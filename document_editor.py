@@ -66,7 +66,7 @@ class TextEditorToolbar(QFrame):
                 background: #0f172a;
                 border: 1px solid rgba(148, 163, 184, 0.3);
                 border-radius: 4px;
-                padding: 4px 8px;
+                padding: 4px 24px 4px 8px;
                 color: #e5e7eb;
                 min-width: 100px;
             }
@@ -74,8 +74,50 @@ class TextEditorToolbar(QFrame):
                 border-color: rgba(96, 165, 250, 0.5);
             }
             QComboBox::drop-down {
-                border: none;
-                width: 20px;
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 22px;
+                border-left: 1px solid rgba(148, 163, 184, 0.3);
+                background: rgba(59, 130, 246, 0.15);
+                border-top-right-radius: 4px;
+                border-bottom-right-radius: 4px;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 6px solid #94a3b8;
+                margin: 0px;
+            }
+            QComboBox::down-arrow:hover {
+                border-top-color: #60a5fa;
+            }
+            QFontComboBox {
+                background: #0f172a;
+                border: 1px solid rgba(148, 163, 184, 0.3);
+                border-radius: 4px;
+                padding: 4px 24px 4px 8px;
+                color: #e5e7eb;
+                min-width: 140px;
+            }
+            QFontComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 22px;
+                border-left: 1px solid rgba(148, 163, 184, 0.3);
+                background: rgba(59, 130, 246, 0.15);
+                border-top-right-radius: 4px;
+                border-bottom-right-radius: 4px;
+            }
+            QFontComboBox::down-arrow {
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 6px solid #94a3b8;
+                margin: 0px;
+            }
+            QFontComboBox::down-arrow:hover {
+                border-top-color: #60a5fa;
             }
             QSpinBox {
                 background: #0f172a;
@@ -144,7 +186,7 @@ class TextEditorToolbar(QFrame):
         sizes = ["8", "9", "10", "11", "12", "14", "16", "18", "20", "22", "24", "26", "28", "36", "48", "72"]
         self.font_size_combo.addItems(sizes)
         self.font_size_combo.setCurrentText("11")
-        self.font_size_combo.setFixedWidth(55)
+        self.font_size_combo.setFixedWidth(48)
         self.font_size_combo.currentTextChanged.connect(self._change_font_size)
         font_group.addWidget(self.font_size_combo)
 
@@ -220,35 +262,35 @@ class TextEditorToolbar(QFrame):
         para_group.addWidget(QLabel("Párrafo:"))
 
         self.align_left_btn = QToolButton()
-        self.align_left_btn.setText("⬅️")
+        self.align_left_btn.setText("≡←")
         self.align_left_btn.setToolTip("Alinear a la izquierda")
         self.align_left_btn.setCheckable(True)
         self.align_left_btn.setChecked(True)
-        self.align_left_btn.setFixedSize(32, 26)
+        self.align_left_btn.setFixedSize(36, 26)
         self.align_left_btn.clicked.connect(lambda: self._set_alignment(Qt.AlignLeft))
         para_group.addWidget(self.align_left_btn)
 
         self.align_center_btn = QToolButton()
-        self.align_center_btn.setText("↔️")
+        self.align_center_btn.setText("≡↔")
         self.align_center_btn.setToolTip("Centrar")
         self.align_center_btn.setCheckable(True)
-        self.align_center_btn.setFixedSize(32, 26)
+        self.align_center_btn.setFixedSize(36, 26)
         self.align_center_btn.clicked.connect(lambda: self._set_alignment(Qt.AlignCenter))
         para_group.addWidget(self.align_center_btn)
 
         self.align_right_btn = QToolButton()
-        self.align_right_btn.setText("➡️")
+        self.align_right_btn.setText("≡→")
         self.align_right_btn.setToolTip("Alinear a la derecha")
         self.align_right_btn.setCheckable(True)
-        self.align_right_btn.setFixedSize(32, 26)
+        self.align_right_btn.setFixedSize(36, 26)
         self.align_right_btn.clicked.connect(lambda: self._set_alignment(Qt.AlignRight))
         para_group.addWidget(self.align_right_btn)
 
         self.align_justify_btn = QToolButton()
-        self.align_justify_btn.setText("☰")
+        self.align_justify_btn.setText("≡≡")
         self.align_justify_btn.setToolTip("Justificar")
         self.align_justify_btn.setCheckable(True)
-        self.align_justify_btn.setFixedSize(32, 26)
+        self.align_justify_btn.setFixedSize(36, 26)
         self.align_justify_btn.clicked.connect(lambda: self._set_alignment(Qt.AlignJustify))
         para_group.addWidget(self.align_justify_btn)
 

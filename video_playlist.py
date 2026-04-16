@@ -2,6 +2,7 @@
 Módulo de gestión de lista de reproducción de video.
 """
 
+import json
 import os
 import random
 from pathlib import Path
@@ -10,7 +11,8 @@ from typing import List, Optional
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QListWidgetItem, QAbstractItemView, QFileDialog
+    QListWidget, QListWidgetItem, QAbstractItemView, QFileDialog,
+    QMessageBox
 )
 
 from video_converter import VIDEO_EXTENSIONS
@@ -55,6 +57,16 @@ class VideoPlaylistWidget(QWidget):
         self.clear_btn.setFixedHeight(26)
         self.clear_btn.setToolTip("Limpiar toda la lista")
         header.addWidget(self.clear_btn)
+        
+        self.save_playlist_btn = QPushButton("💾 Guardar")
+        self.save_playlist_btn.setFixedHeight(26)
+        self.save_playlist_btn.setToolTip("Guardar playlist actual")
+        header.addWidget(self.save_playlist_btn)
+        
+        self.load_playlist_btn = QPushButton("📂 Abrir")
+        self.load_playlist_btn.setFixedHeight(26)
+        self.load_playlist_btn.setToolTip("Abrir una playlist guardada")
+        header.addWidget(self.load_playlist_btn)
         
         layout.addLayout(header)
         
@@ -104,6 +116,8 @@ class VideoPlaylistWidget(QWidget):
         self.add_btn.clicked.connect(self._add_files)
         self.remove_btn.clicked.connect(self._remove_selected)
         self.clear_btn.clicked.connect(self._clear_all)
+        self.save_playlist_btn.clicked.connect(self._save_playlist)
+        self.load_playlist_btn.clicked.connect(self._load_playlist)
         self.sort_name_btn.clicked.connect(lambda: self._sort_by("name"))
         self.sort_date_btn.clicked.connect(lambda: self._sort_by("date"))
         self.sort_size_btn.clicked.connect(lambda: self._sort_by("size"))
@@ -230,3 +244,71 @@ class VideoPlaylistWidget(QWidget):
             event.acceptProposedAction()
         else:
             super().dropEvent(event)
+    
+    # --- Guardar / Cargar playlist ---
+    
+    def _save_playlist(self):
+        """Guarda la playlist actual como archivo JSON."""
+        if not self._paths:
+            QMessageBox.information(self, "Playlist vacía",
+                                    "No hay archivos en la lista para guardar.")
+            return
+        
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Guardar playlist", "",
+            "Playlist JSON (*.json);;Todos los archivos (*.*)"
+        )
+        if not file_path:
+            return
+        
+        # Sincronizar _paths con el orden visual actual
+        self._sync_paths_from_list()
+        
+        data = {"files": list(self._paths)}
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            QMessageBox.information(self, "Éxito",
+                                    f"Playlist guardada en:\n{file_path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error",
+                                 f"No se pudo guardar la playlist:\n{e}")
+    
+    def _load_playlist(self):
+        """Carga una playlist desde un archivo JSON."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Abrir playlist", "",
+            "Playlist JSON (*.json);;Todos los archivos (*.*)"
+        )
+        if not file_path:
+            return
+        
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            files = data.get("files", [])
+            if not files:
+                QMessageBox.warning(self, "Playlist vacía",
+                                    "La playlist no contiene archivos.")
+                return
+            
+            self._clear_all()
+            for path in files:
+                if os.path.isfile(path):
+                    self._add_path(path)
+            
+            QMessageBox.information(self, "Éxito",
+                                    f"Playlist cargada: {len(self._paths)} archivos.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error",
+                                 f"No se pudo cargar la playlist:\n{e}")
+    
+    def _sync_paths_from_list(self):
+        """Sincroniza _paths con el orden actual de la lista visual."""
+        self._paths = []
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            path = item.data(Qt.UserRole)
+            if path:
+                self._paths.append(path)
