@@ -44,28 +44,23 @@ class VideoPlaylistWidget(QWidget):
         header.addStretch()
         
         self.add_btn = QPushButton("+ Agregar")
-        self.add_btn.setFixedHeight(26)
-        self.add_btn.setToolTip("Agregar archivos a la lista")
+        self.add_btn.setFixedHeight(20)
         header.addWidget(self.add_btn)
         
         self.remove_btn = QPushButton("- Quitar")
-        self.remove_btn.setFixedHeight(26)
-        self.remove_btn.setToolTip("Quitar archivo seleccionado")
+        self.remove_btn.setFixedHeight(20)
         header.addWidget(self.remove_btn)
         
         self.clear_btn = QPushButton("Limpiar")
-        self.clear_btn.setFixedHeight(26)
-        self.clear_btn.setToolTip("Limpiar toda la lista")
+        self.clear_btn.setFixedHeight(20)
         header.addWidget(self.clear_btn)
         
         self.save_playlist_btn = QPushButton("💾 Guardar")
-        self.save_playlist_btn.setFixedHeight(26)
-        self.save_playlist_btn.setToolTip("Guardar playlist actual")
+        self.save_playlist_btn.setFixedHeight(20)
         header.addWidget(self.save_playlist_btn)
         
         self.load_playlist_btn = QPushButton("📂 Abrir")
-        self.load_playlist_btn.setFixedHeight(26)
-        self.load_playlist_btn.setToolTip("Abrir una playlist guardada")
+        self.load_playlist_btn.setFixedHeight(20)
         header.addWidget(self.load_playlist_btn)
         
         layout.addLayout(header)
@@ -90,23 +85,19 @@ class VideoPlaylistWidget(QWidget):
         sort_layout.addWidget(sort_label)
         
         self.sort_name_btn = QPushButton("Nombre")
-        self.sort_name_btn.setFixedHeight(24)
-        self.sort_name_btn.setToolTip("Ordenar por nombre")
+        self.sort_name_btn.setFixedHeight(18)
         sort_layout.addWidget(self.sort_name_btn)
         
         self.sort_date_btn = QPushButton("Fecha")
-        self.sort_date_btn.setFixedHeight(24)
-        self.sort_date_btn.setToolTip("Ordenar por fecha de modificación")
+        self.sort_date_btn.setFixedHeight(18)
         sort_layout.addWidget(self.sort_date_btn)
         
         self.sort_size_btn = QPushButton("Tamaño")
-        self.sort_size_btn.setFixedHeight(24)
-        self.sort_size_btn.setToolTip("Ordenar por tamaño de archivo")
+        self.sort_size_btn.setFixedHeight(18)
         sort_layout.addWidget(self.sort_size_btn)
         
         self.sort_random_btn = QPushButton("Aleatorio")
-        self.sort_random_btn.setFixedHeight(24)
-        self.sort_random_btn.setToolTip("Orden aleatorio")
+        self.sort_random_btn.setFixedHeight(18)
         sort_layout.addWidget(self.sort_random_btn)
         
         sort_layout.addStretch()

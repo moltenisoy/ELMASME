@@ -148,14 +148,12 @@ class DocumentViewer(QWidget):
         zoom_controls.addStretch(1)
 
         self.zoom_out_button = QPushButton("Zoom -")
-        self.zoom_out_button.setToolTip("Reducir zoom")
-        self.zoom_out_button.setFixedSize(70, 32)
+        self.zoom_out_button.setFixedSize(70, 22)
         self.zoom_out_button.clicked.connect(self.zoom_out)
         zoom_controls.addWidget(self.zoom_out_button)
 
         self.zoom_in_button = QPushButton("Zoom +")
-        self.zoom_in_button.setToolTip("Aumentar zoom")
-        self.zoom_in_button.setFixedSize(70, 32)
+        self.zoom_in_button.setFixedSize(70, 22)
         self.zoom_in_button.clicked.connect(self.zoom_in)
         zoom_controls.addWidget(self.zoom_in_button)
 

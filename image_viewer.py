@@ -139,39 +139,29 @@ class ImageViewer(QWidget):
         
         self.scroll_area.setWidget(container)
         
-        # Botón Zoom +
         self.zoom_in_button = QToolButton()
         self.zoom_in_button.setText("Zoom +")
-        self.zoom_in_button.setToolTip("Aumentar zoom")
-        self.zoom_in_button.setFixedSize(QSize(70, 32))
+        self.zoom_in_button.setFixedSize(QSize(70, 22))
         self.zoom_in_button.clicked.connect(self.zoom_in)
         
-        # Botón Zoom -
         self.zoom_out_button = QToolButton()
         self.zoom_out_button.setText("Zoom -")
-        self.zoom_out_button.setToolTip("Reducir zoom")
-        self.zoom_out_button.setFixedSize(QSize(70, 32))
+        self.zoom_out_button.setFixedSize(QSize(70, 22))
         self.zoom_out_button.clicked.connect(self.zoom_out)
         
-        # Botón Reset Zoom
         self.reset_zoom_button = QToolButton()
         self.reset_zoom_button.setText("100%")
-        self.reset_zoom_button.setToolTip("Restablecer zoom")
-        self.reset_zoom_button.setFixedSize(QSize(60, 32))
+        self.reset_zoom_button.setFixedSize(QSize(60, 22))
         self.reset_zoom_button.clicked.connect(self.reset_zoom)
         
-        # Botón Pantalla completa
         self.fullscreen_button = QToolButton()
         self.fullscreen_button.setText("Pantalla completa")
-        self.fullscreen_button.setToolTip("Ver en pantalla completa")
-        self.fullscreen_button.setFixedSize(QSize(120, 32))
+        self.fullscreen_button.setFixedSize(QSize(120, 22))
         self.fullscreen_button.clicked.connect(self.toggle_fullscreen)
         
-        # Botón Redimensionar
         self.resize_button = QToolButton()
         self.resize_button.setText("Redimensionar")
-        self.resize_button.setToolTip("Cambiar tamaño/convertir formato")
-        self.resize_button.setFixedSize(QSize(100, 32))
+        self.resize_button.setFixedSize(QSize(100, 22))
         self.resize_button.clicked.connect(self.show_resize_dialog)
         
         # Layout de controles
