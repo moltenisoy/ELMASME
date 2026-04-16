@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QFileDialog, QMessageBox, QToolButton, QFrame, QMenuBar
+    QPushButton, QFileDialog, QMessageBox, QToolButton, QFrame, QMenuBar, QMenu
 )
 
 from content_viewers import ViewerHost
@@ -196,20 +196,12 @@ class UniversalViewerWindow(QMainWindow):
         integrar_menu.addAction(registrar)
         integrar_menu.addAction(desregistrar)
         integrar_menu.addAction(abrir_default_apps)
-        
-        # Menú Ayuda
-        ayuda_menu = menu_bar.addMenu("Ayuda")
-        
-        extensiones = QAction("Ver extensiones compatibles", self)
-        extensiones.triggered.connect(self.show_supported_extensions)
-        
-        ayuda_menu.addAction(extensiones)
     
     def _build_footer(self) -> QFrame:
         """Construye el footer con navegación e información del archivo."""
         footer = QFrame()
         footer.setObjectName("FooterPanel")
-        footer.setFixedHeight(70)
+        footer.setFixedHeight(80)
         
         footer_layout = QHBoxLayout(footer)
         footer_layout.setContentsMargins(12, 6, 12, 6)
@@ -218,16 +210,28 @@ class UniversalViewerWindow(QMainWindow):
         # Botón Anterior
         self.prev_button = QToolButton()
         self.prev_button.setText("◀ Anterior")
-        self.prev_button.setFixedSize(QSize(80, 34))
+        self.prev_button.setFixedSize(QSize(160, 68))
         self.prev_button.clicked.connect(self.go_previous)
         
-        # Botón Siguiente
-        self.next_button = QToolButton()
-        self.next_button.setText("Siguiente ▶")
-        self.next_button.setFixedSize(QSize(80, 34))
-        self.next_button.clicked.connect(self.go_next)
+        # Botones de Archivo e Integración (reubicados aquí)
+        self.archivo_button = QPushButton("Archivo")
+        self.archivo_button.setFixedSize(80, 34)
+        self.archivo_button.clicked.connect(self._show_archivo_menu)
         
-        # Información del archivo (centrada)
+        self.integracion_button = QPushButton("Integración")
+        self.integracion_button.setFixedSize(90, 34)
+        self.integracion_button.clicked.connect(self._show_integracion_menu)
+        
+        # Contenedor para botones de Archivo e Integración (vertical)
+        buttons_container = QFrame()
+        buttons_layout = QVBoxLayout(buttons_container)
+        buttons_layout.setContentsMargins(0, 0, 0, 0)
+        buttons_layout.setSpacing(4)
+        buttons_layout.setAlignment(Qt.AlignCenter)
+        buttons_layout.addWidget(self.archivo_button)
+        buttons_layout.addWidget(self.integracion_button)
+        
+        # Información del archivo (desplazada a la derecha)
         info_container = QFrame()
         info_layout = QVBoxLayout(info_container)
         info_layout.setContentsMargins(0, 0, 0, 0)
@@ -245,29 +249,59 @@ class UniversalViewerWindow(QMainWindow):
         info_layout.addWidget(self.file_name_label)
         info_layout.addWidget(self.file_path_label)
         
-        # Contador de archivos (más abajo, pequeño)
-        counter_container = QFrame()
-        counter_layout = QVBoxLayout(counter_container)
-        counter_layout.setContentsMargins(0, 0, 0, 0)
-        counter_layout.setSpacing(0)
-        counter_layout.setAlignment(Qt.AlignBottom | Qt.AlignHCenter)
-        
+        # Contador de archivos
         self.nav_info_label = QLabel("0 de 0")
         self.nav_info_label.setObjectName("CounterLabel")
         self.nav_info_label.setAlignment(Qt.AlignCenter)
         
-        counter_layout.addStretch()
-        counter_layout.addWidget(self.nav_info_label)
+        # Botón Siguiente
+        self.next_button = QToolButton()
+        self.next_button.setText("Siguiente ▶")
+        self.next_button.setFixedSize(QSize(160, 68))
+        self.next_button.clicked.connect(self.go_next)
         
         # Agregar todo al layout principal
+        # [◀] [Archivo/Integración] [stretch] [counter] [info] [▶]
         footer_layout.addWidget(self.prev_button)
+        footer_layout.addWidget(buttons_container)
         footer_layout.addStretch(1)
+        footer_layout.addWidget(self.nav_info_label)
         footer_layout.addWidget(info_container, 2)
-        footer_layout.addStretch(1)
-        footer_layout.addWidget(counter_container)
         footer_layout.addWidget(self.next_button)
         
         return footer
+    
+    def _show_archivo_menu(self):
+        """Muestra un menú contextual con opciones de Archivo."""
+        menu = QMenu(self)
+        
+        abrir_archivo = QAction("Abrir archivo", self)
+        abrir_archivo.triggered.connect(self.open_file_dialog)
+        menu.addAction(abrir_archivo)
+        
+        abrir_carpeta = QAction("Abrir carpeta", self)
+        abrir_carpeta.triggered.connect(self.open_folder_dialog)
+        menu.addAction(abrir_carpeta)
+        
+        menu.exec(self.archivo_button.mapToGlobal(self.archivo_button.rect().topLeft()))
+    
+    def _show_integracion_menu(self):
+        """Muestra un menú contextual con opciones de Integración."""
+        menu = QMenu(self)
+        
+        registrar = QAction("Registrar asociaciones", self)
+        registrar.triggered.connect(self.register_associations)
+        menu.addAction(registrar)
+        
+        desregistrar = QAction("Desregistrar asociaciones", self)
+        desregistrar.triggered.connect(self.unregister_associations)
+        menu.addAction(desregistrar)
+        
+        abrir_default_apps = QAction("Abrir apps predeterminadas de Windows", self)
+        abrir_default_apps.triggered.connect(open_windows_default_apps_settings)
+        menu.addAction(abrir_default_apps)
+        
+        menu.exec(self.integracion_button.mapToGlobal(self.integracion_button.rect().topLeft()))
     
     def _setup_shortcuts(self):
         """Configura los atajos de teclado."""
@@ -418,31 +452,4 @@ class UniversalViewerWindow(QMainWindow):
             self,
             "Asociaciones eliminadas",
             "Se eliminaron las asociaciones registradas por la aplicación."
-        )
-    
-    def show_supported_extensions(self):
-        """Muestra el diálogo con las extensiones compatibles."""
-        from formats import (
-            get_image_extensions, get_audio_extensions,
-            get_video_extensions, get_document_extensions
-        )
-        
-        message = (
-            "Extensiones registrables:\n\n"
-            f"Imágenes:\n{', '.join(get_image_extensions())}\n\n"
-            f"Audio:\n{', '.join(get_audio_extensions())}\n\n"
-            f"Video:\n{', '.join(get_video_extensions())}\n\n"
-            f"Documentos:\n{', '.join(get_document_extensions())}\n\n"
-            "Soporte directo:\n"
-            "- Imágenes: Visualización completa con zoom y conversión\n"
-            "- Audio: Reproducción con conversión a todos los formatos\n"
-            "- Video: Reproducción con conversión a todos los formatos\n"
-            "- PDF: Visualización con zoom\n"
-            "- Texto: Visualización y edición"
-        )
-        
-        QMessageBox.information(
-            self,
-            "Extensiones compatibles",
-            message
         )

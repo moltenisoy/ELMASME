@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QDialog, QComboBox, QCheckBox, QGroupBox,
+    QDialog, QComboBox, QCheckBox, QGroupBox, QSpinBox,
     QGridLayout, QMessageBox, QFileDialog, QProgressDialog, QApplication
 )
 
@@ -563,3 +563,243 @@ class VideoBatchConverterDialog(QDialog):
     
     def get_output_paths(self) -> List[str]:
         return self.output_paths
+
+
+def trim_video(
+    input_path: str,
+    output_path: str,
+    start_seconds: float,
+    end_seconds: float,
+    progress_callback: Optional[Callable[[int], None]] = None
+) -> bool:
+    """
+    Recorta un fragmento de un archivo de video usando ffmpeg.
+
+    Args:
+        input_path: Ruta del archivo de entrada
+        output_path: Ruta del archivo de salida
+        start_seconds: Segundo de inicio del recorte
+        end_seconds: Segundo de fin del recorte
+        progress_callback: Función opcional para reportar progreso (0-100)
+
+    Returns:
+        True si el recorte fue exitoso, False en caso contrario
+    """
+    if not is_ffmpeg_available():
+        raise RuntimeError("ffmpeg no está instalado o no está disponible en el PATH")
+
+    duration = end_seconds - start_seconds
+    if duration <= 0:
+        return False
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-ss", str(start_seconds),
+        "-i", input_path,
+        "-t", str(duration),
+        "-c", "copy",
+        output_path
+    ]
+
+    try:
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+
+        if progress_callback:
+            progress_callback(0)
+            import time
+            for i in range(10):
+                time.sleep(0.2)
+                progress_callback((i + 1) * 10)
+
+        stdout, stderr = process.communicate(timeout=600)
+
+        if progress_callback:
+            progress_callback(100)
+
+        return process.returncode == 0 and os.path.exists(output_path)
+
+    except subprocess.TimeoutExpired:
+        process.kill()
+        return False
+    except Exception:
+        return False
+
+
+class VideoTrimDialog(QDialog):
+    """Diálogo para recortar un fragmento de tiempo de un video."""
+
+    def __init__(self, input_path: str, parent=None):
+        super().__init__(parent)
+        self.input_path = input_path
+        self.input_format = Path(input_path).suffix.lower()
+        self.output_path = None
+
+        self.setWindowTitle("Recortar Video")
+        self.setMinimumWidth(500)
+
+        self._build_ui()
+
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+
+        # Información del archivo de entrada
+        info_group = QGroupBox("Archivo de entrada")
+        info_layout = QGridLayout(info_group)
+
+        info = get_video_info(self.input_path)
+        self.total_duration = info["duration"]
+
+        info_layout.addWidget(QLabel("Nombre:"), 0, 0)
+        info_layout.addWidget(QLabel(info["filename"]), 0, 1)
+
+        info_layout.addWidget(QLabel("Formato:"), 1, 0)
+        info_layout.addWidget(QLabel(FORMAT_NAMES.get(self.input_format, self.input_format)), 1, 1)
+
+        if self.total_duration > 0:
+            minutes = int(self.total_duration // 60)
+            seconds = int(self.total_duration % 60)
+            info_layout.addWidget(QLabel("Duración total:"), 2, 0)
+            info_layout.addWidget(QLabel(f"{minutes}:{seconds:02d}"), 2, 1)
+
+        layout.addWidget(info_group)
+
+        # Opciones de recorte
+        trim_group = QGroupBox("Rango de recorte")
+        trim_layout = QGridLayout(trim_group)
+
+        trim_layout.addWidget(QLabel("Inicio (mm:ss):"), 0, 0)
+        start_h = QHBoxLayout()
+        self.start_min = QSpinBox()
+        self.start_min.setRange(0, 9999)
+        self.start_min.setValue(0)
+        self.start_min.setSuffix(" min")
+        self.start_sec = QSpinBox()
+        self.start_sec.setRange(0, 59)
+        self.start_sec.setValue(0)
+        self.start_sec.setSuffix(" seg")
+        start_h.addWidget(self.start_min)
+        start_h.addWidget(self.start_sec)
+        start_h.addStretch()
+        trim_layout.addLayout(start_h, 0, 1)
+
+        trim_layout.addWidget(QLabel("Fin (mm:ss):"), 1, 0)
+        end_h = QHBoxLayout()
+        self.end_min = QSpinBox()
+        self.end_min.setRange(0, 9999)
+        self.end_sec = QSpinBox()
+        self.end_sec.setRange(0, 59)
+        self.end_min.setSuffix(" min")
+        self.end_sec.setSuffix(" seg")
+
+        if self.total_duration > 0:
+            self.end_min.setValue(int(self.total_duration // 60))
+            self.end_sec.setValue(int(self.total_duration % 60))
+        else:
+            self.end_min.setValue(0)
+            self.end_sec.setValue(0)
+
+        end_h.addWidget(self.end_min)
+        end_h.addWidget(self.end_sec)
+        end_h.addStretch()
+        trim_layout.addLayout(end_h, 1, 1)
+
+        layout.addWidget(trim_group)
+
+        # Botones
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+
+        self.trim_button = QPushButton("Recortar")
+        self.trim_button.clicked.connect(self._on_trim)
+        buttons.addWidget(self.trim_button)
+
+        self.cancel_button = QPushButton("Cancelar")
+        self.cancel_button.clicked.connect(self.reject)
+        buttons.addWidget(self.cancel_button)
+
+        layout.addLayout(buttons)
+        layout.addStretch()
+
+    def _on_trim(self):
+        start_seconds = self.start_min.value() * 60 + self.start_sec.value()
+        end_seconds = self.end_min.value() * 60 + self.end_sec.value()
+
+        if end_seconds <= start_seconds:
+            QMessageBox.warning(
+                self,
+                "Rango inválido",
+                "El tiempo de fin debe ser mayor al tiempo de inicio."
+            )
+            return
+
+        original_dir = os.path.dirname(self.input_path)
+        original_name = os.path.splitext(os.path.basename(self.input_path))[0]
+        suggested_name = f"{original_name}_recortado{self.input_format}"
+        suggested_path = os.path.join(original_dir, suggested_name)
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Guardar video recortado",
+            suggested_path,
+            f"Video (*{self.input_format})"
+        )
+        if not file_path:
+            return
+        self.output_path = file_path
+
+        progress = QProgressDialog("Recortando video...", "Cancelar", 0, 100, self)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+
+        try:
+            def update_progress(value):
+                progress.setValue(value)
+                QApplication.processEvents()
+
+            success = trim_video(
+                self.input_path,
+                self.output_path,
+                start_seconds,
+                end_seconds,
+                update_progress
+            )
+
+            progress.setValue(100)
+
+            if success:
+                QMessageBox.information(
+                    self,
+                    "Éxito",
+                    f"Video recortado correctamente.\nGuardado en:\n{self.output_path}"
+                )
+                self.accept()
+            else:
+                QMessageBox.critical(
+                    self,
+                    "Error",
+                    "No se pudo recortar el archivo de video."
+                )
+
+        except RuntimeError as e:
+            progress.close()
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"{str(e)}\n\nPor favor instala ffmpeg para usar esta función."
+            )
+        except Exception as e:
+            progress.close()
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Error durante el recorte:\n{str(e)}"
+            )
+
+    def get_output_path(self) -> Optional[str]:
+        return self.output_path
