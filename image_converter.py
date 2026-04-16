@@ -1,8 +1,3 @@
-"""
-Módulo para conversión y manipulación de archivos de imagen.
-Incluye redimensionamiento, información y guardado en distintos formatos.
-"""
-
 import os
 from pathlib import Path
 from typing import Optional, Dict
@@ -13,12 +8,10 @@ from PySide6.QtWidgets import (
     QDialog, QComboBox, QCheckBox, QGroupBox, QGridLayout, QSpinBox
 )
 
-# Formatos de imagen soportados
 IMAGE_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff"
 }
 
-# Nombres legibles de formatos
 FORMAT_NAMES = {
     ".png": "PNG (Portable Network Graphics)",
     ".jpg": "JPEG (Joint Photographic Experts Group)",
@@ -30,12 +23,9 @@ FORMAT_NAMES = {
     ".tiff": "TIFF (Tagged Image File Format)"
 }
 
-# Formatos que soportan transparencia
 TRANSPARENT_FORMATS = {".png", ".gif", ".webp", ".tif", ".tiff"}
 
-
 def get_image_info(path: str) -> Dict:
-    """Obtiene información de la imagen."""
     info = {
         "path": path,
         "filename": os.path.basename(path),
@@ -60,13 +50,11 @@ def get_image_info(path: str) -> Dict:
     
     info["format"] = reader.format().data().decode().upper() if reader.format() else "Unknown"
     
-    # Verificar si tiene canal alpha
     image = reader.read()
     if not image.isNull():
         info["has_alpha"] = image.hasAlphaChannel()
     
     return info
-
 
 def save_image(
     image: QImage,
@@ -74,7 +62,6 @@ def save_image(
     format: Optional[str] = None,
     quality: int = 90
 ) -> bool:
-    """Guarda una imagen en el formato especificado."""
     if image.isNull():
         return False
     
@@ -86,7 +73,6 @@ def save_image(
     else:
         return image.save(path, None, quality)
 
-
 def resize_image(
     image: QImage,
     width: int,
@@ -94,7 +80,6 @@ def resize_image(
     keep_aspect: bool = True,
     smooth: bool = True
 ) -> QImage:
-    """Redimensiona una imagen."""
     if image.isNull():
         return QImage()
     
@@ -103,9 +88,7 @@ def resize_image(
     
     return image.scaled(width, height, aspect_mode, transform_mode)
 
-
 class ImageResizeDialog(QDialog):
-    """Diálogo para redimensionar y convertir imágenes."""
     
     def __init__(self, parent=None, current_width=0, current_height=0):
         super().__init__(parent)

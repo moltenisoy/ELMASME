@@ -1,7 +1,3 @@
-"""
-Módulo para edición de documentos de texto.
-"""
-
 import os
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QFont, QKeySequence, QColor, QTextCharFormat
@@ -11,9 +7,7 @@ from PySide6.QtWidgets import (
     QFileDialog
 )
 
-
 def read_text_file(path: str) -> str:
-    """Lee un archivo de texto con detección automática de codificación."""
     encodings = ["utf-8", "utf-8-sig", "cp1252", "latin-1", "iso-8859-1"]
 
     for encoding in encodings:
@@ -26,24 +20,15 @@ def read_text_file(path: str) -> str:
     with open(path, "r", encoding="utf-8", errors="replace") as file:
         return file.read()
 
-
 def save_text_file(path: str, content: str) -> bool:
-    """Guarda contenido de texto en un archivo."""
-    try:
-        with open(path, "w", encoding="utf-8") as file:
-            file.write(content)
-        return True
-    except Exception:
-        return False
-
-
-def is_editable(path: str) -> bool:
-    """Verifica si un archivo es editable."""
+    with open(path, "w", encoding="utf-8") as file:
+        file.write(content)
     return True
 
+def is_editable(path: str) -> bool:
+    return True
 
 class TextEditorToolbar(QFrame):
-    """Barra de herramientas de edición de texto."""
 
     def __init__(self, text_view: QTextEdit, parent=None):
         super().__init__(parent)
@@ -450,28 +435,23 @@ class TextEditorToolbar(QFrame):
         self._update_format_buttons()
 
     def save_current(self, current_path, is_pdf):
-        """Guarda el contenido actual del editor."""
         if not current_path:
             return
 
-        try:
-            if is_pdf:
-                txt_path = os.path.splitext(current_path)[0] + "_editado.txt"
-                content = self.text_view.toPlainText()
-                if save_text_file(txt_path, content):
-                    QMessageBox.information(
-                        self,
-                        "Éxito",
-                        f"Contenido guardado como texto plano:\n{txt_path}"
-                    )
-                else:
-                    QMessageBox.critical(self, "Error", "No se pudo guardar el archivo.")
+        if is_pdf:
+            txt_path = os.path.splitext(current_path)[0] + "_editado.txt"
+            content = self.text_view.toPlainText()
+            if save_text_file(txt_path, content):
+                QMessageBox.information(
+                    self,
+                    "Éxito",
+                    f"Contenido guardado como texto plano:\n{txt_path}"
+                )
             else:
-                content = self.text_view.toPlainText()
-                if save_text_file(current_path, content):
-                    QMessageBox.information(self, "Éxito", "Archivo guardado correctamente.")
-                else:
-                    QMessageBox.critical(self, "Error", "No se pudo guardar el archivo.")
-
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error al guardar:\n{str(e)}")
+                QMessageBox.critical(self, "Error", "No se pudo guardar el archivo.")
+        else:
+            content = self.text_view.toPlainText()
+            if save_text_file(current_path, content):
+                QMessageBox.information(self, "Éxito", "Archivo guardado correctamente.")
+            else:
+                QMessageBox.critical(self, "Error", "No se pudo guardar el archivo.")

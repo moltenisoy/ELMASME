@@ -1,7 +1,3 @@
-"""
-Módulo para manejo de archivos de imagen.
-Re-exporta desde image_converter e image_viewer para compatibilidad.
-"""
 from image_converter import (  # noqa: F401
     IMAGE_EXTENSIONS,
     FORMAT_NAMES,

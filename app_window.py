@@ -1,7 +1,3 @@
-"""
-Ventana principal de la aplicación Universal Viewer.
-"""
-
 import os
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QAction, QKeySequence
@@ -20,9 +16,7 @@ from windows_integration import (
     supported_extensions_text,
 )
 
-
 class UniversalViewerWindow(QMainWindow):
-    """Ventana principal del visor universal."""
     
     def __init__(self, start_path=None):
         super().__init__()
@@ -43,11 +37,9 @@ class UniversalViewerWindow(QMainWindow):
             self.viewer.show_message("Abre un archivo o una carpeta para comenzar.")
     
     def _build_ui(self):
-        """Construye la interfaz de usuario."""
         self._apply_styles()
         self._build_menu()
         
-        # Widget central
         root = QWidget()
         self.setCentralWidget(root)
         
@@ -55,25 +47,21 @@ class UniversalViewerWindow(QMainWindow):
         layout.setContentsMargins(10, 4, 10, 8)
         layout.setSpacing(8)
         
-        # Panel del visor (sin header, más espacio)
         viewer_panel = QFrame()
         viewer_panel.setObjectName("Panel")
         viewer_layout = QVBoxLayout(viewer_panel)
         viewer_layout.setContentsMargins(10, 10, 10, 10)
         viewer_layout.addWidget(self.viewer)
         
-        # Footer con navegación e información del archivo
         footer = self._build_footer()
         
         layout.addWidget(viewer_panel, 1)
         layout.addWidget(footer)
         
-        # Atajos de teclado
         self._setup_shortcuts()
         self._refresh_navigation()
     
     def _apply_styles(self):
-        """Aplica los estilos CSS de la aplicación."""
         self.setStyleSheet("""
             QMainWindow {
                 background: #0f172a;
@@ -159,11 +147,9 @@ class UniversalViewerWindow(QMainWindow):
         """)
     
     def _build_menu(self):
-        """Construye la barra de menú."""
         menu_bar = QMenuBar()
         self.setMenuBar(menu_bar)
         
-        # Menú Archivo
         archivo_menu = menu_bar.addMenu("Archivo")
         
         abrir_archivo = QAction("Abrir archivo", self)
@@ -181,7 +167,6 @@ class UniversalViewerWindow(QMainWindow):
         archivo_menu.addSeparator()
         archivo_menu.addAction(salir)
         
-        # Menú Integración
         integrar_menu = menu_bar.addMenu("Integración")
         
         registrar = QAction("Registrar asociaciones", self)
@@ -198,7 +183,6 @@ class UniversalViewerWindow(QMainWindow):
         integrar_menu.addAction(abrir_default_apps)
     
     def _build_footer(self) -> QFrame:
-        """Construye el footer con navegación e información del archivo."""
         footer = QFrame()
         footer.setObjectName("FooterPanel")
         footer.setFixedHeight(80)
@@ -207,13 +191,11 @@ class UniversalViewerWindow(QMainWindow):
         footer_layout.setContentsMargins(12, 6, 12, 6)
         footer_layout.setSpacing(12)
         
-        # Botón Anterior
         self.prev_button = QToolButton()
         self.prev_button.setText("◀ Anterior")
         self.prev_button.setFixedSize(QSize(160, 68))
         self.prev_button.clicked.connect(self.go_previous)
         
-        # Botones de Archivo e Integración (reubicados aquí)
         self.archivo_button = QPushButton("Archivo")
         self.archivo_button.setFixedSize(80, 34)
         self.archivo_button.clicked.connect(self._show_archivo_menu)
@@ -222,7 +204,6 @@ class UniversalViewerWindow(QMainWindow):
         self.integracion_button.setFixedSize(90, 34)
         self.integracion_button.clicked.connect(self._show_integracion_menu)
         
-        # Contenedor para botones de Archivo e Integración (vertical)
         buttons_container = QFrame()
         buttons_layout = QVBoxLayout(buttons_container)
         buttons_layout.setContentsMargins(0, 0, 0, 0)
@@ -231,7 +212,6 @@ class UniversalViewerWindow(QMainWindow):
         buttons_layout.addWidget(self.archivo_button)
         buttons_layout.addWidget(self.integracion_button)
         
-        # Información del archivo (desplazada a la derecha)
         info_container = QFrame()
         info_layout = QVBoxLayout(info_container)
         info_layout.setContentsMargins(0, 0, 0, 0)
@@ -249,19 +229,15 @@ class UniversalViewerWindow(QMainWindow):
         info_layout.addWidget(self.file_name_label)
         info_layout.addWidget(self.file_path_label)
         
-        # Contador de archivos
         self.nav_info_label = QLabel("0 de 0")
         self.nav_info_label.setObjectName("CounterLabel")
         self.nav_info_label.setAlignment(Qt.AlignCenter)
         
-        # Botón Siguiente
         self.next_button = QToolButton()
         self.next_button.setText("Siguiente ▶")
         self.next_button.setFixedSize(QSize(160, 68))
         self.next_button.clicked.connect(self.go_next)
         
-        # Agregar todo al layout principal
-        # [◀] [Archivo/Integración] [stretch] [counter] [info] [▶]
         footer_layout.addWidget(self.prev_button)
         footer_layout.addWidget(buttons_container)
         footer_layout.addStretch(1)
@@ -272,7 +248,6 @@ class UniversalViewerWindow(QMainWindow):
         return footer
     
     def _show_archivo_menu(self):
-        """Muestra un menú contextual con opciones de Archivo."""
         menu = QMenu(self)
         
         abrir_archivo = QAction("Abrir archivo", self)
@@ -286,7 +261,6 @@ class UniversalViewerWindow(QMainWindow):
         menu.exec(self.archivo_button.mapToGlobal(self.archivo_button.rect().topLeft()))
     
     def _show_integracion_menu(self):
-        """Muestra un menú contextual con opciones de Integración."""
         menu = QMenu(self)
         
         registrar = QAction("Registrar asociaciones", self)
@@ -304,33 +278,27 @@ class UniversalViewerWindow(QMainWindow):
         menu.exec(self.integracion_button.mapToGlobal(self.integracion_button.rect().topLeft()))
     
     def _setup_shortcuts(self):
-        """Configura los atajos de teclado."""
-        # Flecha izquierda - anterior
         left_action = QAction(self)
         left_action.setShortcut(QKeySequence(Qt.Key_Left))
         left_action.triggered.connect(self.handle_left_key)
         self.addAction(left_action)
         
-        # Flecha derecha - siguiente
         right_action = QAction(self)
         right_action.setShortcut(QKeySequence(Qt.Key_Right))
         right_action.triggered.connect(self.handle_right_key)
         self.addAction(right_action)
         
-        # Escape - salir de pantalla completa
         esc_action = QAction(self)
         esc_action.setShortcut(QKeySequence(Qt.Key_Escape))
         esc_action.triggered.connect(self.handle_escape_key)
         self.addAction(esc_action)
         
-        # Ctrl+O - abrir archivo
         open_action = QAction(self)
         open_action.setShortcut(QKeySequence.Open)
         open_action.triggered.connect(self.open_file_dialog)
         self.addAction(open_action)
     
     def _center_window(self):
-        """Centra la ventana en la pantalla."""
         screen = self.screen()
         if screen:
             geometry = screen.availableGeometry()
@@ -339,7 +307,6 @@ class UniversalViewerWindow(QMainWindow):
             self.move(frame.topLeft())
     
     def open_file_dialog(self):
-        """Abre el diálogo para seleccionar un archivo."""
         extensions = " ".join(f"*{ext}" for ext in supported_extensions())
         file_path, _ = QFileDialog.getOpenFileName(
             self,
@@ -351,13 +318,11 @@ class UniversalViewerWindow(QMainWindow):
             self.load_path(file_path)
     
     def open_folder_dialog(self):
-        """Abre el diálogo para seleccionar una carpeta."""
         folder = QFileDialog.getExistingDirectory(self, "Abrir carpeta", "")
         if folder:
             self.load_path(folder)
     
     def load_path(self, path: str):
-        """Carga una ruta (archivo o carpeta)."""
         if not os.path.exists(path):
             QMessageBox.warning(
                 self,
@@ -382,7 +347,6 @@ class UniversalViewerWindow(QMainWindow):
         self._load_current(current)
     
     def _load_current(self, path: str):
-        """Carga el archivo actual en el visor."""
         self.current_path = path
         self.viewer.load_file(path)
         
@@ -395,7 +359,6 @@ class UniversalViewerWindow(QMainWindow):
         self._refresh_navigation()
     
     def _refresh_navigation(self):
-        """Actualiza la información de navegación."""
         total = len(self.navigator.files)
         index = self.navigator.current_index + 1 if self.navigator.current_index >= 0 else 0
         
@@ -404,37 +367,30 @@ class UniversalViewerWindow(QMainWindow):
         self.nav_info_label.setText(f"{index} de {total}")
     
     def go_previous(self):
-        """Navega al archivo anterior."""
         path = self.navigator.previous()
         if path:
             self._load_current(path)
     
     def go_next(self):
-        """Navega al archivo siguiente."""
         path = self.navigator.next()
         if path:
             self._load_current(path)
     
     def handle_left_key(self):
-        """Maneja la tecla flecha izquierda."""
-        # Solo navegar si el visor de video no está en modo navegación interna
         if not hasattr(self.viewer.video_viewer, 'navigation_enabled') or \
            not self.viewer.video_viewer.navigation_enabled:
             self.go_previous()
     
     def handle_right_key(self):
-        """Maneja la tecla flecha derecha."""
         if not hasattr(self.viewer.video_viewer, 'navigation_enabled') or \
            not self.viewer.video_viewer.navigation_enabled:
             self.go_next()
     
     def handle_escape_key(self):
-        """Maneja la tecla Escape."""
         if self.viewer.video_viewer.is_fullscreen:
             self.viewer.video_viewer.exit_fullscreen()
     
     def register_associations(self):
-        """Registra las asociaciones de archivos en Windows."""
         register_file_associations()
         QMessageBox.information(
             self,
@@ -446,7 +402,6 @@ class UniversalViewerWindow(QMainWindow):
         )
     
     def unregister_associations(self):
-        """Elimina las asociaciones de archivos en Windows."""
         unregister_file_associations()
         QMessageBox.information(
             self,

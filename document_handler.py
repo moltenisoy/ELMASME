@@ -1,7 +1,3 @@
-"""
-Módulo para manejo de documentos.
-Re-exporta desde document_pdf, document_editor y document_viewer para compatibilidad.
-"""
 from document_pdf import PDF_EXTENSIONS, extract_pdf_text  # noqa: F401
 from document_editor import (  # noqa: F401
     read_text_file,

@@ -1,7 +1,3 @@
-"""
-Módulo para visualización de documentos.
-"""
-
 import os
 from pathlib import Path
 from typing import Set, Dict
@@ -59,7 +55,6 @@ TYPE_NAMES = {
     ".docx": "Word Document"
 }
 
-
 def get_document_info(path: str) -> Dict:
     info = {
         "path": path,
@@ -78,7 +73,6 @@ def get_document_info(path: str) -> Dict:
     info["is_editable"] = True
 
     return info
-
 
 class DocumentViewer(QWidget):
 

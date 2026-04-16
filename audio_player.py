@@ -1,8 +1,3 @@
-"""
-Módulo de reproducción de archivos de audio.
-Incluye el visor de audio con controles de reproducción y conversión.
-"""
-
 import os
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
@@ -14,9 +9,7 @@ from PySide6.QtWidgets import (
 from audio_converter import get_audio_info, AudioConverterDialog, AudioBatchConverterDialog, AudioTrimDialog
 from audio_playlist import AudioPlaylistWidget
 
-
 class AudioViewer(QWidget):
-    """Visor de audio con controles de reproducción y conversión."""
     
     def __init__(self):
         super().__init__()
@@ -30,7 +23,6 @@ class AudioViewer(QWidget):
         self._connect_signals()
     
     def _build_ui(self):
-        # Placeholder para audio (sin video)
         self.placeholder = QLabel()
         self.placeholder.setAlignment(Qt.AlignCenter)
         self.placeholder.setStyleSheet(
@@ -39,7 +31,6 @@ class AudioViewer(QWidget):
         self.placeholder.setText("Audio cargado")
         self.placeholder.setMinimumHeight(200)
         
-        # Controles de reproducción
         self.pause_button = QPushButton("Pausar")
         self.pause_button.setFixedSize(80, 32)
         self.pause_button.clicked.connect(self.player.pause)
@@ -48,14 +39,12 @@ class AudioViewer(QWidget):
         self.resume_button.setFixedSize(80, 32)
         self.resume_button.clicked.connect(self.player.play)
         
-        # Slider de posición
         self.position_slider = QSlider(Qt.Horizontal)
         self.position_slider.setRange(0, 0)
         self.position_slider.sliderPressed.connect(self._on_slider_pressed)
         self.position_slider.sliderReleased.connect(self._on_slider_released)
         self.position_slider.valueChanged.connect(self._on_slider_value_changed)
         
-        # Controles de volumen
         self.volume_slider = QSlider(Qt.Horizontal)
         self.volume_slider.setRange(0, 100)
         self.volume_slider.setValue(50)
@@ -68,7 +57,6 @@ class AudioViewer(QWidget):
         self.volume_toggle_button.setFixedSize(70, 32)
         self.volume_toggle_button.clicked.connect(self._toggle_volume)
         
-        # Botones de conversión
         self.convert_button = QToolButton()
         self.convert_button.setText("Convertir")
         self.convert_button.setToolTip("Convertir a otro formato")
@@ -81,14 +69,12 @@ class AudioViewer(QWidget):
         self.convert_all_button.setFixedSize(110, 32)
         self.convert_all_button.clicked.connect(self._show_batch_converter)
         
-        # Botón de recorte
         self.trim_button = QToolButton()
         self.trim_button.setText("Recortar")
         self.trim_button.setToolTip("Recortar un fragmento de tiempo del audio")
         self.trim_button.setFixedSize(80, 32)
         self.trim_button.clicked.connect(self._show_trimmer)
         
-        # Layout de volumen
         volume_layout = QHBoxLayout()
         volume_layout.setContentsMargins(0, 0, 0, 0)
         volume_layout.setSpacing(8)
@@ -99,7 +85,6 @@ class AudioViewer(QWidget):
         self.volume_container = QWidget()
         self.volume_container.setLayout(volume_layout)
         
-        # Layout de controles
         controls = QHBoxLayout()
         controls.setContentsMargins(0, 0, 0, 0)
         controls.setSpacing(10)
@@ -112,11 +97,9 @@ class AudioViewer(QWidget):
         controls.addWidget(self.trim_button)
         controls.addStretch(1)
         
-        # Lista de reproducción
         self.playlist_widget = AudioPlaylistWidget()
         self.playlist_widget.file_selected.connect(self.load_file)
         
-        # Layout principal
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
@@ -131,12 +114,10 @@ class AudioViewer(QWidget):
         self.player.durationChanged.connect(self._on_duration_changed)
     
     def load_file(self, path: str):
-        """Carga un archivo de audio."""
         self.current_path = path
         self.player.stop()
         self.player.setSource(QUrl.fromLocalFile(path))
         
-        # Mostrar información del audio
         info = get_audio_info(path)
         info_text = f"Audio: {info['filename']}"
         
@@ -152,7 +133,6 @@ class AudioViewer(QWidget):
         self.player.play()
     
     def stop(self):
-        """Detiene la reproducción."""
         self.player.stop()
     
     def _on_position_changed(self, position):
@@ -181,7 +161,6 @@ class AudioViewer(QWidget):
         self.volume_container.setVisible(not self.volume_container.isVisible())
     
     def _show_converter(self):
-        """Muestra el diálogo de conversión."""
         if not self.current_path:
             return
         
@@ -189,7 +168,6 @@ class AudioViewer(QWidget):
         dialog.exec()
     
     def _show_batch_converter(self):
-        """Muestra el diálogo de conversión por lotes."""
         if not self.current_path:
             return
         
@@ -197,7 +175,6 @@ class AudioViewer(QWidget):
         dialog.exec()
     
     def _show_trimmer(self):
-        """Muestra el diálogo de recorte de audio."""
         if not self.current_path:
             return
         

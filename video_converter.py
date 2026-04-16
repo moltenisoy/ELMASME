@@ -1,8 +1,3 @@
-"""
-Módulo de conversión de archivos de video.
-Incluye funciones de información, conversión y diálogos de conversión.
-"""
-
 import json
 import os
 import subprocess
@@ -15,12 +10,10 @@ from PySide6.QtWidgets import (
     QGridLayout, QMessageBox, QFileDialog, QProgressDialog, QApplication
 )
 
-# Formatos de video soportados
 VIDEO_EXTENSIONS = {
     ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm", ".m4v"
 }
 
-# Nombres legibles de formatos
 FORMAT_NAMES = {
     ".mp4": "MP4 (MPEG-4)",
     ".mkv": "MKV (Matroska)",
@@ -31,7 +24,6 @@ FORMAT_NAMES = {
     ".m4v": "M4V (iTunes Video)"
 }
 
-# Codecs recomendados por formato
 FORMAT_CODECS = {
     ".mp4": {"video": "libx264", "audio": "aac"},
     ".mkv": {"video": "libx264", "audio": "aac"},
@@ -42,9 +34,7 @@ FORMAT_CODECS = {
     ".m4v": {"video": "libx264", "audio": "aac"}
 }
 
-
 def get_video_info(path: str) -> Dict:
-    """Obtiene información del archivo de video."""
     info = {
         "path": path,
         "filename": os.path.basename(path),
@@ -62,7 +52,6 @@ def get_video_info(path: str) -> Dict:
     if os.path.exists(path):
         info["size"] = os.path.getsize(path)
     
-    # Intentar obtener metadatos con ffprobe
     try:
         result = subprocess.run(
             ["ffprobe", "-v", "quiet", "-print_format", "json",
@@ -75,7 +64,7 @@ def get_video_info(path: str) -> Dict:
             if "format" in data:
                 fmt = data["format"]
                 info["duration"] = float(fmt.get("duration", 0))
-                info["bitrate"] = int(fmt.get("bit_rate", 0)) // 1000  # kbps
+                info["bitrate"] = int(fmt.get("bit_rate", 0)) // 1000
             
             if "streams" in data:
                 for stream in data["streams"]:
@@ -83,7 +72,6 @@ def get_video_info(path: str) -> Dict:
                         info["width"] = stream.get("width", 0)
                         info["height"] = stream.get("height", 0)
                         info["video_codec"] = stream.get("codec_name", "")
-                        # Calcular FPS
                         avg_frame_rate = stream.get("avg_frame_rate", "0/1")
                         if "/" in avg_frame_rate:
                             num, den = avg_frame_rate.split("/")
@@ -97,9 +85,7 @@ def get_video_info(path: str) -> Dict:
     
     return info
 
-
 def is_ffmpeg_available() -> bool:
-    """Verifica si ffmpeg está instalado y disponible."""
     try:
         result = subprocess.run(
             ["ffmpeg", "-version"],
@@ -109,7 +95,6 @@ def is_ffmpeg_available() -> bool:
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return False
 
-
 def convert_video(
     input_path: str,
     output_path: str,
@@ -117,25 +102,11 @@ def convert_video(
     quality: str = "high",
     progress_callback: Optional[Callable[[int], None]] = None
 ) -> bool:
-    """
-    Convierte un archivo de video a otro formato usando ffmpeg.
-    
-    Args:
-        input_path: Ruta del archivo de entrada
-        output_path: Ruta del archivo de salida
-        output_format: Extensión de salida (ej: ".mp4", ".avi")
-        quality: Calidad de salida ("low", "medium", "high", "original")
-        progress_callback: Función opcional para reportar progreso (0-100)
-    
-    Returns:
-        True si la conversión fue exitosa, False en caso contrario
-    """
     if not is_ffmpeg_available():
         raise RuntimeError("ffmpeg no está instalado o no está disponible en el PATH")
     
     codecs = FORMAT_CODECS.get(output_format.lower(), {"video": "copy", "audio": "copy"})
     
-    # Presets de calidad
     quality_presets = {
         "low": {"crf": "28", "preset": "veryfast", "audio_bitrate": "96k"},
         "medium": {"crf": "23", "preset": "medium", "audio_bitrate": "128k"},
@@ -147,7 +118,6 @@ def convert_video(
     
     cmd = ["ffmpeg", "-y", "-i", input_path]
     
-    # Configuración de video
     if quality == "original":
         cmd.extend(["-c:v", "copy"])
     else:
@@ -157,7 +127,6 @@ def convert_video(
             "-preset", preset["preset"]
         ])
     
-    # Configuración de audio
     if quality == "original" or preset["audio_bitrate"] == "copy":
         cmd.extend(["-c:a", "copy"])
     else:
@@ -168,42 +137,31 @@ def convert_video(
     
     cmd.append(output_path)
     
-    try:
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True
-        )
-        
-        if progress_callback:
-            progress_callback(0)
-            import time
-            for i in range(10):
-                time.sleep(0.2)
-                progress_callback((i + 1) * 10)
-        
-        stdout, stderr = process.communicate(timeout=600)
-        
-        if progress_callback:
-            progress_callback(100)
-        
-        return process.returncode == 0 and os.path.exists(output_path)
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True
+    )
     
-    except subprocess.TimeoutExpired:
-        process.kill()
-        return False
-    except Exception:
-        return False
-
+    if progress_callback:
+        progress_callback(0)
+        import time
+        for i in range(10):
+            time.sleep(0.2)
+            progress_callback((i + 1) * 10)
+    
+    stdout, stderr = process.communicate(timeout=600)
+    
+    if progress_callback:
+        progress_callback(100)
+    
+    return process.returncode == 0 and os.path.exists(output_path)
 
 def get_supported_output_formats(input_format: str) -> List[str]:
-    """Obtiene la lista de formatos a los que se puede convertir un video."""
     return sorted([ext for ext in VIDEO_EXTENSIONS if ext != input_format.lower()])
 
-
 class VideoConverterDialog(QDialog):
-    """Diálogo para convertir archivos de video."""
     
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -220,7 +178,6 @@ class VideoConverterDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         
-        # Información del archivo de entrada
         info_group = QGroupBox("Archivo de entrada")
         info_layout = QGridLayout(info_group)
         
@@ -248,11 +205,9 @@ class VideoConverterDialog(QDialog):
         
         layout.addWidget(info_group)
         
-        # Opciones de conversión
         convert_group = QGroupBox("Opciones de conversión")
         convert_layout = QVBoxLayout(convert_group)
         
-        # Formato de salida
         format_layout = QHBoxLayout()
         format_layout.addWidget(QLabel("Convertir a:"))
         self.format_combo = QComboBox()
@@ -265,7 +220,6 @@ class VideoConverterDialog(QDialog):
         format_layout.addStretch()
         convert_layout.addLayout(format_layout)
         
-        # Calidad
         quality_layout = QHBoxLayout()
         quality_layout.addWidget(QLabel("Calidad:"))
         self.quality_combo = QComboBox()
@@ -279,7 +233,6 @@ class VideoConverterDialog(QDialog):
         
         layout.addWidget(convert_group)
         
-        # Opciones de guardado
         save_group = QGroupBox("Guardar como")
         save_layout = QVBoxLayout(save_group)
         
@@ -298,7 +251,6 @@ class VideoConverterDialog(QDialog):
         
         layout.addWidget(save_group)
         
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
         
@@ -337,65 +289,46 @@ class VideoConverterDialog(QDialog):
             original_name = os.path.splitext(os.path.basename(self.input_path))[0]
             self.output_path = os.path.join(original_dir, f"{original_name}{output_format}")
         
-        # Realizar conversión
         progress = QProgressDialog("Convirtiendo video...", "Cancelar", 0, 100, self)
         progress.setWindowModality(Qt.WindowModal)
         progress.setMinimumDuration(0)
         
-        try:
-            def update_progress(value):
-                progress.setValue(value)
-                QApplication.processEvents()
-            
-            success = convert_video(
-                self.input_path,
-                self.output_path,
-                output_format,
-                quality,
-                update_progress
-            )
-            
-            progress.setValue(100)
-            
-            if success:
-                if self.overwrite_radio.isChecked() and self.output_path != self.input_path:
-                    if os.path.exists(self.input_path):
-                        os.remove(self.input_path)
-                
-                QMessageBox.information(
-                    self,
-                    "Éxito",
-                    f"Video convertido correctamente.\nGuardado en:\n{self.output_path}"
-                )
-                self.accept()
-            else:
-                QMessageBox.critical(
-                    self,
-                    "Error",
-                    "No se pudo convertir el archivo de video."
-                )
+        def update_progress(value):
+            progress.setValue(value)
+            QApplication.processEvents()
         
-        except RuntimeError as e:
-            progress.close()
-            QMessageBox.critical(
+        success = convert_video(
+            self.input_path,
+            self.output_path,
+            output_format,
+            quality,
+            update_progress
+        )
+        
+        progress.setValue(100)
+        
+        if success:
+            if self.overwrite_radio.isChecked() and self.output_path != self.input_path:
+                if os.path.exists(self.input_path):
+                    os.remove(self.input_path)
+            
+            QMessageBox.information(
                 self,
-                "Error",
-                f"{str(e)}\n\nPor favor instala ffmpeg para usar esta función."
+                "Éxito",
+                f"Video convertido correctamente.\nGuardado en:\n{self.output_path}"
             )
-        except Exception as e:
-            progress.close()
+            self.accept()
+        else:
             QMessageBox.critical(
                 self,
                 "Error",
-                f"Error durante la conversión:\n{str(e)}"
+                "No se pudo convertir el archivo de video."
             )
     
     def get_output_path(self) -> Optional[str]:
         return self.output_path
 
-
 class VideoBatchConverterDialog(QDialog):
-    """Diálogo para convertir video a múltiples formatos simultáneamente."""
     
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -412,12 +345,10 @@ class VideoBatchConverterDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         
-        # Información del archivo
         info_label = QLabel(f"Archivo: {os.path.basename(self.input_path)}")
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
         
-        # Calidad
         quality_layout = QHBoxLayout()
         quality_layout.addWidget(QLabel("Calidad:"))
         self.quality_combo = QComboBox()
@@ -429,7 +360,6 @@ class VideoBatchConverterDialog(QDialog):
         quality_layout.addStretch()
         layout.addLayout(quality_layout)
         
-        # Selección de formatos
         format_group = QGroupBox("Seleccionar formatos de salida")
         format_layout = QVBoxLayout(format_group)
         
@@ -442,7 +372,6 @@ class VideoBatchConverterDialog(QDialog):
             self.format_checks[fmt] = check
             format_layout.addWidget(check)
         
-        # Botones de selección rápida
         select_layout = QHBoxLayout()
         select_all_btn = QPushButton("Seleccionar todos")
         select_all_btn.clicked.connect(self._select_all)
@@ -456,7 +385,6 @@ class VideoBatchConverterDialog(QDialog):
         format_layout.addLayout(select_layout)
         layout.addWidget(format_group)
         
-        # Opciones
         options_group = QGroupBox("Opciones")
         options_layout = QVBoxLayout(options_group)
         
@@ -466,7 +394,6 @@ class VideoBatchConverterDialog(QDialog):
         
         layout.addWidget(options_group)
         
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
         
@@ -531,14 +458,11 @@ class VideoBatchConverterDialog(QDialog):
             
             output_path = os.path.join(original_dir, f"{original_name}_converted{fmt}")
             
-            try:
-                success = convert_video(self.input_path, output_path, fmt, quality)
-                if success:
-                    self.output_paths.append(output_path)
-                else:
-                    errors.append(fmt)
-            except Exception as e:
-                errors.append(f"{fmt}: {str(e)}")
+            success = convert_video(self.input_path, output_path, fmt, quality)
+            if success:
+                self.output_paths.append(output_path)
+            else:
+                errors.append(fmt)
         
         progress.setValue(len(selected_formats))
         
@@ -564,7 +488,6 @@ class VideoBatchConverterDialog(QDialog):
     def get_output_paths(self) -> List[str]:
         return self.output_paths
 
-
 def trim_video(
     input_path: str,
     output_path: str,
@@ -572,19 +495,6 @@ def trim_video(
     end_seconds: float,
     progress_callback: Optional[Callable[[int], None]] = None
 ) -> bool:
-    """
-    Recorta un fragmento de un archivo de video usando ffmpeg.
-
-    Args:
-        input_path: Ruta del archivo de entrada
-        output_path: Ruta del archivo de salida
-        start_seconds: Segundo de inicio del recorte
-        end_seconds: Segundo de fin del recorte
-        progress_callback: Función opcional para reportar progreso (0-100)
-
-    Returns:
-        True si el recorte fue exitoso, False en caso contrario
-    """
     if not is_ffmpeg_available():
         raise RuntimeError("ffmpeg no está instalado o no está disponible en el PATH")
 
@@ -601,37 +511,28 @@ def trim_video(
         output_path
     ]
 
-    try:
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True
-        )
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True
+    )
 
-        if progress_callback:
-            progress_callback(0)
-            import time
-            for i in range(10):
-                time.sleep(0.2)
-                progress_callback((i + 1) * 10)
+    if progress_callback:
+        progress_callback(0)
+        import time
+        for i in range(10):
+            time.sleep(0.2)
+            progress_callback((i + 1) * 10)
 
-        stdout, stderr = process.communicate(timeout=600)
+    stdout, stderr = process.communicate(timeout=600)
 
-        if progress_callback:
-            progress_callback(100)
+    if progress_callback:
+        progress_callback(100)
 
-        return process.returncode == 0 and os.path.exists(output_path)
-
-    except subprocess.TimeoutExpired:
-        process.kill()
-        return False
-    except Exception:
-        return False
-
+    return process.returncode == 0 and os.path.exists(output_path)
 
 class VideoTrimDialog(QDialog):
-    """Diálogo para recortar un fragmento de tiempo de un video."""
 
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -648,7 +549,6 @@ class VideoTrimDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
 
-        # Información del archivo de entrada
         info_group = QGroupBox("Archivo de entrada")
         info_layout = QGridLayout(info_group)
 
@@ -669,7 +569,6 @@ class VideoTrimDialog(QDialog):
 
         layout.addWidget(info_group)
 
-        # Opciones de recorte
         trim_group = QGroupBox("Rango de recorte")
         trim_layout = QGridLayout(trim_group)
 
@@ -711,7 +610,6 @@ class VideoTrimDialog(QDialog):
 
         layout.addWidget(trim_group)
 
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
 
@@ -757,48 +655,32 @@ class VideoTrimDialog(QDialog):
         progress.setWindowModality(Qt.WindowModal)
         progress.setMinimumDuration(0)
 
-        try:
-            def update_progress(value):
-                progress.setValue(value)
-                QApplication.processEvents()
+        def update_progress(value):
+            progress.setValue(value)
+            QApplication.processEvents()
 
-            success = trim_video(
-                self.input_path,
-                self.output_path,
-                start_seconds,
-                end_seconds,
-                update_progress
+        success = trim_video(
+            self.input_path,
+            self.output_path,
+            start_seconds,
+            end_seconds,
+            update_progress
+        )
+
+        progress.setValue(100)
+
+        if success:
+            QMessageBox.information(
+                self,
+                "Éxito",
+                f"Video recortado correctamente.\nGuardado en:\n{self.output_path}"
             )
-
-            progress.setValue(100)
-
-            if success:
-                QMessageBox.information(
-                    self,
-                    "Éxito",
-                    f"Video recortado correctamente.\nGuardado en:\n{self.output_path}"
-                )
-                self.accept()
-            else:
-                QMessageBox.critical(
-                    self,
-                    "Error",
-                    "No se pudo recortar el archivo de video."
-                )
-
-        except RuntimeError as e:
-            progress.close()
+            self.accept()
+        else:
             QMessageBox.critical(
                 self,
                 "Error",
-                f"{str(e)}\n\nPor favor instala ffmpeg para usar esta función."
-            )
-        except Exception as e:
-            progress.close()
-            QMessageBox.critical(
-                self,
-                "Error",
-                f"Error durante el recorte:\n{str(e)}"
+                "No se pudo recortar el archivo de video."
             )
 
     def get_output_path(self) -> Optional[str]:

@@ -1,8 +1,3 @@
-"""
-Módulo de reproducción de video.
-Incluye el widget de video clickeable y el visor de video con controles.
-"""
-
 import os
 from typing import Optional
 from PySide6.QtCore import Qt, QUrl
@@ -16,9 +11,7 @@ from PySide6.QtWidgets import (
 from video_converter import VideoConverterDialog, VideoBatchConverterDialog, VideoTrimDialog
 from video_playlist import VideoPlaylistWidget
 
-
 class ClickableVideoWidget(QVideoWidget):
-    """Widget de video que detecta clicks."""
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -41,9 +34,7 @@ class ClickableVideoWidget(QVideoWidget):
     def set_double_click_callback(self, callback):
         self.double_click_callback = callback
 
-
 class VideoViewer(QWidget):
-    """Visor de video con controles de reproducción y conversión."""
     
     def __init__(self):
         super().__init__()
@@ -63,7 +54,6 @@ class VideoViewer(QWidget):
         self._connect_signals()
     
     def _build_ui(self):
-        # Controles de reproducción
         self.pause_button = QPushButton("Pausar")
         self.pause_button.setFixedSize(80, 32)
         self.pause_button.clicked.connect(self.player.pause)
@@ -72,14 +62,12 @@ class VideoViewer(QWidget):
         self.resume_button.setFixedSize(80, 32)
         self.resume_button.clicked.connect(self.player.play)
         
-        # Slider de posición
         self.position_slider = QSlider(Qt.Horizontal)
         self.position_slider.setRange(0, 0)
         self.position_slider.sliderPressed.connect(self._on_slider_pressed)
         self.position_slider.sliderReleased.connect(self._on_slider_released)
         self.position_slider.valueChanged.connect(self._on_slider_value_changed)
         
-        # Controles de volumen
         self.volume_slider = QSlider(Qt.Horizontal)
         self.volume_slider.setRange(0, 100)
         self.volume_slider.setValue(50)
@@ -92,13 +80,11 @@ class VideoViewer(QWidget):
         self.volume_toggle_button.setFixedSize(70, 32)
         self.volume_toggle_button.clicked.connect(self._toggle_volume)
         
-        # Botón de pantalla completa
         self.fullscreen_button = QToolButton()
         self.fullscreen_button.setText("Pantalla completa")
         self.fullscreen_button.setFixedSize(120, 32)
         self.fullscreen_button.clicked.connect(self._toggle_fullscreen)
         
-        # Botones de conversión
         self.convert_button = QToolButton()
         self.convert_button.setText("Convertir")
         self.convert_button.setToolTip("Convertir a otro formato")
@@ -111,14 +97,12 @@ class VideoViewer(QWidget):
         self.convert_all_button.setFixedSize(110, 32)
         self.convert_all_button.clicked.connect(self._show_batch_converter)
         
-        # Botón de recorte
         self.trim_button = QToolButton()
         self.trim_button.setText("Recortar")
         self.trim_button.setToolTip("Recortar un fragmento de tiempo del video")
         self.trim_button.setFixedSize(80, 32)
         self.trim_button.clicked.connect(self._show_trimmer)
         
-        # Layout de volumen
         volume_layout = QHBoxLayout()
         volume_layout.setContentsMargins(0, 0, 0, 0)
         volume_layout.setSpacing(8)
@@ -129,7 +113,6 @@ class VideoViewer(QWidget):
         self.volume_container = QWidget()
         self.volume_container.setLayout(volume_layout)
         
-        # Layout de controles
         controls = QHBoxLayout()
         controls.setContentsMargins(0, 0, 0, 0)
         controls.setSpacing(10)
@@ -143,7 +126,6 @@ class VideoViewer(QWidget):
         controls.addWidget(self.trim_button)
         controls.addStretch(1)
         
-        # Layout principal
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
@@ -152,7 +134,6 @@ class VideoViewer(QWidget):
         layout.addWidget(self.volume_container)
         layout.addLayout(controls)
         
-        # Lista de reproducción
         self.playlist_widget = VideoPlaylistWidget()
         self.playlist_widget.file_selected.connect(self.load_file)
         layout.addWidget(self.playlist_widget)
@@ -164,14 +145,12 @@ class VideoViewer(QWidget):
         self.video_widget.set_double_click_callback(self._toggle_fullscreen)
     
     def load_file(self, path: str):
-        """Carga un archivo de video."""
         self.current_path = path
         self.player.stop()
         self.player.setSource(QUrl.fromLocalFile(path))
         self.player.play()
     
     def stop(self):
-        """Detiene la reproducción."""
         self.player.stop()
     
     def is_navigation_enabled(self) -> bool:
@@ -225,7 +204,6 @@ class VideoViewer(QWidget):
             self.is_fullscreen = False
     
     def _show_converter(self):
-        """Muestra el diálogo de conversión."""
         if not self.current_path:
             return
         
@@ -233,7 +211,6 @@ class VideoViewer(QWidget):
         dialog.exec()
     
     def _show_batch_converter(self):
-        """Muestra el diálogo de conversión por lotes."""
         if not self.current_path:
             return
         
@@ -241,7 +218,6 @@ class VideoViewer(QWidget):
         dialog.exec()
     
     def _show_trimmer(self):
-        """Muestra el diálogo de recorte de video."""
         if not self.current_path:
             return
         

@@ -1,7 +1,3 @@
-"""
-Módulo de gestión de lista de reproducción de video.
-"""
-
 import os
 import random
 from pathlib import Path
@@ -15,9 +11,7 @@ from PySide6.QtWidgets import (
 
 from video_converter import VIDEO_EXTENSIONS
 
-
 class VideoPlaylistWidget(QWidget):
-    """Widget para gestionar una lista de reproducción de video."""
     
     file_selected = Signal(str)
     
@@ -32,7 +26,6 @@ class VideoPlaylistWidget(QWidget):
         layout.setContentsMargins(0, 4, 0, 0)
         layout.setSpacing(6)
         
-        # Encabezado
         header = QHBoxLayout()
         header.setSpacing(6)
         
@@ -58,7 +51,6 @@ class VideoPlaylistWidget(QWidget):
         
         layout.addLayout(header)
         
-        # Lista
         self.list_widget = QListWidget()
         self.list_widget.setMinimumHeight(120)
         self.list_widget.setMaximumHeight(200)
@@ -69,7 +61,6 @@ class VideoPlaylistWidget(QWidget):
         self.list_widget.viewport().setAcceptDrops(True)
         layout.addWidget(self.list_widget)
         
-        # Botones de ordenamiento
         sort_layout = QHBoxLayout()
         sort_layout.setSpacing(4)
         
@@ -111,7 +102,6 @@ class VideoPlaylistWidget(QWidget):
         self.list_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
     
     def _add_files(self):
-        """Abre diálogo para agregar archivos de video."""
         extensions = " ".join(f"*{ext}" for ext in sorted(VIDEO_EXTENSIONS))
         files, _ = QFileDialog.getOpenFileNames(
             self,
@@ -123,7 +113,6 @@ class VideoPlaylistWidget(QWidget):
             self._add_path(f)
     
     def _add_path(self, path: str):
-        """Agrega una ruta a la lista si es un archivo de video válido."""
         ext = Path(path).suffix.lower()
         if ext not in VIDEO_EXTENSIONS:
             return
@@ -136,7 +125,6 @@ class VideoPlaylistWidget(QWidget):
         self.list_widget.addItem(item)
     
     def _remove_selected(self):
-        """Quita el archivo seleccionado de la lista."""
         row = self.list_widget.currentRow()
         if row >= 0:
             item = self.list_widget.takeItem(row)
@@ -145,12 +133,10 @@ class VideoPlaylistWidget(QWidget):
                 self._paths.remove(path)
     
     def _clear_all(self):
-        """Limpia toda la lista."""
         self.list_widget.clear()
         self._paths.clear()
     
     def _sort_by(self, key: str):
-        """Ordena la lista por el criterio especificado."""
         if not self._paths:
             return
         
@@ -166,7 +152,6 @@ class VideoPlaylistWidget(QWidget):
         self._rebuild_list()
     
     def _rebuild_list(self):
-        """Reconstruye la lista visual desde self._paths."""
         self.list_widget.clear()
         for path in self._paths:
             item = QListWidgetItem(os.path.basename(path))
@@ -175,24 +160,20 @@ class VideoPlaylistWidget(QWidget):
             self.list_widget.addItem(item)
     
     def _on_item_double_clicked(self, item: QListWidgetItem):
-        """Emite señal cuando se hace doble click en un archivo."""
         path = item.data(Qt.UserRole)
         if path:
             self.file_selected.emit(path)
     
     def get_playlist(self) -> List[str]:
-        """Retorna la lista completa de rutas."""
         return list(self._paths)
     
     def get_current_file(self) -> Optional[str]:
-        """Retorna la ruta del archivo seleccionado actualmente."""
         item = self.list_widget.currentItem()
         if item:
             return item.data(Qt.UserRole)
         return None
     
     def next_file(self) -> Optional[str]:
-        """Avanza al siguiente archivo en la lista."""
         row = self.list_widget.currentRow()
         if row < self.list_widget.count() - 1:
             self.list_widget.setCurrentRow(row + 1)
@@ -200,14 +181,11 @@ class VideoPlaylistWidget(QWidget):
         return None
     
     def previous_file(self) -> Optional[str]:
-        """Retrocede al archivo anterior en la lista."""
         row = self.list_widget.currentRow()
         if row > 0:
             self.list_widget.setCurrentRow(row - 1)
             return self.list_widget.currentItem().data(Qt.UserRole)
         return None
-    
-    # --- Drag and Drop desde cualquier origen ---
     
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():

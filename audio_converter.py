@@ -1,8 +1,3 @@
-"""
-Módulo de conversión de archivos de audio.
-Incluye metadatos y conversión entre formatos.
-"""
-
 import json
 import os
 import subprocess
@@ -16,15 +11,12 @@ from PySide6.QtWidgets import (
     QGridLayout, QMessageBox, QFileDialog, QProgressDialog, QApplication
 )
 
-# Formatos de audio soportados
 AUDIO_EXTENSIONS = {
     ".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma"
 }
 
-# Formatos que Qt Multimedia puede reproducir directamente
 QT_SUPPORTED_AUDIO = {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac"}
 
-# Nombres legibles de formatos
 FORMAT_NAMES = {
     ".mp3": "MP3 (MPEG Audio)",
     ".wav": "WAV (Waveform Audio)",
@@ -35,9 +27,7 @@ FORMAT_NAMES = {
     ".wma": "WMA (Windows Media Audio)"
 }
 
-
 def get_audio_info(path: str) -> Dict:
-    """Obtiene información del archivo de audio."""
     info = {
         "path": path,
         "filename": os.path.basename(path),
@@ -52,7 +42,6 @@ def get_audio_info(path: str) -> Dict:
     if os.path.exists(path):
         info["size"] = os.path.getsize(path)
     
-    # Intentar obtener metadatos con ffprobe si está disponible
     try:
         result = subprocess.run(
             ["ffprobe", "-v", "quiet", "-print_format", "json",
@@ -64,7 +53,7 @@ def get_audio_info(path: str) -> Dict:
             if "format" in data:
                 fmt = data["format"]
                 info["duration"] = float(fmt.get("duration", 0))
-                info["bitrate"] = int(fmt.get("bit_rate", 0)) // 1000  # kbps
+                info["bitrate"] = int(fmt.get("bit_rate", 0)) // 1000
             if "streams" in data and len(data["streams"]) > 0:
                 stream = data["streams"][0]
                 info["sample_rate"] = int(stream.get("sample_rate", 0))
@@ -74,9 +63,7 @@ def get_audio_info(path: str) -> Dict:
     
     return info
 
-
 def is_ffmpeg_available() -> bool:
-    """Verifica si ffmpeg está instalado y disponible."""
     try:
         result = subprocess.run(
             ["ffmpeg", "-version"],
@@ -86,29 +73,15 @@ def is_ffmpeg_available() -> bool:
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return False
 
-
 def convert_audio(
     input_path: str,
     output_path: str,
     output_format: str,
     progress_callback: Optional[Callable[[int], None]] = None
 ) -> bool:
-    """
-    Convierte un archivo de audio a otro formato usando ffmpeg.
-    
-    Args:
-        input_path: Ruta del archivo de entrada
-        output_path: Ruta del archivo de salida
-        output_format: Extensión de salida (ej: ".mp3", ".wav")
-        progress_callback: Función opcional para reportar progreso (0-100)
-    
-    Returns:
-        True si la conversión fue exitosa, False en caso contrario
-    """
     if not is_ffmpeg_available():
         raise RuntimeError("ffmpeg no está instalado o no está disponible en el PATH")
     
-    # Mapeo de extensiones a codecs de ffmpeg
     codec_map = {
         ".mp3": "libmp3lame",
         ".wav": "pcm_s16le",
@@ -123,50 +96,37 @@ def convert_audio(
     
     cmd = [
         "ffmpeg",
-        "-y",  # Sobrescribir sin preguntar
+        "-y",
         "-i", input_path,
         "-c:a", codec,
-        "-q:a", "2",  # Calidad alta
+        "-q:a", "2",
         output_path
     ]
     
-    try:
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True
-        )
-        
-        # Monitorear progreso (simplificado)
-        if progress_callback:
-            progress_callback(0)
-            # Simular progreso ya que ffmpeg no reporta fácilmente
-            for i in range(10):
-                time.sleep(0.1)
-                progress_callback((i + 1) * 10)
-        
-        stdout, stderr = process.communicate(timeout=300)
-        
-        if progress_callback:
-            progress_callback(100)
-        
-        return process.returncode == 0 and os.path.exists(output_path)
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True
+    )
     
-    except subprocess.TimeoutExpired:
-        process.kill()
-        return False
-    except Exception:
-        return False
-
+    if progress_callback:
+        progress_callback(0)
+        for i in range(10):
+            time.sleep(0.1)
+            progress_callback((i + 1) * 10)
+    
+    stdout, stderr = process.communicate(timeout=300)
+    
+    if progress_callback:
+        progress_callback(100)
+    
+    return process.returncode == 0 and os.path.exists(output_path)
 
 def get_supported_output_formats(input_format: str) -> List[str]:
-    """Obtiene la lista de formatos a los que se puede convertir un audio."""
     return sorted([ext for ext in AUDIO_EXTENSIONS if ext != input_format.lower()])
 
-
 class AudioConverterDialog(QDialog):
-    """Diálogo para convertir archivos de audio."""
     
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -183,7 +143,6 @@ class AudioConverterDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         
-        # Información del archivo de entrada
         info_group = QGroupBox("Archivo de entrada")
         info_layout = QGridLayout(info_group)
         
@@ -207,11 +166,9 @@ class AudioConverterDialog(QDialog):
         
         layout.addWidget(info_group)
         
-        # Opciones de conversión
         convert_group = QGroupBox("Opciones de conversión")
         convert_layout = QVBoxLayout(convert_group)
         
-        # Formato de salida
         format_layout = QHBoxLayout()
         format_layout.addWidget(QLabel("Convertir a:"))
         self.format_combo = QComboBox()
@@ -224,14 +181,12 @@ class AudioConverterDialog(QDialog):
         format_layout.addStretch()
         convert_layout.addLayout(format_layout)
         
-        # Opción de copia sin conversión
         self.copy_check = QCheckBox("Copiar sin recodificar (copiar códec original)")
         self.copy_check.setToolTip("Mantiene la misma calidad pero cambia el contenedor")
         convert_layout.addWidget(self.copy_check)
         
         layout.addWidget(convert_group)
         
-        # Opciones de guardado
         save_group = QGroupBox("Guardar como")
         save_layout = QVBoxLayout(save_group)
         
@@ -250,7 +205,6 @@ class AudioConverterDialog(QDialog):
         
         layout.addWidget(save_group)
         
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
         
@@ -269,7 +223,6 @@ class AudioConverterDialog(QDialog):
         output_format = self.format_combo.currentData()
         
         if self.new_file_radio.isChecked():
-            # Generar nombre sugerido
             original_dir = os.path.dirname(self.input_path)
             original_name = os.path.splitext(os.path.basename(self.input_path))[0]
             suggested_name = f"{original_name}_converted{output_format}"
@@ -285,68 +238,48 @@ class AudioConverterDialog(QDialog):
                 return
             self.output_path = file_path
         else:
-            # Sobrescribir (realmente crear nuevo y reemplazar)
             original_dir = os.path.dirname(self.input_path)
             original_name = os.path.splitext(os.path.basename(self.input_path))[0]
             self.output_path = os.path.join(original_dir, f"{original_name}{output_format}")
         
-        # Realizar conversión
         progress = QProgressDialog("Convirtiendo audio...", "Cancelar", 0, 100, self)
         progress.setWindowModality(Qt.WindowModal)
         progress.setMinimumDuration(0)
         
-        try:
-            def update_progress(value):
-                progress.setValue(value)
-                QApplication.processEvents()
-            
-            success = convert_audio(
-                self.input_path,
-                self.output_path,
-                output_format,
-                update_progress
-            )
-            
-            progress.setValue(100)
-            
-            if success:
-                if self.overwrite_radio.isChecked() and self.output_path != self.input_path:
-                    os.remove(self.input_path)
-                
-                QMessageBox.information(
-                    self,
-                    "Éxito",
-                    f"Audio convertido correctamente.\nGuardado en:\n{self.output_path}"
-                )
-                self.accept()
-            else:
-                QMessageBox.critical(
-                    self,
-                    "Error",
-                    "No se pudo convertir el archivo de audio."
-                )
+        def update_progress(value):
+            progress.setValue(value)
+            QApplication.processEvents()
         
-        except RuntimeError as e:
-            progress.close()
-            QMessageBox.critical(
+        success = convert_audio(
+            self.input_path,
+            self.output_path,
+            output_format,
+            update_progress
+        )
+        
+        progress.setValue(100)
+        
+        if success:
+            if self.overwrite_radio.isChecked() and self.output_path != self.input_path:
+                os.remove(self.input_path)
+            
+            QMessageBox.information(
                 self,
-                "Error",
-                f"{str(e)}\n\nPor favor instala ffmpeg para usar esta función."
+                "Éxito",
+                f"Audio convertido correctamente.\nGuardado en:\n{self.output_path}"
             )
-        except Exception as e:
-            progress.close()
+            self.accept()
+        else:
             QMessageBox.critical(
                 self,
                 "Error",
-                f"Error durante la conversión:\n{str(e)}"
+                "No se pudo convertir el archivo de audio."
             )
     
     def get_output_path(self) -> Optional[str]:
         return self.output_path
 
-
 class AudioBatchConverterDialog(QDialog):
-    """Diálogo para convertir audio a múltiples formatos simultáneamente."""
     
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -363,12 +296,10 @@ class AudioBatchConverterDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         
-        # Información del archivo
         info_label = QLabel(f"Archivo: {os.path.basename(self.input_path)}")
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
         
-        # Selección de formatos
         format_group = QGroupBox("Seleccionar formatos de salida")
         format_layout = QVBoxLayout(format_group)
         
@@ -381,7 +312,6 @@ class AudioBatchConverterDialog(QDialog):
             self.format_checks[fmt] = check
             format_layout.addWidget(check)
         
-        # Botones de selección rápida
         select_layout = QHBoxLayout()
         select_all_btn = QPushButton("Seleccionar todos")
         select_all_btn.clicked.connect(self._select_all)
@@ -395,7 +325,6 @@ class AudioBatchConverterDialog(QDialog):
         format_layout.addLayout(select_layout)
         layout.addWidget(format_group)
         
-        # Opciones
         options_group = QGroupBox("Opciones")
         options_layout = QVBoxLayout(options_group)
         
@@ -405,7 +334,6 @@ class AudioBatchConverterDialog(QDialog):
         
         layout.addWidget(options_group)
         
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
         
@@ -469,14 +397,11 @@ class AudioBatchConverterDialog(QDialog):
             
             output_path = os.path.join(original_dir, f"{original_name}_converted{fmt}")
             
-            try:
-                success = convert_audio(self.input_path, output_path, fmt)
-                if success:
-                    self.output_paths.append(output_path)
-                else:
-                    errors.append(fmt)
-            except Exception as e:
-                errors.append(f"{fmt}: {str(e)}")
+            success = convert_audio(self.input_path, output_path, fmt)
+            if success:
+                self.output_paths.append(output_path)
+            else:
+                errors.append(fmt)
         
         progress.setValue(len(selected_formats))
         
@@ -502,7 +427,6 @@ class AudioBatchConverterDialog(QDialog):
     def get_output_paths(self) -> List[str]:
         return self.output_paths
 
-
 def trim_audio(
     input_path: str,
     output_path: str,
@@ -510,19 +434,6 @@ def trim_audio(
     end_seconds: float,
     progress_callback: Optional[Callable[[int], None]] = None
 ) -> bool:
-    """
-    Recorta un fragmento de un archivo de audio usando ffmpeg.
-
-    Args:
-        input_path: Ruta del archivo de entrada
-        output_path: Ruta del archivo de salida
-        start_seconds: Segundo de inicio del recorte
-        end_seconds: Segundo de fin del recorte
-        progress_callback: Función opcional para reportar progreso (0-100)
-
-    Returns:
-        True si el recorte fue exitoso, False en caso contrario
-    """
     if not is_ffmpeg_available():
         raise RuntimeError("ffmpeg no está instalado o no está disponible en el PATH")
 
@@ -539,36 +450,27 @@ def trim_audio(
         output_path
     ]
 
-    try:
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True
-        )
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True
+    )
 
-        if progress_callback:
-            progress_callback(0)
-            for i in range(10):
-                time.sleep(0.1)
-                progress_callback((i + 1) * 10)
+    if progress_callback:
+        progress_callback(0)
+        for i in range(10):
+            time.sleep(0.1)
+            progress_callback((i + 1) * 10)
 
-        stdout, stderr = process.communicate(timeout=300)
+    stdout, stderr = process.communicate(timeout=300)
 
-        if progress_callback:
-            progress_callback(100)
+    if progress_callback:
+        progress_callback(100)
 
-        return process.returncode == 0 and os.path.exists(output_path)
-
-    except subprocess.TimeoutExpired:
-        process.kill()
-        return False
-    except Exception:
-        return False
-
+    return process.returncode == 0 and os.path.exists(output_path)
 
 class AudioTrimDialog(QDialog):
-    """Diálogo para recortar un fragmento de tiempo de un audio."""
 
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -585,7 +487,6 @@ class AudioTrimDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
 
-        # Información del archivo de entrada
         info_group = QGroupBox("Archivo de entrada")
         info_layout = QGridLayout(info_group)
 
@@ -606,7 +507,6 @@ class AudioTrimDialog(QDialog):
 
         layout.addWidget(info_group)
 
-        # Opciones de recorte
         trim_group = QGroupBox("Rango de recorte")
         trim_layout = QGridLayout(trim_group)
 
@@ -648,7 +548,6 @@ class AudioTrimDialog(QDialog):
 
         layout.addWidget(trim_group)
 
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
 
@@ -694,48 +593,32 @@ class AudioTrimDialog(QDialog):
         progress.setWindowModality(Qt.WindowModal)
         progress.setMinimumDuration(0)
 
-        try:
-            def update_progress(value):
-                progress.setValue(value)
-                QApplication.processEvents()
+        def update_progress(value):
+            progress.setValue(value)
+            QApplication.processEvents()
 
-            success = trim_audio(
-                self.input_path,
-                self.output_path,
-                start_seconds,
-                end_seconds,
-                update_progress
+        success = trim_audio(
+            self.input_path,
+            self.output_path,
+            start_seconds,
+            end_seconds,
+            update_progress
+        )
+
+        progress.setValue(100)
+
+        if success:
+            QMessageBox.information(
+                self,
+                "Éxito",
+                f"Audio recortado correctamente.\nGuardado en:\n{self.output_path}"
             )
-
-            progress.setValue(100)
-
-            if success:
-                QMessageBox.information(
-                    self,
-                    "Éxito",
-                    f"Audio recortado correctamente.\nGuardado en:\n{self.output_path}"
-                )
-                self.accept()
-            else:
-                QMessageBox.critical(
-                    self,
-                    "Error",
-                    "No se pudo recortar el archivo de audio."
-                )
-
-        except RuntimeError as e:
-            progress.close()
+            self.accept()
+        else:
             QMessageBox.critical(
                 self,
                 "Error",
-                f"{str(e)}\n\nPor favor instala ffmpeg para usar esta función."
-            )
-        except Exception as e:
-            progress.close()
-            QMessageBox.critical(
-                self,
-                "Error",
-                f"Error durante el recorte:\n{str(e)}"
+                "No se pudo recortar el archivo de audio."
             )
 
     def get_output_path(self) -> Optional[str]:

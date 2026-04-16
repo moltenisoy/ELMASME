@@ -1,14 +1,8 @@
-"""
-Módulo para manejo de archivos PDF.
-"""
-
 from PySide6.QtPdf import QPdfDocument
 
 PDF_EXTENSIONS = {".pdf"}
 
-
 def extract_pdf_text(pdf_document: QPdfDocument) -> str:
-    """Extrae texto de un documento PDF."""
     text_parts = []
     page_count = pdf_document.pageCount()
 

@@ -1,7 +1,3 @@
-"""
-Módulo para manejo de archivos de video.
-Re-exporta desde video_converter, video_player y video_playlist para compatibilidad.
-"""
 from video_converter import (  # noqa: F401
     VIDEO_EXTENSIONS,
     FORMAT_NAMES,
