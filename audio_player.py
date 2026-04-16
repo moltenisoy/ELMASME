@@ -270,10 +270,10 @@ class AudioViewer(QWidget):
             filename = os.path.basename(file_path)
             pct = int((i / total) * 100)
             self._progress_bar.start(filename)
-            self._progress_bar.update_progress(pct, filename)
             
             ext = Path(file_path).suffix.lower()
             if ext == audio_format:
+                self._progress_bar.update_progress(int(((i + 1) / total) * 100), filename)
                 continue
             
             out_dir = os.path.dirname(file_path)

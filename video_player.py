@@ -334,7 +334,6 @@ class VideoViewer(QWidget):
         for file_path in video_files:
             filename = os.path.basename(file_path)
             self._progress_bar.start(filename)
-            self._progress_bar.update_progress(int((idx / total) * 100), filename)
             
             ext = Path(file_path).suffix.lower()
             if ext != video_format:
@@ -353,7 +352,7 @@ class VideoViewer(QWidget):
         
         for file_path in audio_files:
             filename = os.path.basename(file_path)
-            self._progress_bar.update_progress(int((idx / total) * 100), filename)
+            self._progress_bar.start(filename)
             
             ext = Path(file_path).suffix.lower()
             if ext != audio_format:
