@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QFileDialog, QMessageBox, QToolButton, QFrame, QMenuBar
+    QPushButton, QFileDialog, QMessageBox, QToolButton, QFrame, QMenuBar, QMenu
 )
 
 from content_viewers import ViewerHost
@@ -273,7 +273,6 @@ class UniversalViewerWindow(QMainWindow):
     
     def _show_archivo_menu(self):
         """Muestra un menú contextual con opciones de Archivo."""
-        from PySide6.QtWidgets import QMenu
         menu = QMenu(self)
         
         abrir_archivo = QAction("Abrir archivo", self)
@@ -288,7 +287,6 @@ class UniversalViewerWindow(QMainWindow):
     
     def _show_integracion_menu(self):
         """Muestra un menú contextual con opciones de Integración."""
-        from PySide6.QtWidgets import QMenu
         menu = QMenu(self)
         
         registrar = QAction("Registrar asociaciones", self)

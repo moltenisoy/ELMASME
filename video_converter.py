@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QDialog, QComboBox, QCheckBox, QGroupBox,
+    QDialog, QComboBox, QCheckBox, QGroupBox, QSpinBox,
     QGridLayout, QMessageBox, QFileDialog, QProgressDialog, QApplication
 )
 
@@ -675,7 +675,6 @@ class VideoTrimDialog(QDialog):
 
         trim_layout.addWidget(QLabel("Inicio (mm:ss):"), 0, 0)
         start_h = QHBoxLayout()
-        from PySide6.QtWidgets import QSpinBox
         self.start_min = QSpinBox()
         self.start_min.setRange(0, 9999)
         self.start_min.setValue(0)

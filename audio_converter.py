@@ -12,7 +12,7 @@ from typing import Optional, List, Dict, Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QComboBox, QCheckBox, QGroupBox,
+    QComboBox, QCheckBox, QGroupBox, QSpinBox,
     QGridLayout, QMessageBox, QFileDialog, QProgressDialog, QApplication
 )
 
@@ -609,8 +609,6 @@ class AudioTrimDialog(QDialog):
         # Opciones de recorte
         trim_group = QGroupBox("Rango de recorte")
         trim_layout = QGridLayout(trim_group)
-
-        from PySide6.QtWidgets import QSpinBox
 
         trim_layout.addWidget(QLabel("Inicio (mm:ss):"), 0, 0)
         start_h = QHBoxLayout()
