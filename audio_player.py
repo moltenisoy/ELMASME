@@ -16,6 +16,9 @@ from audio_converter import (
 from audio_playlist import AudioPlaylistWidget
 from progress_bar import ConversionProgressBar
 
+OVERLAY_HEIGHT = 36
+OVERLAY_TRIGGER_ZONE = 0.8
+
 VOLUME_SLIDER_STYLE = """
     QSlider::groove:horizontal {
         background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -180,7 +183,7 @@ class AudioViewer(QWidget):
         pos = event.pos()
         if pg.contains(pos):
             local_y = pos.y() - pg.y()
-            bottom_zone = pg.height() * 0.8
+            bottom_zone = pg.height() * OVERLAY_TRIGGER_ZONE
             if local_y >= bottom_zone:
                 if not self.overlay.isVisible() and not self._show_timer.isActive():
                     self._show_timer.start()
@@ -213,7 +216,7 @@ class AudioViewer(QWidget):
 
     def _reposition_overlay(self):
         pg = self.placeholder.geometry()
-        overlay_h = 36
+        overlay_h = OVERLAY_HEIGHT
         self.overlay.setGeometry(
             pg.x(), pg.y() + pg.height() - overlay_h, pg.width(), overlay_h
         )

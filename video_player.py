@@ -21,6 +21,9 @@ from audio_converter import (
 from video_playlist import VideoPlaylistWidget
 from progress_bar import ConversionProgressBar
 
+OVERLAY_HEIGHT = 36
+OVERLAY_TRIGGER_ZONE = 0.8
+
 VOLUME_SLIDER_STYLE = """
     QSlider::groove:horizontal {
         background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -224,7 +227,7 @@ class VideoViewer(QWidget):
         video_height = self.video_widget.height()
         if video_height <= 0:
             return
-        bottom_zone = video_height * 0.8
+        bottom_zone = video_height * OVERLAY_TRIGGER_ZONE
         if pos.y() >= bottom_zone:
             if not self.overlay.isVisible() and not self._show_timer.isActive():
                 self._show_timer.start()
@@ -251,7 +254,7 @@ class VideoViewer(QWidget):
 
     def _reposition_overlay(self):
         vg = self.video_widget.geometry()
-        overlay_h = 36
+        overlay_h = OVERLAY_HEIGHT
         self.overlay.setGeometry(
             vg.x(), vg.y() + vg.height() - overlay_h, vg.width(), overlay_h
         )
