@@ -1,7 +1,3 @@
-"""
-Módulo para visualización de documentos.
-"""
-
 import os
 from pathlib import Path
 from typing import Set, Dict
@@ -11,7 +7,7 @@ from PySide6.QtPdf import QPdfDocument
 from PySide6.QtPdfWidgets import QPdfView
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
-    QStackedWidget, QMessageBox
+    QStackedWidget, QMessageBox, QFileDialog
 )
 
 from document_pdf import PDF_EXTENSIONS, extract_pdf_text
@@ -90,6 +86,7 @@ class DocumentViewer(QWidget):
         self.current_path = None
         self.edit_mode = True
         self.is_pdf = False
+        self._modified = False
 
         self._build_ui()
 
@@ -127,8 +124,12 @@ class DocumentViewer(QWidget):
             }
         """)
 
+        self.text_view.setAcceptDrops(False)
+
         self.toolbar = TextEditorToolbar(self.text_view, self)
         self.toolbar.save_btn.clicked.connect(self.save_file)
+
+        self.text_view.textChanged.connect(self._on_content_changed)
 
         self.message = QLabel()
         self.message.setAlignment(Qt.AlignCenter)
@@ -188,6 +189,7 @@ class DocumentViewer(QWidget):
             if self.pdf_document.status() == QPdfDocument.Status.Ready:
                 pdf_text = extract_pdf_text(self.pdf_document)
                 self.text_view.setPlainText(pdf_text)
+                self._modified = False
                 self.stack.setCurrentWidget(self.text_view)
                 self.toolbar.setVisible(True)
                 self.zoom_out_button.setVisible(False)
@@ -197,11 +199,13 @@ class DocumentViewer(QWidget):
             self.message.setText("No fue posible renderizar el PDF.")
             self.stack.setCurrentWidget(self.message)
             self.toolbar.setVisible(False)
+            self._modified = False
             return
 
         if ext in TEXT_DOCUMENT_EXTENSIONS:
             content = read_text_file(path)
             self.text_view.setPlainText(content)
+            self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
             self.zoom_out_button.setVisible(False)
@@ -211,9 +215,27 @@ class DocumentViewer(QWidget):
         self.message.setText("Formato de documento incompatible para visualización directa.")
         self.stack.setCurrentWidget(self.message)
         self.toolbar.setVisible(False)
+        self._modified = False
 
     def save_file(self):
         self.toolbar.save_current(self.current_path, self.is_pdf)
+        self._modified = False
+
+    def save_file_as(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Guardar como", "", "Todos los archivos (*.*)")
+        if file_path:
+            content = self.text_view.toPlainText()
+            save_text_file(file_path, content)
+            self._modified = False
+
+    def is_modified(self):
+        return self._modified
+
+    def discard_changes(self):
+        self._modified = False
+
+    def _on_content_changed(self):
+        self._modified = True
 
     def zoom_in(self):
         if self.stack.currentWidget() == self.pdf_view:
