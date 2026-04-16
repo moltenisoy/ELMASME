@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QToolButton, QSizePolicy
 )
 
-from video_converter import VideoConverterDialog, VideoBatchConverterDialog
+from video_converter import VideoConverterDialog, VideoBatchConverterDialog, VideoTrimDialog
 from video_playlist import VideoPlaylistWidget
 
 
@@ -111,6 +111,13 @@ class VideoViewer(QWidget):
         self.convert_all_button.setFixedSize(110, 32)
         self.convert_all_button.clicked.connect(self._show_batch_converter)
         
+        # Botón de recorte
+        self.trim_button = QToolButton()
+        self.trim_button.setText("Recortar")
+        self.trim_button.setToolTip("Recortar un fragmento de tiempo del video")
+        self.trim_button.setFixedSize(80, 32)
+        self.trim_button.clicked.connect(self._show_trimmer)
+        
         # Layout de volumen
         volume_layout = QHBoxLayout()
         volume_layout.setContentsMargins(0, 0, 0, 0)
@@ -133,6 +140,7 @@ class VideoViewer(QWidget):
         controls.addWidget(self.fullscreen_button)
         controls.addWidget(self.convert_button)
         controls.addWidget(self.convert_all_button)
+        controls.addWidget(self.trim_button)
         controls.addStretch(1)
         
         # Layout principal
@@ -230,4 +238,12 @@ class VideoViewer(QWidget):
             return
         
         dialog = VideoBatchConverterDialog(self.current_path, self)
+        dialog.exec()
+    
+    def _show_trimmer(self):
+        """Muestra el diálogo de recorte de video."""
+        if not self.current_path:
+            return
+        
+        dialog = VideoTrimDialog(self.current_path, self)
         dialog.exec()
