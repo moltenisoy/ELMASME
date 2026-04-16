@@ -4,7 +4,7 @@ from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFileDialog, QMessageBox, QToolButton, QFrame, QMenu,
-    QTabWidget, QDialog
+    QTabWidget, QDialog, QCheckBox
 )
 
 from content_viewers import ViewerHost
@@ -26,6 +26,7 @@ class UniversalViewerWindow(QMainWindow):
         self.setAcceptDrops(True)
         self._tab_data = {}
         self._current_theme_index = 0
+        self._no_multi_playback = False
         self.setWindowTitle("Universal Viewer")
         self.resize(1280, 800)
         self._build_ui()
@@ -71,38 +72,24 @@ class UniversalViewerWindow(QMainWindow):
     def _build_footer(self) -> QFrame:
         footer = QFrame()
         footer.setObjectName("FooterPanel")
-        footer.setFixedHeight(60)
+        footer.setFixedHeight(44)
 
         footer_layout = QHBoxLayout(footer)
-        footer_layout.setContentsMargins(12, 4, 12, 4)
-        footer_layout.setSpacing(8)
+        footer_layout.setContentsMargins(8, 2, 8, 2)
+        footer_layout.setSpacing(6)
 
         self.prev_button = QToolButton()
         self.prev_button.setText("◀ Anterior")
-        self.prev_button.setFixedSize(QSize(120, 40))
+        self.prev_button.setFixedSize(QSize(100, 30))
         self.prev_button.clicked.connect(self.go_previous)
 
         self.archivo_button = QPushButton("Archivo")
-        self.archivo_button.setFixedSize(80, 26)
+        self.archivo_button.setFixedSize(70, 24)
         self.archivo_button.clicked.connect(self._show_archivo_menu)
 
-        self.integracion_button = QPushButton("Integración")
-        self.integracion_button.setFixedSize(90, 26)
-        self.integracion_button.clicked.connect(self._show_integracion_menu)
-
-        buttons_container = QFrame()
-        buttons_layout = QVBoxLayout(buttons_container)
-        buttons_layout.setContentsMargins(0, 0, 0, 0)
-        buttons_layout.setSpacing(2)
-        buttons_layout.setAlignment(Qt.AlignCenter)
-        buttons_layout.addWidget(self.archivo_button)
-        buttons_layout.addWidget(self.integracion_button)
-
-        info_container = QFrame()
-        info_layout = QVBoxLayout(info_container)
-        info_layout.setContentsMargins(0, 0, 0, 0)
-        info_layout.setSpacing(2)
-        info_layout.setAlignment(Qt.AlignCenter)
+        self.settings_button = QPushButton("⚙")
+        self.settings_button.setFixedSize(30, 24)
+        self.settings_button.clicked.connect(self._show_settings_panel)
 
         self.file_name_label = QLabel("Sin archivo")
         self.file_name_label.setObjectName("FileNameLabel")
@@ -112,6 +99,11 @@ class UniversalViewerWindow(QMainWindow):
         self.file_path_label.setObjectName("FilePathLabel")
         self.file_path_label.setAlignment(Qt.AlignCenter)
 
+        info_container = QFrame()
+        info_layout = QVBoxLayout(info_container)
+        info_layout.setContentsMargins(0, 0, 0, 0)
+        info_layout.setSpacing(0)
+        info_layout.setAlignment(Qt.AlignCenter)
         info_layout.addWidget(self.file_name_label)
         info_layout.addWidget(self.file_path_label)
 
@@ -120,16 +112,17 @@ class UniversalViewerWindow(QMainWindow):
         self.nav_info_label.setAlignment(Qt.AlignCenter)
 
         self.theme_button = QPushButton("🎨 Tema")
-        self.theme_button.setFixedSize(80, 26)
+        self.theme_button.setFixedSize(80, 24)
         self.theme_button.clicked.connect(self._show_theme_menu)
 
         self.next_button = QToolButton()
         self.next_button.setText("Siguiente ▶")
-        self.next_button.setFixedSize(QSize(120, 40))
+        self.next_button.setFixedSize(QSize(100, 30))
         self.next_button.clicked.connect(self.go_next)
 
         footer_layout.addWidget(self.prev_button)
-        footer_layout.addWidget(buttons_container)
+        footer_layout.addWidget(self.archivo_button)
+        footer_layout.addWidget(self.settings_button)
         footer_layout.addStretch(1)
         footer_layout.addWidget(self.nav_info_label)
         footer_layout.addWidget(self.theme_button)
@@ -151,22 +144,56 @@ class UniversalViewerWindow(QMainWindow):
 
         menu.exec(self.archivo_button.mapToGlobal(self.archivo_button.rect().topLeft()))
 
-    def _show_integracion_menu(self):
-        menu = QMenu(self)
+    def _show_settings_panel(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Ajustes")
+        dialog.setFixedSize(450, 280)
 
-        registrar = QAction("Registrar asociaciones", self)
-        registrar.triggered.connect(self.register_associations)
-        menu.addAction(registrar)
+        dlg_layout = QVBoxLayout(dialog)
+        dlg_layout.setSpacing(12)
 
-        desregistrar = QAction("Desregistrar asociaciones", self)
-        desregistrar.triggered.connect(self.unregister_associations)
-        menu.addAction(desregistrar)
+        integracion_label = QLabel("Integración")
+        integracion_label.setStyleSheet("font-weight:bold;font-size:14px;")
+        dlg_layout.addWidget(integracion_label)
 
-        abrir_default_apps = QAction("Abrir apps predeterminadas de Windows", self)
-        abrir_default_apps.triggered.connect(open_windows_default_apps_settings)
-        menu.addAction(abrir_default_apps)
+        registrar_btn = QPushButton("Registrar asociaciones")
+        registrar_btn.clicked.connect(self.register_associations)
+        dlg_layout.addWidget(registrar_btn)
 
-        menu.exec(self.integracion_button.mapToGlobal(self.integracion_button.rect().topLeft()))
+        desregistrar_btn = QPushButton("Desregistrar asociaciones")
+        desregistrar_btn.clicked.connect(self.unregister_associations)
+        dlg_layout.addWidget(desregistrar_btn)
+
+        abrir_default_btn = QPushButton("Abrir apps predeterminadas de Windows")
+        abrir_default_btn.clicked.connect(open_windows_default_apps_settings)
+        dlg_layout.addWidget(abrir_default_btn)
+
+        dlg_layout.addSpacing(10)
+
+        reproduccion_label = QLabel("Reproducción")
+        reproduccion_label.setStyleSheet("font-weight:bold;font-size:14px;")
+        dlg_layout.addWidget(reproduccion_label)
+
+        self._no_multi_checkbox = QCheckBox("No permitir reproducción de múltiples archivos simultáneos")
+        self._no_multi_checkbox.setChecked(self._no_multi_playback)
+        self._no_multi_checkbox.toggled.connect(self._on_no_multi_playback_changed)
+        dlg_layout.addWidget(self._no_multi_checkbox)
+
+        dlg_layout.addStretch()
+
+        cerrar_btn = QPushButton("Cerrar")
+        cerrar_btn.clicked.connect(dialog.accept)
+        dlg_layout.addWidget(cerrar_btn, alignment=Qt.AlignRight)
+
+        dialog.move(
+            self.x() + (self.width() - dialog.width()) // 2,
+            self.y() + (self.height() - dialog.height()) // 2
+        )
+
+        dialog.exec()
+
+    def _on_no_multi_playback_changed(self, checked):
+        self._no_multi_playback = checked
 
     def _show_theme_menu(self):
         menu = QMenu(self)
@@ -279,11 +306,6 @@ class UniversalViewerWindow(QMainWindow):
     def _on_tab_changed(self, index):
         if index < 0:
             return
-        for i in range(self.tab_widget.count()):
-            if i != index:
-                w = self.tab_widget.widget(i)
-                if w:
-                    w.stop_media()
         self._refresh_navigation()
 
     def _current_tab_data(self):
@@ -419,6 +441,12 @@ class UniversalViewerWindow(QMainWindow):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
 
+    def _stop_all_media(self):
+        for i in range(self.tab_widget.count()):
+            w = self.tab_widget.widget(i)
+            if w:
+                w.stop_media()
+
     def dropEvent(self, event):
         if event.mimeData().hasUrls():
             paths = []
@@ -428,19 +456,46 @@ class UniversalViewerWindow(QMainWindow):
                     paths.append(path)
 
             for path in paths:
-                data, viewer = self._current_tab_data()
-                if data and data['current_path']:
-                    self._open_in_new_tab(path)
-                else:
-                    if viewer and data:
+                if self._no_multi_playback:
+                    data, viewer = self._current_tab_data()
+                    if data and viewer:
+                        if self._prompt_unsaved_changes(viewer):
+                            continue
+                        self._stop_all_media()
                         self._load_path_in_tab(path, viewer, data['navigator'])
                     else:
+                        self._stop_all_media()
                         self._open_in_new_tab(path)
+                else:
+                    data, viewer = self._current_tab_data()
+                    if data and data['current_path']:
+                        self._open_in_new_tab(path)
+                    else:
+                        if viewer and data:
+                            self._load_path_in_tab(path, viewer, data['navigator'])
+                        else:
+                            self._open_in_new_tab(path)
 
             event.acceptProposedAction()
 
     def open_file_dialog(self):
         data, viewer = self._current_tab_data()
+
+        if self._no_multi_playback:
+            if data and viewer:
+                if self._prompt_unsaved_changes(viewer):
+                    return
+            extensions = " ".join(f"*{ext}" for ext in supported_extensions())
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Abrir archivo", "", f"Archivos compatibles ({extensions})"
+            )
+            if file_path:
+                self._stop_all_media()
+                if viewer and data:
+                    self._load_path_in_tab(file_path, viewer, data['navigator'])
+                else:
+                    self._open_in_new_tab(file_path)
+            return
 
         if data and data['current_path']:
             choice = self._show_open_choice_dialog()
@@ -474,6 +529,19 @@ class UniversalViewerWindow(QMainWindow):
 
     def open_folder_dialog(self):
         data, viewer = self._current_tab_data()
+
+        if self._no_multi_playback:
+            if data and viewer:
+                if self._prompt_unsaved_changes(viewer):
+                    return
+            folder = QFileDialog.getExistingDirectory(self, "Abrir carpeta", "")
+            if folder:
+                self._stop_all_media()
+                if viewer and data:
+                    self._load_path_in_tab(folder, viewer, data['navigator'])
+                else:
+                    self._open_in_new_tab(folder)
+            return
 
         if data and data['current_path']:
             choice = self._show_open_choice_dialog()

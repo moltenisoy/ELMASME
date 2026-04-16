@@ -45,8 +45,6 @@ class ViewerHost(QWidget):
             self.video_viewer.exit_fullscreen()
 
     def load_file(self, path: str):
-        self.stop_media()
-
         kind = get_content_type(path)
 
         if kind == "image":

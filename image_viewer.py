@@ -32,6 +32,7 @@ class PanLabel(QLabel):
         self._offset_y = 0
         self._max_offset_x = 0
         self._max_offset_y = 0
+        self._image_viewer = None
         self.setCursor(Qt.OpenHandCursor)
     
     def set_pan_limits(self, max_offset_x: int, max_offset_y: int):
@@ -83,7 +84,8 @@ class PanLabel(QLabel):
             delta = event.pos() - self._last_pos
             self.pan(delta.x(), delta.y())
             self._last_pos = event.pos()
-            self.parent().update_pixmap_position()
+            if self._image_viewer:
+                self._image_viewer.update_pixmap_position()
         super().mouseMoveEvent(event)
 
 
@@ -128,6 +130,7 @@ class ImageViewer(QWidget):
         
         # Label para mostrar la imagen con capacidad de pan
         self.label = PanLabel()
+        self.label._image_viewer = self
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setStyleSheet("background: transparent;")
         
