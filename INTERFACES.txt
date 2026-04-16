@@ -1,0 +1,280 @@
+En modo formal técnico profesional entrego el Prompt 1 completo para la replicación exacta de la interfaz gráfica de PlayStation 5 sin omitir ningún detalle de la estructura distribución de opciones y funciones estética colorimetría aplicada notificaciones tipo de animaciones distribución de los elementos en pantalla y diseño geométrico de los mismos tal como se recolectó en la investigación profunda. Prompt 1 PS5 UI: Replica exactamente la estética gráfica de la PlayStation 5 home screen y control center en cualquier otra interfaz de diseño diferente transformándola completamente para que adopte esta estructura y distribución de opciones y funciones. La estructura consiste en un home screen con una barra horizontal de cinco tabs ubicados en la parte superior de la pantalla: PS Plus con su icono correspondiente PlayStation Store con su icono correspondiente el juego actual la game library y media todos representados únicamente mediante icons sin texto para minimizar clutter visual. Debajo de esa barra se encuentra la fila de game icons que se presentan en tamaño reducido para permitir que el key art del juego seleccionado destaque en el centro de la pantalla distribuidos en una grilla horizontal que se desplaza con el stick analógico o con los botones L1 y R1 para cambiar de tab de manera rápida. La distribución general es top-heavy con la barra de navegación ocupando la parte superior el contenido principal ocupando la mayor parte de la pantalla central y widgets personalizables en el Welcome Hub que pueden ser movidos y agregados según preferencia del usuario incluyendo recent stats o background dinámico. La estética es dark mode con fondo negro mate acentos en azul eléctrico y blanco para los icons. La geometría es limpia con bordes rectos pero suaves en las cards de juegos que consisten en rectángulos apaisados con esquinas redondeadas mínimas. Las notificaciones se gestionan en el Control Center que se abre mediante el botón PS y presenta una fila de icons customizables en la parte inferior de la pantalla cuando se está en juego incluyendo Home Notifications con badge numérico Game Base para amigos y permite reordenar todo excepto algunos elementos fijos. Las animaciones consisten en fades suaves y slides horizontales al cambiar de tabs con L1 y R1 transiciones rápidas sin lag icons que se agrandan ligeramente al recibir focus y el fondo del Welcome Hub que incluye showcase mode con slideshow o idle animation. La colorimetría aplicada utiliza negro dominante código hexadecimal 000000 azul PS código hexadecimal 00AEEF en highlights y blanco código hexadecimal FFFFFF para texto y borders. Los elementos geométricos incluyen tabs alineados perfectamente de manera horizontal en la parte superior con spacing uniforme game icons en grid de cinco o más según tamaño todo centrado y simétrico. El Control Center se superpone de manera semi-transparente al abrirse con icons en forma de círculo o rectángulo redondeado según customización y las notificaciones toasts aparecen en la esquina superior derecha con fade in. Este prompt debe aplicarse a cualquier diseño input transformándolo completamente en esta distribución colorimetría geometría y animaciones sin alterar la funcionalidad base original.
+En modo formal técnico profesional entrego el Prompt 2 completo para la replicación exacta de la interfaz gráfica de SteamOS sin omitir ningún detalle de la estructura distribución de opciones y funciones estética colorimetría aplicada notificaciones tipo de animaciones distribución de los elementos en pantalla y diseño geométrico de los mismos tal como se recolectó en la investigación profunda. Prompt 2 SteamOS UI: Replica la estética completa de SteamOS en sus modos Game Mode y Desktop Mode en cualquier otra interfaz de diseño diferente transformándola completamente para que adopte esta estructura y distribución de opciones y funciones. En Game Mode la estructura es controller-first con home screen que presenta un carousel de recent games en el centro grande capsules en alta resolución que se agrandan al recibir focus abajo un footer con quick access y arriba o en el lado el Steam menu con opciones de library store friends y settings. La distribución incluye carousel horizontal que ocupa el setenta por ciento de la pantalla opciones en vertical list a la izquierda al abrir el Steam button y quick settings overlay a la derecha. La estética es dark mode con acentos en azul Steam código hexadecimal 1B9FFF y verde fondo negro con gradients sutiles. La geometría utiliza cards y buttons redondeados con corner radius alto para adaptarse al feel de handheld. Las notificaciones consisten en toasts que aparecen en la esquina inferior con sonido achievement unlocks con toast y sonido nuevo. Las animaciones incluyen smooth scrolls en el carousel fade ins en los menus y focus glow azul que se mueve con trackpad o stick. En Desktop Mode la estructura es KDE Plasma completa con taskbar ubicada en la parte inferior full width start menu tipo Steam icons en desktop system tray en la derecha con notifications y windows que se pueden resizear y tile. La colorimetría mantiene los mismos tonos dark con plasma customization. Los elementos geométricos incluyen taskbar horizontal bottom full width menus dropdown con borders rectos pero icons redondeados y spacing uniforme en grids. La diferencia clave es que Game Mode es full screen console-like sin cursor mientras Desktop Mode incluye mouse support y windows manager. Este prompt debe aplicarse a cualquier diseño input transformándolo completamente en esta distribución estética colorimetría geometría y animaciones manteniendo las funciones originales sin alteración.
+En modo formal técnico profesional entrego el Prompt 3 completo para la replicación exacta de la interfaz gráfica de Nintendo Switch 2 sin omitir ningún detalle de la estructura distribución de opciones y funciones estética colorimetría aplicada notificaciones tipo de animaciones distribución de los elementos en pantalla y diseño geométrico de los mismos tal como se recolectó en la investigación profunda. Prompt 3 Nintendo Switch 2 UI: Replica la estética del Nintendo Switch 2 HOME Menu en cualquier otra interfaz de diseño diferente transformándola completamente para que adopte esta estructura y distribución de opciones y funciones. La estructura presenta game icons en una fila horizontal al centro con el más reciente primero icons con bordes redondeados suaves para un look sleeker distribuidos de izquierda a derecha ocupando el medio de la pantalla en el display de 7.9 pulgadas. Arriba a la izquierda en el corner se encuentra My Page con icons de user info y friends list. Abajo en el bottom edge o en un tablet unificado agrupado se encuentran Nintendo Switch Online GameChat con nuevo icono C turquoise para voice video y screen share News en verde eShop en rojo vibrante en vez de naranja viejo Album en pastel blue GameShare Controllers Virtual Game Card System Settings y Sleep Mode. La distribución es minimal con fila de juegos grande en el centro y barra inferior con apps en tablet group para evitar clutter optimizado para pantalla grande con más espacio. La estética utiliza fondo blanco o negro según theme day o night acentos en rojo para eShop azul y verde en icons. La geometría presenta rounded squares en todas partes icons más grandes y suaves. Las notificaciones están integradas en NSO y News con badges en icons. Las animaciones consisten en snappy slides y fades al navegar con Joy-Con selection outline rainbow en la bottom bar y transiciones rápidas sin delay. La colorimetría aplica blanco código hexadecimal FFFFFF default negro código hexadecimal 000000 para dark rojo código hexadecimal FF0000 en eShop e icons pastel. Los elementos geométricos incluyen todo alineado grid-like horizontal tablet group rectangular unificado abajo icons en fila perfecta con equal spacing battery y controller icons redondeados arriba derecha. Este prompt debe aplicarse a cualquier diseño input transformándolo completamente en esta estructura distribución colorimetría geometría y animaciones sin alterar la lógica funcional base y optimizado para pantalla grande.
+
+
+
+
+
+
+
+
+
+Prompt para Agente de Código: Estética de Interfaz PlayStation 5 (PS5)
+
+OBJETIVO:
+Aplicar el lenguaje de diseño de la interfaz de usuario (UI) de PlayStation 5 a cualquier otra interfaz proporcionada. Este prompt describe en detalle la estética, estructura, interacciones y filosofía de diseño de la UI de PS5, sirviendo como una guía exhaustiva para transformar visual y funcionalmente una interfaz existente.
+
+1. Visión General y Filosofía de Diseño
+
+Concepto Principal: "Acceso inmediato a todo sin salir del juego". La interfaz está diseñada para la superposición y la no interrupción del juego. La navegación es rápida y fluida, minimizando el tiempo en menús.
+
+Revisión Completa: La UI de PS5 representa una revisión del 100% respecto a la de PS4, con un enfoque "más sutil que llamativo, pero sin un solo píxel sin tocar".
+
+Inspiración Móvil: La interfaz se basa en un sistema de "tarjetas" o "cartas" que se superponen al contenido, similar a las notificaciones de un teléfono móvil moderno.
+
+2. Paleta de Colores y Estética Visual
+
+Tema Base: Oscuro con toques de blanco y dorado. Se describe un esquema de color negro y dorado. El fondo general es oscuro (negro/gris muy oscuro) para dar contraste.
+
+Colores Primarios:
+
+Fondo: Negro profundo o gris carbón.
+
+Texto Principal: Blanco.
+
+Color de Acento: Dorado o azul brillante (característico de PlayStation) para elementos interactivos, bordes de selección y detalles. La actualización beta de 2026 muestra un azul holográfico para algunos elementos de la UI.
+
+Contraste y Claridad: La interfaz está diseñada para televisores 4K con HDR, priorizando la legibilidad y el alto contraste.
+
+3. Tipografía
+
+Fuente Principal: SST (Sony Type). Es una tipografía humanista sin serifa (sans-serif) diseñada por Monotype para Sony.
+
+Características: Es limpia, moderna y altamente legible. Soporta múltiples alfabetos (latín, griego, cirílico, etc.) y está optimizada para su uso en pantalla.
+
+Jerarquía: Uso de diferentes pesos (Light, Regular, Bold) para establecer jerarquías visuales claras. El texto suele ser blanco sobre fondos oscuros, y en algunos contextos, negro sobre blanco.
+
+4. Diseño y Geometría de la Interfaz
+
+Pantalla de Inicio (Home Screen):
+
+Estructura: Una barra horizontal superior que contiene una fila de iconos de juegos y aplicaciones. Las actualizaciones recientes añaden pestañas en la esquina superior izquierda (PS Plus, PS Store, Juegos, Biblioteca, Multimedia) navegables con L1/R1.
+
+Iconos (Tiles): Son grandes, rectangulares y dinámicos (con arte del juego o aplicación). Al enfocar uno, su fondo se expande, ocupando casi toda la pantalla, mostrando arte, noticias y actividades relacionadas.
+
+Barra de Favoritos: Una franja horizontal debajo de la fila principal para anclar juegos/apps de acceso rápido.
+
+Geometría: Predominan las esquinas redondeadas en los elementos (tarjetas, iconos, botones) para una apariencia suave y moderna.
+
+5. Centro de Control y Sistema de Tarjetas (El Núcleo de la Interacción)
+
+Activación: Presionar el botón PS del mando DualSense en cualquier momento, incluso durante una partida.
+
+Apariencia: Un panel que se desliza desde la parte inferior de la pantalla, superponiéndose al contenido actual.
+
+Elementos:
+
+Fila de Iconos de Control: En la parte inferior, iconos para: Inicio, Conmutador de Apps, Notificaciones, Game Base (amigos), Música, Sonido, Micrófono, Accesorios, Perfil y Encendido. Son personalizables en orden y visibilidad.
+
+Tarjetas (Cards): Ocupan la mayor parte del panel. Son rectángulos con bordes redondeados que muestran:
+
+Actividades: Progreso en el juego, desafíos, estimación de tiempo para completar objetivos.
+
+Noticias: Actualizaciones de juegos seguidos.
+
+Ayuda en Juego (Game Help): Pistas y vídeos para el objetivo actual (exclusivo de PS Plus).
+
+Multimedia: Capturas de pantalla o vídeos recientes.
+
+Interacción PiP (Picture-in-Picture): Las tarjetas de ayuda, las retransmisiones de amigos o los chats de voz se pueden anclar a la pantalla en modo PiP, en una de seis zonas predefinidas.
+
+7. Animaciones y Transiciones
+
+Fluidez y Respuesta: Las animaciones son fluidas y están diseñadas para dar una sensación de rapidez e inmediatez.
+
+Transiciones de Tarjetas: Las tarjetas se deslizan y se expanden con animaciones suaves. El cambio entre la pantalla de inicio y una aplicación o juego debe ser rápido y sin cortes bruscos.
+
+Movimiento de Enfoque: Al navegar por los iconos, el foco se mueve con una animación de resorte (spring animation) sutil.
+
+9. Personalización y Accesibilidad
+
+Personalización: Se pueden crear carpetas para agrupar juegos, usar capturas de pantalla como fondo de pantalla personalizado y reorganizar los iconos en la pantalla de inicio y el Centro de Control.
+
+Accesibilidad: Amplias opciones, incluyendo: inversión de colores, corrección de color (para daltonismo), texto en negrita, tamaño de texto ajustable, lector de pantalla y reasignación completa de botones.
+
+Prompt para Agente de Código: Estética de Interfaz SteamOS (Modo Juego / Steam Deck UI)
+
+OBJETIVO:
+Aplicar el lenguaje de diseño de SteamOS (en su modo de juego, la UI del Steam Deck) a cualquier otra interfaz proporcionada. Este prompt describe en detalle la estética, estructura, interacciones y filosofía de diseño de SteamOS, sirviendo como una guía exhaustiva para transformar visual y funcionalmente una interfaz existente.
+
+1. Visión General y Filosofía de Diseño
+
+Concepto Principal: "Un puente entre la consola y el PC". Una interfaz accesible y optimizada para mando, que da prioridad al acceso rápido a la biblioteca de juegos del usuario, sin dejar de ofrecer la potencia y flexibilidad de un PC.
+
+Evolución de Big Picture: La UI del Steam Deck es la sucesora y sustituta del antiguo modo Big Picture de Steam. Es una versión modernizada, más limpia y con mejor rendimiento.
+
+2. Paleta de Colores y Estética Visual
+
+Tema Base: Oscuro con acentos azules/cyan. Es una estética moderna y tecnológica. Se basa en una paleta de colores "Vapor".
+
+Colores Primarios:
+
+Fondo: Tonos muy oscuros, principalmente azul marino muy oscuro o gris azulado (#0E141B o similar), que dan una sensación de profundidad.
+
+Acentos: Azules brillantes, cian y a veces púrpura para elementos interactivos, como el logo de Steam, botones de acción, barras de progreso y bordes de selección.
+
+Texto: Principalmente blanco o gris muy claro sobre fondos oscuros.
+
+Vibrante y Cálido: A partir de SteamOS 3.5, la paleta de colores se ha ajustado para ser más cálida y vibrante, utilizando el espacio de color sRGB por defecto para una mejor representación en pantallas modernas (especialmente OLED).
+
+Efectos de Vidrio Esmerilado (Frosted Glass): Se utilizan efectos de desenfoque y transparencia (como el vidrio esmerilado) en fondos de menús y superposiciones, creando una sensación de profundidad y modernidad.
+
+3. Tipografía
+
+Fuente Principal: No hay una fuente oficial única y exclusiva. SteamOS utiliza fuentes del sistema Linux, siendo común "Liberation Sans" (una métrica equivalente a Arial) y DejaVu Sans.
+
+Características: Son fuentes sans-serif, limpias, funcionales y de alta legibilidad. El enfoque está en la claridad y la eficiencia, no en la ornamentación.
+
+Jerarquía: Se establece una clara jerarquía mediante el uso de diferentes tamaños y pesos (Regular, Bold) para distinguir títulos, nombres de juegos, descripciones y texto de menú.
+
+4. Diseño y Geometría de la Interfaz
+
+Pantalla de Inicio (Home):
+
+Estructura: Un diseño de cuadrícula o carrusel horizontal con grandes iconos/portadas de juegos. La sección principal muestra "Juegos recientes".
+
+Elementos: Una barra superior puede contener el logo de Steam, accesos directos a la Biblioteca, Tienda, Comunidad y el perfil del usuario. La navegación principal se realiza con el stick izquierdo/derecho o los gatillos (L2/R2).
+
+Geometría: Las portadas de los juegos son rectangulares verticales (formato de caja de juego). Los menús y paneles tienen esquinas redondeadas.
+
+Biblioteca (Library):
+
+Organización: Una lista vertical en el lado izquierdo con todos los juegos instalados, que se puede ordenar y filtrar. El panel central muestra una vista en cuadrícula de las portadas.
+
+Página del Juego: Al seleccionar un juego, se abre una página dedicada con arte de fondo, información del juego, logros, amigos que lo juegan, DLC, etc. Es una versión condensada de la página de la biblioteca del cliente de escritorio de Steam.
+
+5. Menús de Acceso Rápido (El Núcleo de la Interacción)
+
+Menú Principal (Steam Button): Presionar el botón Steam/Guía abre un menú superpuesto en el lado izquierdo de la pantalla. Desde aquí se accede a:
+
+Inicio
+
+Biblioteca
+
+Tienda
+
+Comunidad
+
+Amigos y Chat
+
+Descargas
+
+Configuración
+
+Energía (Suspender, Apagar)
+
+Menú de Acceso Rápido (Quick Access Menu - QAM): Presionar el botón "..." (o una combinación como Steam + A) abre un menú que se desliza desde el lado derecho de la pantalla. Contiene controles esenciales para:
+
+Notificaciones (lista de invitaciones, mensajes).
+
+Amigos (lista de amigos en línea).
+
+Configuración Rápida: Brillo, volumen, modo avión, etc..
+
+Rendimiento (Performance): Un panel exclusivo para ajustar el límite de FPS, la frecuencia de refresco de la pantalla (40-60Hz), y el TDP (potencia del procesador).
+
+
+
+Enfoque: Animaciones fluidas pero funcionales. El objetivo es la inmediatez. Las transiciones entre menús deben ser rápidas (deslizamientos).
+
+Modo de Movimiento Reducido: SteamOS incluye una opción de "movimiento reducido" en los ajustes de accesibilidad, que limita o desactiva las animaciones y transiciones.
+
+Desplazamiento: El desplazamiento por listas largas (como la biblioteca) es suave y con inercia.
+
+8. Sonido y Feedback
+
+Sonidos de UI: Sonidos electrónicos sutiles (clics, "pops") para la navegación y la confirmación de acciones. Son menos "juguetones" que los de una consola tradicional y más cercanos a una interfaz de PC.
+
+Háptica: El Steam Deck cuenta con motores hápticos que proporcionan una vibración sutil al navegar por los menús o al realizar acciones, mejorando la sensación táctil.
+
+9. Personalización y Accesibilidad
+
+Personalización: Se puede cambiar el arte de las portadas de los juegos de forma nativa. Existen temas y modificaciones de la comunidad.
+
+Accesibilidad: Opciones muy completas, incluyendo:
+
+Escalado de UI: Para ajustar el tamaño de los elementos en pantalla.
+
+Modo de Alto Contraste: Para mejorar la legibilidad.
+
+Filtros de Color: Escala de grises, invertir brillo, invertir colores.
+
+Lector de Pantalla: Con ajustes de tono, velocidad y volumen.
+
+Prompt para Agente de Código: Estética de Interfaz Nintendo Switch 2
+
+OBJETIVO:
+Aplicar el lenguaje de diseño de la interfaz de usuario (UI) de Nintendo Switch 2 a cualquier otra interfaz proporcionada. Este prompt describe en detalle la estética, estructura, interacciones y filosofía de diseño de la UI de Switch 2, sirviendo como una guía exhaustiva para transformar visual y funcionalmente una interfaz existente.
+
+1. Visión General y Filosofía de Diseño
+
+Concepto Principal: "Evolución, no revolución". La interfaz de Switch 2 es una iteración directa de la UI de la Switch original, refinada y mejorada. La filosofía de Nintendo es "simplicidad, elegancia y facilidad de uso", con un tono "sutilmente encantador".
+
+Enfoque: Acceso directo a los juegos y funciones clave. Se basa en una estructura de menú horizontal clara y sin complicaciones.
+
+2. Paleta de Colores y Estética Visual
+
+Tema Base: Claro y limpio (modo claro por defecto). A diferencia de sus competidores, la UI de Switch 2 prioriza un fondo blanco o gris muy claro, con texto oscuro.
+
+Colores Primarios:
+
+Fondo: Blanco o gris muy claro.
+
+Texto e Iconos: Principalmente negro o gris oscuro.
+
+Acentos y Destacados: La selección actual se resalta con un borde de color. En Switch 2, estos bordes son más vibrantes y coloridos que en la Switch original. El color del borde puede variar según el contexto (ej. rojo para la eShop, azul para el menú de configuración).
+
+Tema Oscuro: Existe una opción de "Tema Oscuro" en los ajustes, que invierte los colores (fondo negro, texto blanco).
+
+Iconografía Colorida: Los iconos de las aplicaciones del sistema (eShop, Álbum, Configuración, etc.) son coloridos y con un diseño plano, típico de Nintendo.
+
+3. Tipografía
+
+Fuente Principal: Una fuente sans-serif limpia, redondeada y amigable, consistente con la identidad de marca de Nintendo. Es muy legible y tiene un aspecto ligeramente "juguetón". En la Switch 2, la tipografía se renderiza a una mayor resolución, haciéndola más nítida.
+
+4. Diseño y Geometría de la Interfaz
+
+Pantalla de Inicio (HOME Menu):
+
+Estructura: Un carrusel horizontal central con los iconos de los juegos más recientes, con el último juego usado en primer plano.
+
+Iconos de Juego: Son cuadrados con esquinas redondeadas. Esta es una de las diferencias visuales clave con la Switch original (que los tenía cuadrados con bordes afilados).
+
+Dock Inferior: Una barra de iconos en la parte inferior que alberga las funciones principales del sistema. Los iconos en esta barra son circulares o tienen forma de píldora redondeada.
+
+Iconos del Dock Inferior (10 en total):
+
+Nintendo Switch Online (rojo)
+GameChat (amarillo, representado por una 'C')
+Noticias (icono de periódico)
+Nintendo eShop (bolsa de la compra, ahora de color rojo vibrante en lugar del naranja anterior)
+Álbum (icono de foto)
+GameShare (icono de pantalla compartida, color turquesa)
+Mandos (Controllers) (icono de Joy-Con)
+Virtual Game Card (icono de cartucho gris)
+Configuración de la Consola (icono de engranaje)
+Modo Suspensión (icono de encendido/apagado)
+5. Menús y Configuración Rápida
+
+Acceso Rápido: Mantener presionado el botón Y abre un menú de "Ajustes Rápidos" para controlar el brillo, el volumen o conectar mandos sin salir de la pantalla actual.
+
+Navegación: La navegación por los menús es extremadamente rápida y "con garra" (snappy). Las transiciones son casi instantáneas.
+
+7. Animaciones y Transiciones
+
+Fluidez y "Rebote": Las animaciones de la UI se describen como "con rebote" (bumpy), dando una sensación de elasticidad y respuesta física. Los iconos "se deslizan hacia dentro con un sutil rebote".
+
+Velocidad: Las transiciones entre menús y la carga de la eShop son notablemente más rápidas y fluidas que en la Switch original, gracias al hardware mejorado.
+
+
+
+Personalización: Se pueden reordenar los iconos de los juegos en el carrusel principal por tiempo de juego, título o uso reciente. Aunque hay indicios de un menú "Temas" en los ajustes, la personalización visual sigue siendo limitada más allá del modo claro/oscuro.
+
+Accesibilidad: Incluye opciones como:
+
+Zoom: Pulsar dos veces el botón HOME para hacer zoom en una zona seleccionada.
+
+Cambio de Colores de Pantalla: Invertir colores, escala de grises o alto contraste.
+
+Reasignación de Botones: Se puede reasignar la función de los botones, incluyendo el nuevo botón 'C'.
