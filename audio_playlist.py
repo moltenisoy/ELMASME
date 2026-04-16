@@ -7,13 +7,11 @@ import random
 from pathlib import Path
 from typing import List, Optional
 
-from PySide6.QtCore import Qt, Signal, QUrl, QMimeData
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QListWidgetItem, QAbstractItemView, QFileDialog,
-    QMenu
+    QListWidget, QListWidgetItem, QAbstractItemView, QFileDialog
 )
-from PySide6.QtGui import QAction
 
 from audio_converter import AUDIO_EXTENSIONS
 
