@@ -9,7 +9,7 @@ from pathlib import Path
 from audio_handler import AUDIO_EXTENSIONS
 from video_handler import VIDEO_EXTENSIONS
 from image_handler import IMAGE_EXTENSIONS
-from document_handler import PDF_EXTENSIONS, TEXT_DOCUMENT_EXTENSIONS, DOCUMENT_EXTENSIONS
+from document_handler import PDF_EXTENSIONS, TEXT_DOCUMENT_EXTENSIONS, DOCX_EXTENSIONS, DOCUMENT_EXTENSIONS
 
 # Extensiones asociables en Windows
 ALL_SUPPORTED_EXTENSIONS = (
@@ -54,7 +54,7 @@ def get_content_type(path: str) -> str:
         return "video"
     if ext in PDF_EXTENSIONS:
         return "pdf"
-    if ext in TEXT_DOCUMENT_EXTENSIONS:
+    if ext in TEXT_DOCUMENT_EXTENSIONS or ext in DOCX_EXTENSIONS:
         return "text"
     
     return "unsupported"
