@@ -77,7 +77,7 @@ def _extract_docx_text(path: str) -> Optional[str]:
                             texts.append(t.text)
                     paragraphs.append("".join(texts))
                 return "\n".join(paragraphs)
-    except Exception:
+    except (zipfile.BadZipFile, ET.ParseError, OSError, KeyError):
         return None
 
 

@@ -382,7 +382,6 @@ class VideoViewer(QWidget):
 
         self.overlay.setParent(self._fs_window)
         self.overlay.hide()
-        self.overlay.installEventFilter(self)
 
         self._fs_window.installEventFilter(self._FullscreenFilter(self))
         self._fs_window.showFullScreen()
@@ -398,7 +397,6 @@ class VideoViewer(QWidget):
 
         self.overlay.setParent(self)
         self.overlay.hide()
-        self.overlay.installEventFilter(self)
 
         self._fs_window.close()
         self._fs_window.deleteLater()
