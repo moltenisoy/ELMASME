@@ -185,13 +185,13 @@ class DocumentViewer(QWidget):
             self.pdf_document.load(path)
 
             if self.pdf_document.status() == QPdfDocument.Status.Ready:
-                pdf_text = extract_pdf_text(self.pdf_document)
-                self.text_view.setPlainText(pdf_text)
+                self.current_zoom_index = 2
+                self.pdf_view.setZoomFactor(self.zoom_levels[self.current_zoom_index])
                 self._modified = False
-                self.stack.setCurrentWidget(self.text_view)
-                self.toolbar.setVisible(True)
-                self.zoom_out_button.setVisible(False)
-                self.zoom_in_button.setVisible(False)
+                self.stack.setCurrentWidget(self.pdf_view)
+                self.toolbar.setVisible(False)
+                self.zoom_out_button.setVisible(True)
+                self.zoom_in_button.setVisible(True)
                 return
 
             self.message.setText("No fue posible renderizar el PDF.")
