@@ -104,7 +104,6 @@ class ImageViewer(QWidget):
         self._build_ui()
     
     def _build_ui(self):
-        # ScrollArea para contener la imagen con scroll
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -128,7 +127,6 @@ class ImageViewer(QWidget):
             }
         """)
         
-        # Label para mostrar la imagen con capacidad de pan
         self.label = PanLabel()
         self.label._image_viewer = self
         self.label.setAlignment(Qt.AlignCenter)
@@ -167,10 +165,9 @@ class ImageViewer(QWidget):
         self.resize_button.setFixedSize(QSize(100, 22))
         self.resize_button.clicked.connect(self.show_resize_dialog)
         
-        # Layout de controles
         controls = QHBoxLayout()
         controls.setContentsMargins(0, 0, 0, 0)
-        controls.setSpacing(10)
+        controls.setSpacing(6)
         controls.addStretch(1)
         controls.addWidget(self.zoom_out_button)
         controls.addWidget(self.reset_zoom_button)
@@ -178,15 +175,13 @@ class ImageViewer(QWidget):
         controls.addWidget(self.fullscreen_button)
         controls.addWidget(self.resize_button)
         controls.addStretch(1)
-        
-        # Layout principal
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(12)
+        layout.setSpacing(8)
         layout.addWidget(self.scroll_area, 1)
         layout.addLayout(controls)
-        
-        # Atajo de teclado para copiar
+
         copy_action = QAction(self)
         copy_action.setShortcut(QKeySequence.Copy)
         copy_action.triggered.connect(self.copy_image)

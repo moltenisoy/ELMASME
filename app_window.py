@@ -604,17 +604,17 @@ class UniversalViewerWindow(QMainWindow):
         data, viewer = self._current_tab_data()
         if not viewer:
             return
-        if not hasattr(viewer.video_viewer, 'navigation_enabled') or \
-           not viewer.video_viewer.navigation_enabled:
-            self.go_previous()
+        if viewer.video_viewer.video_widget.hasFocus():
+            return
+        self.go_previous()
 
     def handle_right_key(self):
         data, viewer = self._current_tab_data()
         if not viewer:
             return
-        if not hasattr(viewer.video_viewer, 'navigation_enabled') or \
-           not viewer.video_viewer.navigation_enabled:
-            self.go_next()
+        if viewer.video_viewer.video_widget.hasFocus():
+            return
+        self.go_next()
 
     def handle_escape_key(self):
         data, viewer = self._current_tab_data()

@@ -3,11 +3,11 @@ from pathlib import Path
 from typing import Set, Dict
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QFont, QKeySequence, QTextDocument
-from PySide6.QtPdf import QPdfDocument
+from PySide6.QtPdf import QPdfDocument, QPdfSearchModel
 from PySide6.QtPdfWidgets import QPdfView
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
-    QStackedWidget, QMessageBox, QFileDialog, QLineEdit
+    QStackedWidget, QFileDialog, QLineEdit
 )
 
 from document_pdf import PDF_EXTENSIONS, extract_pdf_text
@@ -81,9 +81,26 @@ class FloatingSearchWidget(QWidget):
     def __init__(self, text_edit, parent=None):
         super().__init__(parent, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self._text_edit = text_edit
+        self._pdf_view = None
+        self._pdf_document = None
+        self._search_model = None
         self._drag_pos = None
         self.setFixedSize(330, 80)
         self._build_ui()
+
+    def set_pdf_mode(self, pdf_view, pdf_document):
+        self._pdf_view = pdf_view
+        self._pdf_document = pdf_document
+        self._text_edit = None
+        self._search_model = QPdfSearchModel(self)
+        self._search_model.setDocument(pdf_document)
+        self._pdf_view.setSearchModel(self._search_model)
+
+    def set_text_mode(self, text_edit):
+        self._text_edit = text_edit
+        self._pdf_view = None
+        self._pdf_document = None
+        self._search_model = None
 
     def _build_ui(self):
         self.setStyleSheet("""
@@ -154,13 +171,31 @@ class FloatingSearchWidget(QWidget):
 
     def _search_forward(self):
         text = self.search_input.text()
-        if text and self._text_edit:
+        if not text:
+            return
+        if self._text_edit:
             self._text_edit.find(text)
+        elif self._pdf_view and self._search_model:
+            self._search_model.setSearchString(text)
+            idx = self._pdf_view.currentSearchResultIndex()
+            total = self._search_model.rowCount()
+            if total > 0:
+                next_idx = (idx + 1) % total
+                self._pdf_view.setCurrentSearchResultIndex(next_idx)
 
     def _search_backward(self):
         text = self.search_input.text()
-        if text and self._text_edit:
+        if not text:
+            return
+        if self._text_edit:
             self._text_edit.find(text, QTextDocument.FindBackward)
+        elif self._pdf_view and self._search_model:
+            self._search_model.setSearchString(text)
+            idx = self._pdf_view.currentSearchResultIndex()
+            total = self._search_model.rowCount()
+            if total > 0:
+                prev_idx = (idx - 1) % total
+                self._pdf_view.setCurrentSearchResultIndex(prev_idx)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -245,7 +280,7 @@ class DocumentViewer(QWidget):
 
         zoom_controls = QHBoxLayout()
         zoom_controls.setContentsMargins(0, 0, 0, 0)
-        zoom_controls.setSpacing(10)
+        zoom_controls.setSpacing(6)
         zoom_controls.addStretch(1)
 
         self.zoom_out_button = QPushButton("Zoom -")
@@ -300,7 +335,8 @@ class DocumentViewer(QWidget):
                 self.toolbar.setVisible(False)
                 self.zoom_out_button.setVisible(True)
                 self.zoom_in_button.setVisible(True)
-                self.search_button.setVisible(False)
+                self.search_button.setVisible(True)
+                self._search_widget.set_pdf_mode(self.pdf_view, self.pdf_document)
                 return
 
             self.message.setText("No fue posible renderizar el PDF.")
@@ -323,6 +359,7 @@ class DocumentViewer(QWidget):
             self.zoom_out_button.setVisible(True)
             self.zoom_in_button.setVisible(True)
             self.search_button.setVisible(True)
+            self._search_widget.set_text_mode(self.text_view)
             return
 
         self.message.setText("Formato de documento incompatible para visualización directa.")
