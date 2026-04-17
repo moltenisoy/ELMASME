@@ -305,7 +305,7 @@ class DocumentViewer(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
+        layout.setSpacing(4)
         layout.addWidget(self.toolbar)
         layout.addWidget(self.stack, 1)
         layout.addLayout(zoom_controls)

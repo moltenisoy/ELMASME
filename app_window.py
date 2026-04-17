@@ -44,8 +44,8 @@ class UniversalViewerWindow(QMainWindow):
         self.setCentralWidget(root)
 
         layout = QVBoxLayout(root)
-        layout.setContentsMargins(10, 4, 10, 8)
-        layout.setSpacing(8)
+        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setSpacing(2)
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
@@ -55,7 +55,7 @@ class UniversalViewerWindow(QMainWindow):
         viewer_panel = QFrame()
         viewer_panel.setObjectName("Panel")
         viewer_layout = QVBoxLayout(viewer_panel)
-        viewer_layout.setContentsMargins(10, 10, 10, 10)
+        viewer_layout.setContentsMargins(2, 2, 2, 2)
         viewer_layout.addWidget(self.tab_widget)
 
         footer = self._build_footer()
@@ -72,11 +72,11 @@ class UniversalViewerWindow(QMainWindow):
     def _build_footer(self) -> QFrame:
         footer = QFrame()
         footer.setObjectName("FooterPanel")
-        footer.setFixedHeight(44)
+        footer.setFixedHeight(38)
 
         footer_layout = QHBoxLayout(footer)
-        footer_layout.setContentsMargins(8, 2, 8, 2)
-        footer_layout.setSpacing(6)
+        footer_layout.setContentsMargins(4, 2, 4, 2)
+        footer_layout.setSpacing(4)
 
         self.prev_button = QToolButton()
         self.prev_button.setText("◀ Anterior")

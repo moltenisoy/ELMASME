@@ -21,7 +21,7 @@ from audio_converter import (
 from video_playlist import VideoPlaylistWidget
 from progress_bar import ConversionProgressBar
 
-OVERLAY_HEIGHT = 36
+OVERLAY_HEIGHT = 42
 OVERLAY_TRIGGER_ZONE = 0.8
 
 VOLUME_SLIDER_STYLE = """
@@ -131,15 +131,18 @@ class VideoViewer(QWidget):
         overlay_layout.setSpacing(6)
 
         self.play_button = QPushButton("▶")
-        self.play_button.setFixedSize(32, 22)
+        self.play_button.setFixedSize(36, 28)
+        self.play_button.setStyleSheet("font-size: 18px;")
         self.play_button.clicked.connect(self.player.play)
 
         self.pause_button = QPushButton("⏸")
-        self.pause_button.setFixedSize(32, 22)
+        self.pause_button.setFixedSize(36, 28)
+        self.pause_button.setStyleSheet("font-size: 18px;")
         self.pause_button.clicked.connect(self.player.pause)
 
         self.stop_button = QPushButton("⏹")
-        self.stop_button.setFixedSize(32, 22)
+        self.stop_button.setFixedSize(36, 28)
+        self.stop_button.setStyleSheet("font-size: 18px;")
         self.stop_button.clicked.connect(self._stop_playback)
 
         vol_label = QLabel("🔊")
@@ -157,9 +160,18 @@ class VideoViewer(QWidget):
         self.pin_button.setCheckable(True)
         self.pin_button.clicked.connect(self._toggle_pin)
 
+        self.playlist_toggle_button = QPushButton("📃")
+        self.playlist_toggle_button.setFixedSize(36, 28)
+        self.playlist_toggle_button.setStyleSheet("font-size: 16px;")
+        self.playlist_toggle_button.setToolTip("Mostrar/ocultar lista de reproducción")
+        self.playlist_toggle_button.setCheckable(True)
+        self.playlist_toggle_button.setChecked(True)
+        self.playlist_toggle_button.clicked.connect(self._toggle_playlist_visibility)
+
         overlay_layout.addWidget(self.play_button)
         overlay_layout.addWidget(self.pause_button)
         overlay_layout.addWidget(self.stop_button)
+        overlay_layout.addWidget(self.playlist_toggle_button)
         overlay_layout.addWidget(vol_label)
         overlay_layout.addWidget(self.volume_slider)
         overlay_layout.addStretch()
@@ -272,6 +284,13 @@ class VideoViewer(QWidget):
 
     def _toggle_pin(self):
         self._overlay_pinned = self.pin_button.isChecked()
+
+    def _toggle_playlist_visibility(self):
+        visible = self.playlist_toggle_button.isChecked()
+        self.playlist_widget.setVisible(visible)
+        self.playlist_toggle_button.setToolTip(
+            "Ocultar lista de reproducción" if visible else "Mostrar lista de reproducción"
+        )
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

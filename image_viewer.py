@@ -178,7 +178,7 @@ class ImageViewer(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setSpacing(4)
         layout.addWidget(self.scroll_area, 1)
         layout.addLayout(controls)
 

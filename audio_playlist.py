@@ -18,6 +18,10 @@ class AudioPlaylistWidget(QWidget):
 
     file_selected = Signal(str)
 
+    _PLAY_MODE_ICONS = ["▶", "🔁", "🔀"]
+    _PLAY_MODE_LABELS = ["Secuencial", "Repetir", "Aleatorio"]
+    _PLAY_MODE_KEYS = ["sequential", "repeat", "shuffle"]
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._paths = []
@@ -27,11 +31,11 @@ class AudioPlaylistWidget(QWidget):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 4, 0, 0)
-        layout.setSpacing(6)
+        layout.setContentsMargins(0, 2, 0, 0)
+        layout.setSpacing(2)
 
         header = QHBoxLayout()
-        header.setSpacing(4)
+        header.setSpacing(2)
 
         title = QLabel("Lista de reproducción")
         title.setStyleSheet("font-weight: bold; font-size: 12px;")
@@ -39,28 +43,30 @@ class AudioPlaylistWidget(QWidget):
         header.addStretch()
 
         self.add_btn = QPushButton("+ Agregar")
-        self.add_btn.setFixedHeight(22)
+        self.add_btn.setFixedHeight(24)
         header.addWidget(self.add_btn)
 
         self.remove_btn = QPushButton("- Quitar")
-        self.remove_btn.setFixedHeight(22)
+        self.remove_btn.setFixedHeight(24)
         header.addWidget(self.remove_btn)
 
         self.clear_btn = QPushButton("Limpiar")
-        self.clear_btn.setFixedHeight(22)
+        self.clear_btn.setFixedHeight(24)
         header.addWidget(self.clear_btn)
 
         self.save_playlist_btn = QPushButton("💾")
-        self.save_playlist_btn.setFixedSize(28, 22)
+        self.save_playlist_btn.setFixedSize(28, 24)
+        self.save_playlist_btn.setToolTip("Guardar playlist")
         header.addWidget(self.save_playlist_btn)
 
         self.load_playlist_btn = QPushButton("📂")
-        self.load_playlist_btn.setFixedSize(28, 22)
+        self.load_playlist_btn.setFixedSize(28, 24)
+        self.load_playlist_btn.setToolTip("Cargar playlist")
         header.addWidget(self.load_playlist_btn)
 
         self.sort_btn = QToolButton()
         self.sort_btn.setText("Ordenar ▼")
-        self.sort_btn.setFixedHeight(22)
+        self.sort_btn.setFixedHeight(24)
         self.sort_btn.setPopupMode(QToolButton.InstantPopup)
         sort_menu = QMenu(self)
         sort_menu.addAction("Nombre", lambda: self._sort_by("name"))
@@ -70,8 +76,17 @@ class AudioPlaylistWidget(QWidget):
         self.sort_btn.setMenu(sort_menu)
         header.addWidget(self.sort_btn)
 
+        self._play_mode_index = 0
+        self.play_mode_btn = QToolButton()
+        self.play_mode_btn.setText("▶")
+        self.play_mode_btn.setFixedSize(28, 24)
+        self.play_mode_btn.setToolTip("Modo: Secuencial")
+        self.play_mode_btn.clicked.connect(self._cycle_play_mode)
+        header.addWidget(self.play_mode_btn)
+
         self.toggle_btn = QPushButton("▲")
-        self.toggle_btn.setFixedSize(28, 22)
+        self.toggle_btn.setFixedSize(28, 24)
+        self.toggle_btn.setToolTip("Mostrar/ocultar lista")
         self.toggle_btn.clicked.connect(self._toggle_list)
         header.addWidget(self.toggle_btn)
 
@@ -90,6 +105,14 @@ class AudioPlaylistWidget(QWidget):
         self._list_visible = not self._list_visible
         self.list_widget.setVisible(self._list_visible)
         self.toggle_btn.setText("▲" if self._list_visible else "▼")
+
+    def _cycle_play_mode(self):
+        self._play_mode_index = (self._play_mode_index + 1) % len(self._PLAY_MODE_ICONS)
+        self.play_mode_btn.setText(self._PLAY_MODE_ICONS[self._play_mode_index])
+        self.play_mode_btn.setToolTip(f"Modo: {self._PLAY_MODE_LABELS[self._play_mode_index]}")
+
+    def get_play_mode(self) -> str:
+        return self._PLAY_MODE_KEYS[self._play_mode_index]
 
     def _connect_signals(self):
         self.add_btn.clicked.connect(self._add_files)

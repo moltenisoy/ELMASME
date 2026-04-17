@@ -149,45 +149,48 @@ class TextEditorToolbar(QFrame):
         """)
 
         toolbar_layout = QVBoxLayout(self)
-        toolbar_layout.setContentsMargins(8, 6, 8, 6)
-        toolbar_layout.setSpacing(8)
+        toolbar_layout.setContentsMargins(6, 4, 6, 4)
+        toolbar_layout.setSpacing(4)
 
         row1 = QHBoxLayout()
-        row1.setSpacing(12)
+        row1.setSpacing(6)
 
         clipboard_group = QHBoxLayout()
         clipboard_group.setSpacing(4)
 
         self.paste_btn = QToolButton()
-        self.paste_btn.setText("📋 Pegar")
+        self.paste_btn.setText("📋")
         self.paste_btn.setToolTip("Pegar (Ctrl+V)")
+        self.paste_btn.setFixedSize(28, 26)
         self.paste_btn.clicked.connect(self._paste)
         clipboard_group.addWidget(self.paste_btn)
 
         self.cut_btn = QToolButton()
-        self.cut_btn.setText("✂️ Cortar")
+        self.cut_btn.setText("✂️")
         self.cut_btn.setToolTip("Cortar (Ctrl+X)")
+        self.cut_btn.setFixedSize(28, 26)
         self.cut_btn.clicked.connect(self._cut)
         clipboard_group.addWidget(self.cut_btn)
 
         self.copy_btn = QToolButton()
-        self.copy_btn.setText("📄 Copiar")
+        self.copy_btn.setText("📄")
         self.copy_btn.setToolTip("Copiar (Ctrl+C)")
+        self.copy_btn.setFixedSize(28, 26)
         self.copy_btn.clicked.connect(self._copy)
         clipboard_group.addWidget(self.copy_btn)
 
         row1.addLayout(clipboard_group)
-        row1.addSpacing(20)
+        row1.addSpacing(8)
 
         separator1 = QFrame()
         separator1.setFrameShape(QFrame.VLine)
         separator1.setStyleSheet("color: rgba(148, 163, 184, 0.3);")
         separator1.setFixedWidth(2)
         row1.addWidget(separator1)
-        row1.addSpacing(10)
+        row1.addSpacing(4)
 
         font_group = QHBoxLayout()
-        font_group.setSpacing(6)
+        font_group.setSpacing(4)
 
         font_group.addWidget(QLabel("Fuente:"))
 
@@ -205,7 +208,7 @@ class TextEditorToolbar(QFrame):
         self.font_size_combo.currentTextChanged.connect(self._change_font_size)
         font_group.addWidget(self.font_size_combo)
 
-        font_group.addSpacing(10)
+        font_group.addSpacing(4)
 
         self.bold_btn = QToolButton()
         self.bold_btn.setText("B")
@@ -247,7 +250,7 @@ class TextEditorToolbar(QFrame):
         self.strike_btn.clicked.connect(self._toggle_strikethrough)
         font_group.addWidget(self.strike_btn)
 
-        font_group.addSpacing(10)
+        font_group.addSpacing(4)
 
         self.color_btn = QToolButton()
         self.color_btn.setText("A")
@@ -269,12 +272,10 @@ class TextEditorToolbar(QFrame):
         toolbar_layout.addLayout(row1)
 
         row2 = QHBoxLayout()
-        row2.setSpacing(12)
+        row2.setSpacing(6)
 
         para_group = QHBoxLayout()
         para_group.setSpacing(4)
-
-        para_group.addWidget(QLabel("Párrafo:"))
 
         self.align_left_btn = QToolButton()
         self.align_left_btn.setText("≡←")
@@ -310,47 +311,48 @@ class TextEditorToolbar(QFrame):
         para_group.addWidget(self.align_justify_btn)
 
         row2.addLayout(para_group)
-        row2.addSpacing(20)
+        row2.addSpacing(8)
 
         separator2 = QFrame()
         separator2.setFrameShape(QFrame.VLine)
         separator2.setStyleSheet("color: rgba(148, 163, 184, 0.3);")
         separator2.setFixedWidth(2)
         row2.addWidget(separator2)
-        row2.addSpacing(10)
+        row2.addSpacing(4)
 
         edit_group = QHBoxLayout()
         edit_group.setSpacing(4)
 
-        edit_group.addWidget(QLabel("Edición:"))
-
         self.undo_btn = QToolButton()
-        self.undo_btn.setText("↩️ Deshacer")
+        self.undo_btn.setText("↩️")
         self.undo_btn.setToolTip("Deshacer (Ctrl+Z)")
+        self.undo_btn.setFixedSize(28, 26)
         self.undo_btn.clicked.connect(self._undo)
         edit_group.addWidget(self.undo_btn)
 
         self.redo_btn = QToolButton()
-        self.redo_btn.setText("↪️ Rehacer")
+        self.redo_btn.setText("↪️")
         self.redo_btn.setToolTip("Rehacer (Ctrl+Y)")
+        self.redo_btn.setFixedSize(28, 26)
         self.redo_btn.clicked.connect(self._redo)
         edit_group.addWidget(self.redo_btn)
 
         self.select_all_btn = QToolButton()
-        self.select_all_btn.setText("☑️ Seleccionar todo")
+        self.select_all_btn.setText("☑️")
         self.select_all_btn.setToolTip("Seleccionar todo (Ctrl+A)")
+        self.select_all_btn.setFixedSize(28, 26)
         self.select_all_btn.clicked.connect(self._select_all)
         edit_group.addWidget(self.select_all_btn)
 
         row2.addLayout(edit_group)
-        row2.addSpacing(20)
+        row2.addSpacing(8)
 
         separator3 = QFrame()
         separator3.setFrameShape(QFrame.VLine)
         separator3.setStyleSheet("color: rgba(148, 163, 184, 0.3);")
         separator3.setFixedWidth(2)
         row2.addWidget(separator3)
-        row2.addSpacing(10)
+        row2.addSpacing(4)
 
         save_group = QHBoxLayout()
         save_group.setSpacing(4)
@@ -362,7 +364,7 @@ class TextEditorToolbar(QFrame):
                 background: rgba(34, 197, 94, 0.2);
                 border: 1px solid rgba(34, 197, 94, 0.4);
                 border-radius: 6px;
-                padding: 6px 16px;
+                padding: 4px 12px;
                 color: #4ade80;
                 font-weight: 500;
             }
