@@ -2,12 +2,12 @@ import os
 from pathlib import Path
 from typing import Set, Dict
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QFont, QKeySequence
+from PySide6.QtGui import QAction, QFont, QKeySequence, QTextDocument
 from PySide6.QtPdf import QPdfDocument
 from PySide6.QtPdfWidgets import QPdfView
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
-    QStackedWidget, QMessageBox, QFileDialog
+    QStackedWidget, QMessageBox, QFileDialog, QLineEdit
 )
 
 from document_pdf import PDF_EXTENSIONS, extract_pdf_text
@@ -71,9 +71,110 @@ def get_document_info(path: str) -> Dict:
 
     ext = info["extension"]
     info["type"] = TYPE_NAMES.get(ext, "Document")
-    info["is_editable"] = True
+    info["is_editable"] = ext in EDITABLE_EXTENSIONS
 
     return info
+
+
+class FloatingSearchWidget(QWidget):
+
+    def __init__(self, text_edit, parent=None):
+        super().__init__(parent, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self._text_edit = text_edit
+        self._drag_pos = None
+        self.setFixedSize(330, 80)
+        self._build_ui()
+
+    def _build_ui(self):
+        self.setStyleSheet("""
+            QWidget {
+                background: #1e293b;
+                border: 1px solid rgba(148,163,184,0.3);
+                border-radius: 8px;
+            }
+            QLineEdit {
+                background: #0f172a;
+                color: #e5e7eb;
+                border: 1px solid rgba(148,163,184,0.3);
+                border-radius: 4px;
+                padding: 4px 8px;
+            }
+            QPushButton {
+                background: rgba(30,41,59,0.92);
+                border: 1px solid rgba(148,163,184,0.18);
+                border-radius: 6px;
+                padding: 4px 8px;
+                color: #e5e7eb;
+            }
+            QPushButton:hover {
+                background: rgba(51,65,85,0.96);
+                border: 1px solid rgba(96,165,250,0.45);
+            }
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(6)
+
+        search_row = QHBoxLayout()
+        search_row.setSpacing(4)
+
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Buscar texto...")
+        self.search_input.returnPressed.connect(self._search_forward)
+        search_row.addWidget(self.search_input)
+
+        self.search_btn = QPushButton("🔍")
+        self.search_btn.setFixedSize(32, 26)
+        self.search_btn.clicked.connect(self._search_forward)
+        search_row.addWidget(self.search_btn)
+
+        self.close_btn = QPushButton("✕")
+        self.close_btn.setFixedSize(26, 26)
+        self.close_btn.clicked.connect(self.hide)
+        search_row.addWidget(self.close_btn)
+
+        layout.addLayout(search_row)
+
+        dir_row = QHBoxLayout()
+        dir_row.setSpacing(4)
+
+        self.up_btn = QPushButton("▲ Arriba")
+        self.up_btn.setFixedHeight(24)
+        self.up_btn.clicked.connect(self._search_backward)
+        dir_row.addWidget(self.up_btn)
+
+        self.down_btn = QPushButton("▼ Abajo")
+        self.down_btn.setFixedHeight(24)
+        self.down_btn.clicked.connect(self._search_forward)
+        dir_row.addWidget(self.down_btn)
+
+        dir_row.addStretch()
+        layout.addLayout(dir_row)
+
+    def _search_forward(self):
+        text = self.search_input.text()
+        if text and self._text_edit:
+            self._text_edit.find(text)
+
+    def _search_backward(self):
+        text = self.search_input.text()
+        if text and self._text_edit:
+            self._text_edit.find(text, QTextDocument.FindBackward)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._drag_pos and event.buttons() & Qt.LeftButton:
+            self.move(event.globalPosition().toPoint() - self._drag_pos)
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None
+        super().mouseReleaseEvent(event)
 
 
 class DocumentViewer(QWidget):
@@ -157,6 +258,11 @@ class DocumentViewer(QWidget):
         self.zoom_in_button.clicked.connect(self.zoom_in)
         zoom_controls.addWidget(self.zoom_in_button)
 
+        self.search_button = QPushButton("🔍")
+        self.search_button.setFixedSize(32, 22)
+        self.search_button.clicked.connect(self._toggle_search)
+        zoom_controls.addWidget(self.search_button)
+
         zoom_controls.addStretch(1)
 
         layout = QVBoxLayout(self)
@@ -165,6 +271,8 @@ class DocumentViewer(QWidget):
         layout.addWidget(self.toolbar)
         layout.addWidget(self.stack, 1)
         layout.addLayout(zoom_controls)
+
+        self._search_widget = FloatingSearchWidget(self.text_view)
 
         self._setup_shortcuts()
 
@@ -192,27 +300,37 @@ class DocumentViewer(QWidget):
                 self.toolbar.setVisible(False)
                 self.zoom_out_button.setVisible(True)
                 self.zoom_in_button.setVisible(True)
+                self.search_button.setVisible(False)
                 return
 
             self.message.setText("No fue posible renderizar el PDF.")
             self.stack.setCurrentWidget(self.message)
             self.toolbar.setVisible(False)
+            self.zoom_out_button.setVisible(False)
+            self.zoom_in_button.setVisible(False)
+            self.search_button.setVisible(False)
             self._modified = False
             return
 
         if ext in TEXT_DOCUMENT_EXTENSIONS:
             content = read_text_file(path)
             self.text_view.setPlainText(content)
+            self.current_zoom_index = 2
+            self._apply_text_zoom()
             self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
-            self.zoom_out_button.setVisible(False)
-            self.zoom_in_button.setVisible(False)
+            self.zoom_out_button.setVisible(True)
+            self.zoom_in_button.setVisible(True)
+            self.search_button.setVisible(True)
             return
 
         self.message.setText("Formato de documento incompatible para visualización directa.")
         self.stack.setCurrentWidget(self.message)
         self.toolbar.setVisible(False)
+        self.zoom_out_button.setVisible(False)
+        self.zoom_in_button.setVisible(False)
+        self.search_button.setVisible(False)
         self._modified = False
 
     def save_file(self):
@@ -236,13 +354,34 @@ class DocumentViewer(QWidget):
         self._modified = True
 
     def zoom_in(self):
-        if self.stack.currentWidget() == self.pdf_view:
-            if self.current_zoom_index < len(self.zoom_levels) - 1:
-                self.current_zoom_index += 1
+        if self.current_zoom_index < len(self.zoom_levels) - 1:
+            self.current_zoom_index += 1
+            if self.is_pdf:
                 self.pdf_view.setZoomFactor(self.zoom_levels[self.current_zoom_index])
+            else:
+                self._apply_text_zoom()
 
     def zoom_out(self):
-        if self.stack.currentWidget() == self.pdf_view:
-            if self.current_zoom_index > 0:
-                self.current_zoom_index -= 1
+        if self.current_zoom_index > 0:
+            self.current_zoom_index -= 1
+            if self.is_pdf:
                 self.pdf_view.setZoomFactor(self.zoom_levels[self.current_zoom_index])
+            else:
+                self._apply_text_zoom()
+
+    def _apply_text_zoom(self):
+        factor = self.zoom_levels[self.current_zoom_index]
+        new_size = max(6, int(11 * factor))
+        font = self.text_view.font()
+        font.setPointSize(new_size)
+        self.text_view.setFont(font)
+
+    def _toggle_search(self):
+        if self._search_widget.isVisible():
+            self._search_widget.hide()
+        else:
+            pos = self.mapToGlobal(self.rect().topRight())
+            self._search_widget.move(pos.x() - self._search_widget.width() - 20, pos.y() + 60)
+            self._search_widget.show()
+            self._search_widget.raise_()
+            self._search_widget.search_input.setFocus()

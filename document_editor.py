@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QFont, QKeySequence, QColor, QTextCharFormat
 from PySide6.QtWidgets import (
@@ -19,8 +20,22 @@ def save_text_file(path: str, content: str) -> bool:
     return True
 
 
+_EDITABLE_EXTENSIONS = {
+    ".txt", ".log", ".ini", ".cfg", ".conf", ".config", ".csv", ".tsv", ".xml",
+    ".html", ".htm", ".xhtml", ".css", ".js", ".json", ".yaml", ".yml", ".bat",
+    ".cmd", ".ps1", ".reg", ".inf", ".nfo", ".md", ".markdown", ".rst", ".tex",
+    ".bib", ".sql", ".psql", ".sqlite", ".properties", ".env", ".toml", ".lock",
+    ".gitignore", ".gitattributes", ".editorconfig", ".dockerfile", ".makefile",
+    ".mk", ".gradle", ".groovy", ".java", ".c", ".h", ".cpp", ".hpp", ".cs",
+    ".vb", ".py", ".rb", ".php", ".go", ".rs", ".swift", ".kt", ".kts",
+    ".scala", ".sh", ".bash", ".zsh", ".fish", ".asm", ".s", ".v", ".sv",
+    ".verilog", ".vhdl", ".hex", ".srec", ".map", ".lst"
+}
+
+
 def is_editable(path: str) -> bool:
-    return True
+    ext = Path(path).suffix.lower()
+    return ext in _EDITABLE_EXTENSIONS
 
 
 class TextEditorToolbar(QFrame):
@@ -402,7 +417,12 @@ class TextEditorToolbar(QFrame):
         self.font_combo.blockSignals(False)
 
         self.font_size_combo.blockSignals(True)
-        self.font_size_combo.setCurrentText(str(int(char_format.fontPointSize())))
+        size = char_format.fontPointSize()
+        if size <= 0:
+            size = self.text_view.font().pointSize()
+            if size <= 0:
+                size = 11
+        self.font_size_combo.setCurrentText(str(int(size)))
         self.font_size_combo.blockSignals(False)
 
         alignment = self.text_view.alignment()
