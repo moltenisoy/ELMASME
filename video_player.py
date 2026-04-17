@@ -6,7 +6,7 @@ from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider,
     QToolButton, QSizePolicy, QMessageBox, QComboBox, QDialog,
-    QDialogButtonBox, QApplication, QMenu
+    QDialogButtonBox, QApplication, QMenu, QSplitter
 )
 
 from video_converter import (
@@ -111,7 +111,6 @@ class VideoViewer(QWidget):
 
         self.is_seeking = False
         self.is_fullscreen = False
-        self.navigation_enabled = False
         self.current_path = None
         self._progress_bar = None
         self._overlay_pinned = False
@@ -193,16 +192,28 @@ class VideoViewer(QWidget):
         controls.addWidget(self.edition_button)
         controls.addStretch(1)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
-        layout.addWidget(self.video_widget, 1)
-        layout.addWidget(self.position_slider)
-        layout.addLayout(controls)
+        top_widget = QWidget()
+        top_layout = QVBoxLayout(top_widget)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        top_layout.setSpacing(4)
+        top_layout.addWidget(self.video_widget, 1)
+        top_layout.addWidget(self.position_slider)
+        top_layout.addLayout(controls)
 
         self.playlist_widget = VideoPlaylistWidget()
         self.playlist_widget.file_selected.connect(self.load_file)
-        layout.addWidget(self.playlist_widget)
+
+        self.splitter = QSplitter(Qt.Vertical)
+        self.splitter.addWidget(top_widget)
+        self.splitter.addWidget(self.playlist_widget)
+        self.splitter.setStretchFactor(0, 3)
+        self.splitter.setStretchFactor(1, 1)
+        self.splitter.setChildrenCollapsible(False)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(self.splitter)
 
     def _setup_timers(self):
         self._show_timer = QTimer(self)
@@ -284,11 +295,7 @@ class VideoViewer(QWidget):
         self.player.stop()
         self.position_slider.setValue(0)
 
-    def is_navigation_enabled(self) -> bool:
-        return self.navigation_enabled
-
     def _on_video_clicked(self):
-        self.navigation_enabled = True
         self.video_widget.setFocus()
 
     def _on_position_changed(self, position):

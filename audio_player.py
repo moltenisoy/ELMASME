@@ -5,7 +5,7 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider,
     QToolButton, QMessageBox, QComboBox, QDialog, QDialogButtonBox,
-    QApplication, QMenu
+    QApplication, QMenu, QSplitter
 )
 
 from audio_converter import (
@@ -154,13 +154,25 @@ class AudioViewer(QWidget):
         self.playlist_widget = AudioPlaylistWidget()
         self.playlist_widget.file_selected.connect(self.load_file)
 
+        top_widget = QWidget()
+        top_layout = QVBoxLayout(top_widget)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        top_layout.setSpacing(4)
+        top_layout.addWidget(self.placeholder, 1)
+        top_layout.addWidget(self.position_slider)
+        top_layout.addLayout(controls)
+
+        self.splitter = QSplitter(Qt.Vertical)
+        self.splitter.addWidget(top_widget)
+        self.splitter.addWidget(self.playlist_widget)
+        self.splitter.setStretchFactor(0, 3)
+        self.splitter.setStretchFactor(1, 1)
+        self.splitter.setChildrenCollapsible(False)
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
-        layout.addWidget(self.placeholder, 1)
-        layout.addWidget(self.position_slider)
-        layout.addLayout(controls)
-        layout.addWidget(self.playlist_widget)
+        layout.setSpacing(0)
+        layout.addWidget(self.splitter)
 
     def _setup_timers(self):
         self._show_timer = QTimer(self)
