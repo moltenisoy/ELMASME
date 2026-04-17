@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QStackedWidget, QFileDialog, QLineEdit
 )
 
-from document_pdf import PDF_EXTENSIONS, extract_pdf_text
+from document_pdf import PDF_EXTENSIONS
 from document_editor import TextEditorToolbar, read_text_file, save_text_file, is_editable
 
 TEXT_DOCUMENT_EXTENSIONS = {
@@ -194,7 +194,10 @@ class FloatingSearchWidget(QWidget):
             idx = self._pdf_view.currentSearchResultIndex()
             total = self._search_model.rowCount()
             if total > 0:
-                prev_idx = (idx - 1) % total
+                if idx <= 0:
+                    prev_idx = total - 1
+                else:
+                    prev_idx = idx - 1
                 self._pdf_view.setCurrentSearchResultIndex(prev_idx)
 
     def mousePressEvent(self, event):

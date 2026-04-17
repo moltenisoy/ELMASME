@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QListWidgetItem, QAbstractItemView, QFileDialog,
-    QMessageBox, QToolButton, QMenu
+    QToolButton, QMenu
 )
 
 from audio_converter import AUDIO_EXTENSIONS

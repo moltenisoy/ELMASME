@@ -604,7 +604,8 @@ class UniversalViewerWindow(QMainWindow):
         data, viewer = self._current_tab_data()
         if not viewer:
             return
-        if viewer.video_viewer.video_widget.hasFocus():
+        current_widget = viewer.stack.currentWidget()
+        if current_widget is viewer.video_viewer and viewer.video_viewer.video_widget.hasFocus():
             return
         self.go_previous()
 
@@ -612,7 +613,8 @@ class UniversalViewerWindow(QMainWindow):
         data, viewer = self._current_tab_data()
         if not viewer:
             return
-        if viewer.video_viewer.video_widget.hasFocus():
+        current_widget = viewer.stack.currentWidget()
+        if current_widget is viewer.video_viewer and viewer.video_viewer.video_widget.hasFocus():
             return
         self.go_next()
 
