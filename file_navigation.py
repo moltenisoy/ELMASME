@@ -79,14 +79,14 @@ class FileNavigator:
         if self.has_previous():
             self.current_index -= 1
             return self.current()
-        return self.current()
+        return None
     
     def next(self) -> str | None:
         """Navega al archivo siguiente."""
         if self.has_next():
             self.current_index += 1
             return self.current()
-        return self.current()
+        return None
     
     def go_to_index(self, index: int) -> str | None:
         """Navega a un índice específico."""

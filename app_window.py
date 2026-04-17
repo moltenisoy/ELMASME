@@ -124,9 +124,10 @@ class UniversalViewerWindow(QMainWindow):
         footer_layout.addWidget(self.archivo_button)
         footer_layout.addWidget(self.settings_button)
         footer_layout.addStretch(1)
+        footer_layout.addWidget(info_container)
         footer_layout.addWidget(self.nav_info_label)
+        footer_layout.addStretch(1)
         footer_layout.addWidget(self.theme_button)
-        footer_layout.addWidget(info_container, 2)
         footer_layout.addWidget(self.next_button)
 
         return footer
