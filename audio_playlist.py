@@ -18,6 +18,10 @@ class AudioPlaylistWidget(QWidget):
 
     file_selected = Signal(str)
 
+    _PLAY_MODE_ICONS = ["▶", "🔁", "🔀"]
+    _PLAY_MODE_LABELS = ["Secuencial", "Repetir", "Aleatorio"]
+    _PLAY_MODE_KEYS = ["sequential", "repeat", "shuffle"]
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._paths = []
@@ -72,7 +76,6 @@ class AudioPlaylistWidget(QWidget):
         self.sort_btn.setMenu(sort_menu)
         header.addWidget(self.sort_btn)
 
-        self._play_modes = ["▶ Secuencial", "🔁 Repetir", "🔀 Aleatorio"]
         self._play_mode_index = 0
         self.play_mode_btn = QToolButton()
         self.play_mode_btn.setText("▶")
@@ -104,15 +107,12 @@ class AudioPlaylistWidget(QWidget):
         self.toggle_btn.setText("▲" if self._list_visible else "▼")
 
     def _cycle_play_mode(self):
-        icons = ["▶", "🔁", "🔀"]
-        labels = ["Secuencial", "Repetir", "Aleatorio"]
-        self._play_mode_index = (self._play_mode_index + 1) % len(icons)
-        self.play_mode_btn.setText(icons[self._play_mode_index])
-        self.play_mode_btn.setToolTip(f"Modo: {labels[self._play_mode_index]}")
+        self._play_mode_index = (self._play_mode_index + 1) % len(self._PLAY_MODE_ICONS)
+        self.play_mode_btn.setText(self._PLAY_MODE_ICONS[self._play_mode_index])
+        self.play_mode_btn.setToolTip(f"Modo: {self._PLAY_MODE_LABELS[self._play_mode_index]}")
 
     def get_play_mode(self) -> str:
-        modes = ["sequential", "repeat", "shuffle"]
-        return modes[self._play_mode_index]
+        return self._PLAY_MODE_KEYS[self._play_mode_index]
 
     def _connect_signals(self):
         self.add_btn.clicked.connect(self._add_files)
