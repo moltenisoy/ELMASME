@@ -383,6 +383,14 @@ class TextEditorToolbar(QFrame):
 
         toolbar_layout.addLayout(row2)
 
+        row3 = QHBoxLayout()
+        row3.setSpacing(12)
+        self.stats_label = QLabel()
+        self.stats_label.setStyleSheet("color: #94a3b8; font-size: 11px; padding: 2px 4px;")
+        row3.addWidget(self.stats_label)
+        row3.addStretch()
+        toolbar_layout.addLayout(row3)
+
         default_font = QFont("Calibri", 11)
         self.text_view.setFont(default_font)
         self.font_combo.setCurrentFont(default_font)
@@ -411,7 +419,16 @@ class TextEditorToolbar(QFrame):
         self.addAction(underline_action)
 
     def _on_text_changed(self):
-        pass
+        self._update_stats()
+
+    def _update_stats(self):
+        text = self.text_view.toPlainText()
+        chars = len(text)
+        lines = text.count("\n") + 1 if text else 0
+        words = len(text.split()) if text.strip() else 0
+        self.stats_label.setText(
+            f"Palabras: {words}  |  Líneas: {lines}  |  Caracteres: {chars}"
+        )
 
     def _update_format_buttons(self):
         cursor = self.text_view.textCursor()
