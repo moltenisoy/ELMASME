@@ -1,8 +1,4 @@
-"""
-Módulo para manejo de archivos de audio.
-Re-exporta desde audio_converter, audio_player y audio_playlist para compatibilidad.
-"""
-from audio_converter import (  # noqa: F401
+from audio_converter import (
     AUDIO_EXTENSIONS,
     QT_SUPPORTED_AUDIO,
     FORMAT_NAMES,
@@ -13,5 +9,5 @@ from audio_converter import (  # noqa: F401
     AudioConverterDialog,
     AudioBatchConverterDialog,
 )
-from audio_player import AudioViewer  # noqa: F401
-from audio_playlist import AudioPlaylistWidget  # noqa: F401
+from audio_player import AudioViewer
+from audio_playlist import AudioPlaylistWidget
