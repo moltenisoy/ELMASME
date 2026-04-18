@@ -444,6 +444,7 @@ class PdfEditorToolbar(QFrame):
 
 _RENDER_DPI = 150  # DPI for rendering PDF pages to images
 _PAGE_GAP = 20     # pixels between pages in the scene
+_DEFAULT_FONT_SIZE = 12  # fallback font size in points
 
 
 class PdfEditorWidget(QWidget):
@@ -541,6 +542,7 @@ class PdfEditorWidget(QWidget):
             return
         self._apply_overlays_to_doc()
         try:
+            # encryption=0 avoids encryption issues with incremental saves
             self._doc.save(self._path, incremental=True, encryption=0)
             self._set_modified(False)
             # Re-render to reflect saved state
@@ -548,7 +550,12 @@ class PdfEditorWidget(QWidget):
             self._render_all_pages()
             QMessageBox.information(self, "Guardado", "PDF guardado correctamente.")
         except Exception:
-            # incremental save may fail on some PDFs; fall back to save-as
+            # Incremental save may fail on encrypted or malformed PDFs
+            QMessageBox.warning(
+                self, "Aviso",
+                "No se pudo guardar de forma incremental.\n"
+                "Se abrirá el diálogo «Guardar como» para guardar una copia."
+            )
             self.save_as()
 
     def save_as(self):
@@ -654,14 +661,17 @@ class PdfEditorWidget(QWidget):
                 pdf_rect = fitz.Rect(x, y, x + w, y + h)
                 fontsize = item.font.pointSize() * zoom
                 if fontsize <= 0:
-                    fontsize = 12
+                    fontsize = _DEFAULT_FONT_SIZE
                 color_tuple = (
                     item.color.redF(),
                     item.color.greenF(),
                     item.color.blueF(),
                 )
                 try:
-                    # Use a built-in font for reliable rendering
+                    # PyMuPDF only supports its built-in fonts (helv, cour, etc.)
+                    # for reliable cross-platform rendering, so the user's chosen
+                    # font family is used visually in the editor overlay but saved
+                    # with the Helvetica built-in for maximum PDF compatibility.
                     fontname = "helv"
                     page.insert_textbox(
                         pdf_rect,
