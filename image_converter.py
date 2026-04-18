@@ -101,7 +101,7 @@ def save_image(
             converted = image.convertToFormat(QImage.Format_RGBA8888)
             w = converted.width()
             h = converted.height()
-            pil_img = PILImage.frombytes("RGBA", (w, h), bytes(converted.bits()))
+            pil_img = PILImage.frombytes("RGBA", (w, h), bytes(converted.constBits()))
             
             save_fmt = "AVIF" if fmt_lower == "avif" else "HEIF"
             pil_img.save(path, save_fmt, quality=quality)

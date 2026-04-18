@@ -156,7 +156,8 @@ def convert_video(
             }
             scale = res_map.get(resolution)
             if scale:
-                cmd.extend(["-vf", f"scale={scale}:force_original_aspect_ratio=decrease,pad={scale}:(ow-iw)/2:(oh-ih)/2"])
+                w, h = scale.split(":")
+                cmd.extend(["-vf", f"scale={scale}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2"])
         
         if framerate:
             cmd.extend(["-r", str(framerate)])

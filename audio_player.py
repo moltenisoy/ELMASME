@@ -306,15 +306,15 @@ class AudioViewer(QWidget):
         play_path = path
         if ext in (".mid", ".midi"):
             try:
-                tmp_dir = tempfile.gettempdir()
-                tmp_wav = os.path.join(tmp_dir, "elmasme_midi_preview.wav")
+                fd, tmp_wav = tempfile.mkstemp(suffix=".wav", prefix="elmasme_midi_")
+                os.close(fd)
                 result = subprocess.run(
                     ["ffmpeg", "-y", "-i", path, "-c:a", "pcm_s16le", tmp_wav],
                     capture_output=True, timeout=30
                 )
                 if result.returncode == 0 and os.path.exists(tmp_wav):
                     play_path = tmp_wav
-            except (subprocess.TimeoutExpired, FileNotFoundError):
+            except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
                 pass
         
         self.player.setSource(QUrl.fromLocalFile(play_path))
