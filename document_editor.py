@@ -1,12 +1,16 @@
 import os
 from pathlib import Path
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QFont, QKeySequence, QColor, QTextCharFormat
+from PySide6.QtGui import (
+    QAction, QFont, QKeySequence, QColor, QTextCharFormat,
+    QTextTableFormat, QTextLength, QTextFrameFormat,
+)
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
     QToolButton, QFontComboBox, QComboBox, QColorDialog, QMessageBox,
-    QFileDialog
+    QFileDialog, QDialog, QSpinBox, QFormLayout, QDialogButtonBox,
+    QLineEdit, QGridLayout, QGroupBox,
 )
 
 
@@ -37,6 +41,153 @@ _EDITABLE_EXTENSIONS = {
 def is_editable(path: str) -> bool:
     ext = Path(path).suffix.lower()
     return ext in _EDITABLE_EXTENSIONS
+
+
+class InsertTableDialog(QDialog):
+    """Dialog to configure rows and columns for a table insertion."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Insertar tabla")
+        self.setFixedSize(300, 200)
+        self.setStyleSheet("""
+            QDialog { background: #1e293b; }
+            QLabel { color: #e5e7eb; font-size: 13px; }
+            QSpinBox {
+                background: #0f172a; color: #e5e7eb;
+                border: 1px solid rgba(148,163,184,0.3);
+                border-radius: 4px; padding: 4px; min-width: 80px;
+            }
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+
+        form = QFormLayout()
+        form.setSpacing(10)
+
+        self.rows_spin = QSpinBox()
+        self.rows_spin.setRange(1, 100)
+        self.rows_spin.setValue(3)
+        form.addRow("Filas:", self.rows_spin)
+
+        self.cols_spin = QSpinBox()
+        self.cols_spin.setRange(1, 26)
+        self.cols_spin.setValue(3)
+        form.addRow("Columnas:", self.cols_spin)
+
+        layout.addLayout(form)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.setStyleSheet("""
+            QPushButton {
+                background: rgba(59,130,246,0.2);
+                border: 1px solid rgba(59,130,246,0.4);
+                border-radius: 6px; padding: 6px 16px;
+                color: #60a5fa; font-weight: 500;
+            }
+            QPushButton:hover {
+                background: rgba(59,130,246,0.35);
+            }
+        """)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def get_values(self):
+        return self.rows_spin.value(), self.cols_spin.value()
+
+
+class HeaderFooterDialog(QDialog):
+    """Dialog to configure header and footer text for printing."""
+
+    def __init__(self, header_left="", header_center="", header_right="",
+                 footer_left="", footer_center="", footer_right="",
+                 parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Encabezado y pie de página")
+        self.setFixedSize(500, 340)
+        self.setStyleSheet("""
+            QDialog { background: #1e293b; }
+            QLabel { color: #e5e7eb; font-size: 12px; }
+            QGroupBox {
+                color: #60a5fa; font-weight: 600; font-size: 13px;
+                border: 1px solid rgba(96,165,250,0.3);
+                border-radius: 6px; margin-top: 8px; padding-top: 14px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top left;
+                padding: 0 6px;
+            }
+            QLineEdit {
+                background: #0f172a; color: #e5e7eb;
+                border: 1px solid rgba(148,163,184,0.3);
+                border-radius: 4px; padding: 6px 8px;
+            }
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+
+        hint = QLabel("Variables: {filename} = nombre del archivo, {page} = nº de página, {date} = fecha")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        layout.addWidget(hint)
+
+        # Header group
+        header_group = QGroupBox("Encabezado")
+        hg_layout = QGridLayout(header_group)
+        hg_layout.setSpacing(6)
+        hg_layout.addWidget(QLabel("Izquierda:"), 0, 0)
+        self.header_left = QLineEdit(header_left)
+        hg_layout.addWidget(self.header_left, 0, 1)
+        hg_layout.addWidget(QLabel("Centro:"), 1, 0)
+        self.header_center = QLineEdit(header_center)
+        hg_layout.addWidget(self.header_center, 1, 1)
+        hg_layout.addWidget(QLabel("Derecha:"), 2, 0)
+        self.header_right = QLineEdit(header_right)
+        hg_layout.addWidget(self.header_right, 2, 1)
+        layout.addWidget(header_group)
+
+        # Footer group
+        footer_group = QGroupBox("Pie de página")
+        fg_layout = QGridLayout(footer_group)
+        fg_layout.setSpacing(6)
+        fg_layout.addWidget(QLabel("Izquierda:"), 0, 0)
+        self.footer_left = QLineEdit(footer_left)
+        fg_layout.addWidget(self.footer_left, 0, 1)
+        fg_layout.addWidget(QLabel("Centro:"), 1, 0)
+        self.footer_center = QLineEdit(footer_center)
+        fg_layout.addWidget(self.footer_center, 1, 1)
+        fg_layout.addWidget(QLabel("Derecha:"), 2, 0)
+        self.footer_right = QLineEdit(footer_right)
+        fg_layout.addWidget(self.footer_right, 2, 1)
+        layout.addWidget(footer_group)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.setStyleSheet("""
+            QPushButton {
+                background: rgba(59,130,246,0.2);
+                border: 1px solid rgba(59,130,246,0.4);
+                border-radius: 6px; padding: 6px 16px;
+                color: #60a5fa; font-weight: 500;
+            }
+            QPushButton:hover { background: rgba(59,130,246,0.35); }
+        """)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def get_values(self):
+        return {
+            "header_left": self.header_left.text(),
+            "header_center": self.header_center.text(),
+            "header_right": self.header_right.text(),
+            "footer_left": self.footer_left.text(),
+            "footer_center": self.footer_center.text(),
+            "footer_right": self.footer_right.text(),
+        }
 
 
 class TextEditorToolbar(QFrame):
@@ -271,6 +422,39 @@ class TextEditorToolbar(QFrame):
         font_group.addWidget(self.highlight_btn)
 
         row1.addLayout(font_group)
+        row1.addSpacing(8)
+
+        separator_insert = QFrame()
+        separator_insert.setFrameShape(QFrame.VLine)
+        separator_insert.setStyleSheet("color: rgba(148, 163, 184, 0.3);")
+        separator_insert.setFixedWidth(2)
+        row1.addWidget(separator_insert)
+        row1.addSpacing(4)
+
+        insert_group = QHBoxLayout()
+        insert_group.setSpacing(4)
+
+        self.insert_table_btn = QToolButton()
+        self.insert_table_btn.setText("📊 Tabla")
+        self.insert_table_btn.setToolTip("Insertar tabla")
+        self.insert_table_btn.setFixedSize(72, 26)
+        self.insert_table_btn.clicked.connect(self._insert_table)
+        insert_group.addWidget(self.insert_table_btn)
+
+        self.header_footer_btn = QToolButton()
+        self.header_footer_btn.setText("📃 Encab.")
+        self.header_footer_btn.setToolTip("Configurar encabezado y pie de página para impresión")
+        self.header_footer_btn.setFixedSize(82, 26)
+        self.header_footer_btn.clicked.connect(self._configure_header_footer)
+        insert_group.addWidget(self.header_footer_btn)
+
+        self.compare_btn = QToolButton()
+        self.compare_btn.setText("⇄ Comparar")
+        self.compare_btn.setToolTip("Comparar dos documentos lado a lado")
+        self.compare_btn.setFixedSize(95, 26)
+        insert_group.addWidget(self.compare_btn)
+
+        row1.addLayout(insert_group)
         row1.addStretch()
 
         toolbar_layout.addLayout(row1)
@@ -651,7 +835,54 @@ class TextEditorToolbar(QFrame):
         self.text_view.setAlignment(alignment)
         self._update_format_buttons()
 
+    # ------------------------------------------------------------------
+    #  Insert table
+    # ------------------------------------------------------------------
+
+    def _insert_table(self):
+        dlg = InsertTableDialog(self)
+        if dlg.exec() != QDialog.Accepted:
+            return
+        rows, cols = dlg.get_values()
+        cursor = self.text_view.textCursor()
+        fmt = QTextTableFormat()
+        fmt.setBorderStyle(QTextFrameFormat.BorderStyle_Solid)
+        fmt.setCellPadding(4)
+        fmt.setCellSpacing(0)
+        fmt.setBorder(1)
+        fmt.setBorderBrush(QColor("#94a3b8"))
+        constraints = []
+        col_width = 100.0 / cols
+        for _ in range(cols):
+            constraints.append(QTextLength(QTextLength.PercentageLength, col_width))
+        fmt.setColumnWidthConstraints(constraints)
+        cursor.insertTable(rows, cols, fmt)
+
+    # ------------------------------------------------------------------
+    #  Header / footer for printing
+    # ------------------------------------------------------------------
+
+    _header_footer_config = {
+        "header_left": "", "header_center": "", "header_right": "",
+        "footer_left": "", "footer_center": "{page}", "footer_right": "",
+    }
+
+    def _configure_header_footer(self):
+        cfg = self._header_footer_config
+        dlg = HeaderFooterDialog(
+            header_left=cfg["header_left"],
+            header_center=cfg["header_center"],
+            header_right=cfg["header_right"],
+            footer_left=cfg["footer_left"],
+            footer_center=cfg["footer_center"],
+            footer_right=cfg["footer_right"],
+            parent=self,
+        )
+        if dlg.exec() == QDialog.Accepted:
+            self._header_footer_config = dlg.get_values()
+
     def _export_pdf(self):
+        import datetime
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Exportar como PDF", "", "PDF (*.pdf)"
         )
@@ -659,10 +890,115 @@ class TextEditorToolbar(QFrame):
             return
         if not file_path.lower().endswith(".pdf"):
             file_path += ".pdf"
+
+        cfg = self._header_footer_config
+        has_header = any(cfg.get(k) for k in ("header_left", "header_center", "header_right"))
+        has_footer = any(cfg.get(k) for k in ("footer_left", "footer_center", "footer_right"))
+
+        if not has_header and not has_footer:
+            printer = QPrinter(QPrinter.HighResolution)
+            printer.setOutputFormat(QPrinter.PdfFormat)
+            printer.setOutputFileName(file_path)
+            self.text_view.document().print_(printer)
+            return
+
+        # Build a temporary document with header/footer on each page
         printer = QPrinter(QPrinter.HighResolution)
         printer.setOutputFormat(QPrinter.PdfFormat)
         printer.setOutputFileName(file_path)
-        self.text_view.document().print_(printer)
+
+        source_doc = self.text_view.document().clone()
+        source_doc.setPageSize(printer.pageRect(QPrinter.Point).size())
+
+        page_count = source_doc.pageCount()
+        if page_count < 1:
+            page_count = 1
+
+        from PySide6.QtGui import QPainter, QFontMetrics
+
+        painter = QPainter()
+        if not painter.begin(printer):
+            return
+
+        page_rect = printer.pageRect(QPrinter.DevicePixel)
+        full_rect = printer.paperRect(QPrinter.DevicePixel)
+
+        header_font = QFont("Calibri", 9)
+        header_fm = QFontMetrics(header_font)
+        header_height = header_fm.height() + 10
+        footer_height = header_height
+
+        margin_top = max(0, page_rect.top() - full_rect.top())
+        margin_left = max(0, page_rect.left() - full_rect.left())
+
+        content_top = margin_top + (header_height if has_header else 0)
+        content_bottom = page_rect.height() - (footer_height if has_footer else 0)
+        content_height = content_bottom - (header_height if has_header else 0)
+
+        filename = os.path.basename(file_path) if file_path else ""
+        today = datetime.date.today().strftime("%Y-%m-%d")
+
+        def _resolve(text, page_num):
+            return text.replace("{page}", str(page_num)).replace(
+                "{filename}", filename
+            ).replace("{date}", today)
+
+        # Print page by page
+        source_doc.setPageSize(page_rect.size())
+        total_pages = source_doc.pageCount()
+        if total_pages < 1:
+            total_pages = 1
+
+        for page in range(total_pages):
+            if page > 0:
+                printer.newPage()
+
+            # Draw header
+            if has_header:
+                painter.setFont(header_font)
+                y = margin_top + header_fm.ascent()
+                if cfg["header_left"]:
+                    painter.drawText(int(margin_left), int(y),
+                                     _resolve(cfg["header_left"], page + 1))
+                if cfg["header_center"]:
+                    text = _resolve(cfg["header_center"], page + 1)
+                    tw = header_fm.horizontalAdvance(text)
+                    painter.drawText(int(margin_left + (page_rect.width() - tw) / 2),
+                                     int(y), text)
+                if cfg["header_right"]:
+                    text = _resolve(cfg["header_right"], page + 1)
+                    tw = header_fm.horizontalAdvance(text)
+                    painter.drawText(int(margin_left + page_rect.width() - tw),
+                                     int(y), text)
+
+            # Draw footer
+            if has_footer:
+                painter.setFont(header_font)
+                y = margin_top + page_rect.height() - 4
+                if cfg["footer_left"]:
+                    painter.drawText(int(margin_left), int(y),
+                                     _resolve(cfg["footer_left"], page + 1))
+                if cfg["footer_center"]:
+                    text = _resolve(cfg["footer_center"], page + 1)
+                    tw = header_fm.horizontalAdvance(text)
+                    painter.drawText(int(margin_left + (page_rect.width() - tw) / 2),
+                                     int(y), text)
+                if cfg["footer_right"]:
+                    text = _resolve(cfg["footer_right"], page + 1)
+                    tw = header_fm.horizontalAdvance(text)
+                    painter.drawText(int(margin_left + page_rect.width() - tw),
+                                     int(y), text)
+
+            # Draw document content for this page
+            painter.save()
+            painter.translate(margin_left, content_top)
+            clip_rect = page_rect.adjusted(0, 0, 0, -header_height - footer_height)
+            painter.setClipRect(clip_rect.translated(-margin_left, -content_top))
+            painter.translate(0, -page * page_rect.height())
+            source_doc.drawContents(painter)
+            painter.restore()
+
+        painter.end()
 
     def save_current(self, current_path, is_pdf):
         if not current_path:

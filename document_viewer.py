@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 from document_pdf import PDF_EXTENSIONS
 from document_editor import TextEditorToolbar, read_text_file, save_text_file, is_editable
 from pdf_editor import PdfEditorWidget
+from diff_viewer import DiffViewerWidget
 
 TEXT_DOCUMENT_EXTENSIONS = {
     ".txt", ".log", ".ini", ".cfg", ".conf", ".config", ".csv", ".tsv", ".xml",
@@ -459,6 +460,7 @@ class DocumentViewer(QWidget):
         self.toolbar.zoom_in_btn.clicked.connect(self.zoom_in)
         self.toolbar.search_btn.clicked.connect(self._toggle_search)
         self.toolbar.contrast_btn.clicked.connect(self._toggle_high_contrast)
+        self.toolbar.compare_btn.clicked.connect(self._open_diff_viewer)
 
         self.text_view.textChanged.connect(self._on_content_changed)
 
@@ -473,10 +475,15 @@ class DocumentViewer(QWidget):
         self.pdf_editor = PdfEditorWidget(self)
         self.pdf_editor.modified_changed.connect(self._on_pdf_editor_modified)
 
+        # Diff Viewer
+        self.diff_viewer = DiffViewerWidget(self)
+        self.diff_viewer.close_btn.clicked.connect(self._close_diff_viewer)
+
         self.stack.addWidget(self.pdf_view)
         self.stack.addWidget(self.text_view)
         self.stack.addWidget(self.message)
         self.stack.addWidget(self.pdf_editor)
+        self.stack.addWidget(self.diff_viewer)
 
         # PDF edit/view toggle bar (shown only when viewing a PDF)
         self._pdf_bar = QWidget()
@@ -814,3 +821,28 @@ class DocumentViewer(QWidget):
 
     def _on_pdf_editor_modified(self, modified: bool):
         self._modified = modified
+
+    # ------------------------------------------------------------------
+    #  Diff viewer integration
+    # ------------------------------------------------------------------
+
+    def _open_diff_viewer(self):
+        """Open the side-by-side diff viewer, pre-loading the current file."""
+        self._prev_widget = self.stack.currentWidget()
+        self._prev_toolbar_visible = self.toolbar.isVisible()
+        if self.current_path:
+            self.diff_viewer.load_left_file(self.current_path)
+        self.toolbar.setVisible(False)
+        self._pdf_bar.setVisible(False)
+        self.stack.setCurrentWidget(self.diff_viewer)
+
+    def _close_diff_viewer(self):
+        """Return to the previous view from the diff viewer."""
+        if hasattr(self, "_prev_widget") and self._prev_widget:
+            self.stack.setCurrentWidget(self._prev_widget)
+            self.toolbar.setVisible(getattr(self, "_prev_toolbar_visible", True))
+            if self.is_pdf:
+                self._pdf_bar.setVisible(True)
+        else:
+            self.stack.setCurrentWidget(self.text_view)
+            self.toolbar.setVisible(True)
