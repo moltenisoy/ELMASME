@@ -115,27 +115,15 @@ def convert_video(
     output_path: str,
     output_format: str,
     quality: str = "high",
-    progress_callback: Optional[Callable[[int], None]] = None
+    progress_callback: Optional[Callable[[int], None]] = None,
+    resolution: Optional[str] = None,
+    framerate: Optional[int] = None
 ) -> bool:
-    """
-    Convierte un archivo de video a otro formato usando ffmpeg.
-    
-    Args:
-        input_path: Ruta del archivo de entrada
-        output_path: Ruta del archivo de salida
-        output_format: Extensión de salida (ej: ".mp4", ".avi")
-        quality: Calidad de salida ("low", "medium", "high", "original")
-        progress_callback: Función opcional para reportar progreso (0-100)
-    
-    Returns:
-        True si la conversión fue exitosa, False en caso contrario
-    """
     if not is_ffmpeg_available():
         raise RuntimeError("ffmpeg no está instalado o no está disponible en el PATH")
     
     codecs = FORMAT_CODECS.get(output_format.lower(), {"video": "copy", "audio": "copy"})
     
-    # Presets de calidad
     quality_presets = {
         "low": {"crf": "28", "preset": "veryfast", "audio_bitrate": "96k"},
         "medium": {"crf": "23", "preset": "medium", "audio_bitrate": "128k"},
@@ -147,19 +135,37 @@ def convert_video(
     
     cmd = ["ffmpeg", "-y", "-i", input_path]
     
-    # Configuración de video
-    if quality == "original":
+    if quality == "original" and not resolution and not framerate:
         cmd.extend(["-c:v", "copy"])
     else:
-        cmd.extend([
-            "-c:v", codecs["video"],
-            "-crf", preset["crf"],
-            "-preset", preset["preset"]
-        ])
+        if quality == "original":
+            cmd.extend(["-c:v", codecs["video"]])
+        else:
+            cmd.extend([
+                "-c:v", codecs["video"],
+                "-crf", preset["crf"],
+                "-preset", preset["preset"]
+            ])
+        
+        if resolution:
+            res_map = {
+                "480p": "854:480",
+                "720p": "1280:720",
+                "1080p": "1920:1080",
+                "4K": "3840:2160"
+            }
+            scale = res_map.get(resolution)
+            if scale:
+                cmd.extend(["-vf", f"scale={scale}:force_original_aspect_ratio=decrease,pad={scale}:(ow-iw)/2:(oh-ih)/2"])
+        
+        if framerate:
+            cmd.extend(["-r", str(framerate)])
     
-    # Configuración de audio
     if quality == "original" or preset["audio_bitrate"] == "copy":
-        cmd.extend(["-c:a", "copy"])
+        if not resolution and not framerate:
+            cmd.extend(["-c:a", "copy"])
+        else:
+            cmd.extend(["-c:a", codecs["audio"], "-b:a", "192k"])
     else:
         cmd.extend([
             "-c:a", codecs["audio"],
@@ -277,6 +283,30 @@ class VideoConverterDialog(QDialog):
         quality_layout.addStretch()
         convert_layout.addLayout(quality_layout)
         
+        resolution_layout = QHBoxLayout()
+        resolution_layout.addWidget(QLabel("Resolución:"))
+        self.resolution_combo = QComboBox()
+        self.resolution_combo.addItem("Original", "")
+        self.resolution_combo.addItem("480p (854x480)", "480p")
+        self.resolution_combo.addItem("720p (1280x720)", "720p")
+        self.resolution_combo.addItem("1080p (1920x1080)", "1080p")
+        self.resolution_combo.addItem("4K (3840x2160)", "4K")
+        self.resolution_combo.setCurrentIndex(0)
+        resolution_layout.addWidget(self.resolution_combo)
+        resolution_layout.addStretch()
+        convert_layout.addLayout(resolution_layout)
+        
+        framerate_layout = QHBoxLayout()
+        framerate_layout.addWidget(QLabel("Framerate:"))
+        self.framerate_combo = QComboBox()
+        self.framerate_combo.addItem("Original", 0)
+        for fps in [24, 25, 30, 50, 60]:
+            self.framerate_combo.addItem(f"{fps} fps", fps)
+        self.framerate_combo.setCurrentIndex(0)
+        framerate_layout.addWidget(self.framerate_combo)
+        framerate_layout.addStretch()
+        convert_layout.addLayout(framerate_layout)
+        
         layout.addWidget(convert_group)
         
         # Opciones de guardado
@@ -316,6 +346,8 @@ class VideoConverterDialog(QDialog):
     def _on_convert(self):
         output_format = self.format_combo.currentData()
         quality = self.quality_combo.currentData()
+        resolution = self.resolution_combo.currentData() or None
+        framerate = self.framerate_combo.currentData() or None
         
         if self.new_file_radio.isChecked():
             original_dir = os.path.dirname(self.input_path)
@@ -337,7 +369,6 @@ class VideoConverterDialog(QDialog):
             original_name = os.path.splitext(os.path.basename(self.input_path))[0]
             self.output_path = os.path.join(original_dir, f"{original_name}{output_format}")
         
-        # Realizar conversión
         progress = QProgressDialog("Convirtiendo video...", "Cancelar", 0, 100, self)
         progress.setWindowModality(Qt.WindowModal)
         progress.setMinimumDuration(0)
@@ -352,7 +383,9 @@ class VideoConverterDialog(QDialog):
                 self.output_path,
                 output_format,
                 quality,
-                update_progress
+                update_progress,
+                resolution=resolution,
+                framerate=framerate
             )
             
             progress.setValue(100)

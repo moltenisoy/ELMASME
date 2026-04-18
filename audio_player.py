@@ -1,11 +1,12 @@
 import os
 from pathlib import Path
 from PySide6.QtCore import Qt, QUrl, QTimer
+from PySide6.QtGui import QPixmap
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider,
     QToolButton, QMessageBox, QComboBox, QDialog, QDialogButtonBox,
-    QApplication, QMenu, QSplitter
+    QApplication, QMenu, QSplitter, QFileDialog
 )
 
 from audio_converter import (
@@ -68,6 +69,7 @@ class AudioViewer(QWidget):
         self.current_path = None
         self._progress_bar = None
         self._overlay_pinned = False
+        self._bg_pixmap = None
 
         self.setMouseTracking(True)
         self._build_ui()
@@ -132,6 +134,11 @@ class AudioViewer(QWidget):
         self.playlist_toggle_button.setChecked(True)
         self.playlist_toggle_button.clicked.connect(self._toggle_playlist_visibility)
 
+        self.bg_image_button = QPushButton("🖼")
+        self.bg_image_button.setFixedSize(26, 22)
+        self.bg_image_button.setToolTip("Seleccionar imagen de fondo")
+        self.bg_image_button.clicked.connect(self._select_bg_image)
+
         overlay_layout.addWidget(self.play_button)
         overlay_layout.addWidget(self.pause_button)
         overlay_layout.addWidget(self.stop_button)
@@ -139,6 +146,7 @@ class AudioViewer(QWidget):
         overlay_layout.addWidget(vol_label)
         overlay_layout.addWidget(self.volume_slider)
         overlay_layout.addStretch()
+        overlay_layout.addWidget(self.bg_image_button)
         overlay_layout.addWidget(self.pin_button)
 
         self.position_slider = QSlider(Qt.Horizontal)
@@ -255,10 +263,38 @@ class AudioViewer(QWidget):
             "Ocultar lista de reproducción" if visible else "Mostrar lista de reproducción"
         )
 
+    def _select_bg_image(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Seleccionar imagen de fondo",
+            "",
+            "Imágenes (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;Todos los archivos (*.*)"
+        )
+        if not file_path:
+            return
+        pixmap = QPixmap(file_path)
+        if pixmap.isNull():
+            return
+        self._bg_pixmap = pixmap
+        self._apply_bg_image()
+
+    def _apply_bg_image(self):
+        if self._bg_pixmap and not self._bg_pixmap.isNull():
+            pw = self.placeholder.width() or 400
+            ph = self.placeholder.height() or 200
+            scaled = self._bg_pixmap.scaled(pw, ph, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+            self.placeholder.setPixmap(scaled)
+            self.placeholder.setScaledContents(True)
+            self.placeholder.setStyleSheet(
+                "background:#111827;border-radius:14px;color:#cbd5e1;font-size:16px;"
+            )
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if self.overlay.isVisible():
             self._reposition_overlay()
+        if self._bg_pixmap and not self._bg_pixmap.isNull():
+            self._apply_bg_image()
 
     def load_file(self, path: str):
         self.current_path = path
@@ -276,7 +312,10 @@ class AudioViewer(QWidget):
         if info['bitrate'] > 0:
             info_text += f" | {info['bitrate']} kbps"
 
-        self.placeholder.setText(info_text)
+        if self._bg_pixmap and not self._bg_pixmap.isNull():
+            self._apply_bg_image()
+        else:
+            self.placeholder.setText(info_text)
         self.player.play()
 
     def stop(self):
