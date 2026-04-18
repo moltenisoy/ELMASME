@@ -19,6 +19,34 @@ from windows_integration import (
 )
 
 
+class _LeftElidedLabel(QLabel):
+    """QLabel subclass that elides text from the left when it overflows."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._full_text = ""
+
+    def setFullText(self, text):
+        self._full_text = text
+        self._update_elided()
+
+    def _update_elided(self):
+        if not self._full_text:
+            super().setText("")
+            return
+        fm = self.fontMetrics()
+        w = self.width()
+        if w > 0:
+            elided = fm.elidedText(self._full_text, Qt.ElideLeft, w)
+        else:
+            elided = self._full_text
+        super().setText(elided)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_elided()
+
+
 class UniversalViewerWindow(QMainWindow):
 
     def __init__(self, start_path=None):
@@ -69,13 +97,12 @@ class UniversalViewerWindow(QMainWindow):
     def _apply_theme(self, theme_name):
         self.setStyleSheet(get_theme(theme_name))
 
-    def _build_footer(self) -> QFrame:
-        footer = QFrame()
-        footer.setObjectName("FooterPanel")
-        footer.setFixedHeight(28)
+    def _build_footer(self) -> QWidget:
+        footer = QWidget()
+        footer.setFixedHeight(38)
 
         footer_layout = QHBoxLayout(footer)
-        footer_layout.setContentsMargins(4, 0, 4, 0)
+        footer_layout.setContentsMargins(4, 0, 4, 10)
         footer_layout.setSpacing(4)
 
         self.prev_button = QToolButton()
@@ -91,21 +118,19 @@ class UniversalViewerWindow(QMainWindow):
         self.settings_button.setFixedSize(40, 24)
         self.settings_button.clicked.connect(self._show_settings_panel)
 
+        self.file_path_label = _LeftElidedLabel()
+        self.file_path_label.setObjectName("FilePathLabel")
+        self.file_path_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
         self.file_name_label = QLabel("Sin archivo")
         self.file_name_label.setObjectName("FileNameLabel")
-        self.file_name_label.setAlignment(Qt.AlignCenter)
 
-        self.file_path_label = QLabel("")
-        self.file_path_label.setObjectName("FilePathLabel")
-        self.file_path_label.setAlignment(Qt.AlignCenter)
-
-        info_container = QFrame()
-        info_layout = QVBoxLayout(info_container)
+        info_container = QWidget()
+        info_layout = QHBoxLayout(info_container)
         info_layout.setContentsMargins(0, 0, 0, 0)
         info_layout.setSpacing(0)
-        info_layout.setAlignment(Qt.AlignCenter)
-        info_layout.addWidget(self.file_name_label)
-        info_layout.addWidget(self.file_path_label)
+        info_layout.addWidget(self.file_path_label, 1)
+        info_layout.addWidget(self.file_name_label, 0)
 
         self.next_button = QToolButton()
         self.next_button.setText("0/0 Siguiente ▶")
@@ -115,9 +140,7 @@ class UniversalViewerWindow(QMainWindow):
         footer_layout.addWidget(self.prev_button)
         footer_layout.addWidget(self.archivo_button)
         footer_layout.addWidget(self.settings_button)
-        footer_layout.addStretch(1)
-        footer_layout.addWidget(info_container)
-        footer_layout.addStretch(1)
+        footer_layout.addWidget(info_container, 1)
         footer_layout.addWidget(self.next_button)
 
         return footer
@@ -318,7 +341,7 @@ class UniversalViewerWindow(QMainWindow):
             self.prev_button.setText("◀ Anterior 0/0")
             self.next_button.setText("0/0 Siguiente ▶")
             self.file_name_label.setText("Sin archivo")
-            self.file_path_label.setText("")
+            self.file_path_label.setFullText("")
             return
 
         nav = data['navigator']
@@ -334,11 +357,14 @@ class UniversalViewerWindow(QMainWindow):
         self.next_button.setText(f"{counter_text} Siguiente ▶")
 
         if path:
+            dir_part = os.path.dirname(path)
+            if dir_part and not dir_part.endswith(os.sep):
+                dir_part += os.sep
+            self.file_path_label.setFullText(dir_part)
             self.file_name_label.setText(os.path.basename(path))
-            self.file_path_label.setText(os.path.dirname(path))
         else:
+            self.file_path_label.setFullText("")
             self.file_name_label.setText("Sin archivo")
-            self.file_path_label.setText("")
 
     def _show_open_choice_dialog(self):
         dialog = QDialog(self)
