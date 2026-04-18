@@ -1,7 +1,3 @@
-"""
-Módulo de conversión de archivos de audio.
-Incluye metadatos y conversión entre formatos.
-"""
 
 import json
 import os
@@ -16,10 +12,9 @@ from PySide6.QtWidgets import (
     QGridLayout, QMessageBox, QFileDialog, QProgressDialog, QApplication
 )
 
-# Formatos de audio soportados
 AUDIO_EXTENSIONS = {
     ".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma",
-    ".mid", ".midi"
+    ".mid", ".midi", ".opus"
 }
 
 QT_SUPPORTED_AUDIO = {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac"}
@@ -33,12 +28,12 @@ FORMAT_NAMES = {
     ".aac": "AAC (Advanced Audio Coding)",
     ".wma": "WMA (Windows Media Audio)",
     ".mid": "MIDI (Musical Instrument Digital Interface)",
-    ".midi": "MIDI (Musical Instrument Digital Interface)"
+    ".midi": "MIDI (Musical Instrument Digital Interface)",
+    ".opus": "OPUS (Opus Audio Codec)"
 }
 
 
 def get_audio_info(path: str) -> Dict:
-    """Obtiene información del archivo de audio."""
     info = {
         "path": path,
         "filename": os.path.basename(path),
@@ -53,7 +48,6 @@ def get_audio_info(path: str) -> Dict:
     if os.path.exists(path):
         info["size"] = os.path.getsize(path)
     
-    # Intentar obtener metadatos con ffprobe si está disponible
     try:
         result = subprocess.run(
             ["ffprobe", "-v", "quiet", "-print_format", "json",
@@ -65,7 +59,7 @@ def get_audio_info(path: str) -> Dict:
             if "format" in data:
                 fmt = data["format"]
                 info["duration"] = float(fmt.get("duration", 0))
-                info["bitrate"] = int(fmt.get("bit_rate", 0)) // 1000  # kbps
+                info["bitrate"] = int(fmt.get("bit_rate", 0)) // 1000
             if "streams" in data and len(data["streams"]) > 0:
                 stream = data["streams"][0]
                 info["sample_rate"] = int(stream.get("sample_rate", 0))
@@ -77,7 +71,6 @@ def get_audio_info(path: str) -> Dict:
 
 
 def is_ffmpeg_available() -> bool:
-    """Verifica si ffmpeg está instalado y disponible."""
     try:
         result = subprocess.run(
             ["ffmpeg", "-version"],
@@ -106,7 +99,8 @@ def convert_audio(
         ".ogg": "libvorbis",
         ".m4a": "aac",
         ".aac": "aac",
-        ".wma": "wmav2"
+        ".wma": "wmav2",
+        ".opus": "libopus"
     }
     
     codec = codec_map.get(output_format.lower(), "copy")
@@ -157,12 +151,10 @@ def convert_audio(
 
 
 def get_supported_output_formats(input_format: str) -> List[str]:
-    """Obtiene la lista de formatos a los que se puede convertir un audio."""
     return sorted([ext for ext in AUDIO_EXTENSIONS if ext != input_format.lower()])
 
 
 class AudioConverterDialog(QDialog):
-    """Diálogo para convertir archivos de audio."""
     
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -179,7 +171,6 @@ class AudioConverterDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         
-        # Información del archivo de entrada
         info_group = QGroupBox("Archivo de entrada")
         info_layout = QGridLayout(info_group)
         
@@ -203,11 +194,9 @@ class AudioConverterDialog(QDialog):
         
         layout.addWidget(info_group)
         
-        # Opciones de conversión
         convert_group = QGroupBox("Opciones de conversión")
         convert_layout = QVBoxLayout(convert_group)
         
-        # Formato de salida
         format_layout = QHBoxLayout()
         format_layout.addWidget(QLabel("Convertir a:"))
         self.format_combo = QComboBox()
@@ -220,7 +209,6 @@ class AudioConverterDialog(QDialog):
         format_layout.addStretch()
         convert_layout.addLayout(format_layout)
         
-        # Opción de copia sin conversión
         self.copy_check = QCheckBox("Copiar sin recodificar (copiar códec original)")
         self.copy_check.setToolTip("Mantiene la misma calidad pero cambia el contenedor")
         convert_layout.addWidget(self.copy_check)
@@ -249,7 +237,6 @@ class AudioConverterDialog(QDialog):
         
         layout.addWidget(convert_group)
         
-        # Opciones de guardado
         save_group = QGroupBox("Guardar como")
         save_layout = QVBoxLayout(save_group)
         
@@ -268,7 +255,6 @@ class AudioConverterDialog(QDialog):
         
         layout.addWidget(save_group)
         
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
         
@@ -366,7 +352,6 @@ class AudioConverterDialog(QDialog):
 
 
 class AudioBatchConverterDialog(QDialog):
-    """Diálogo para convertir audio a múltiples formatos simultáneamente."""
     
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -383,12 +368,10 @@ class AudioBatchConverterDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         
-        # Información del archivo
         info_label = QLabel(f"Archivo: {os.path.basename(self.input_path)}")
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
         
-        # Selección de formatos
         format_group = QGroupBox("Seleccionar formatos de salida")
         format_layout = QVBoxLayout(format_group)
         
@@ -401,7 +384,6 @@ class AudioBatchConverterDialog(QDialog):
             self.format_checks[fmt] = check
             format_layout.addWidget(check)
         
-        # Botones de selección rápida
         select_layout = QHBoxLayout()
         select_all_btn = QPushButton("Seleccionar todos")
         select_all_btn.clicked.connect(self._select_all)
@@ -415,7 +397,6 @@ class AudioBatchConverterDialog(QDialog):
         format_layout.addLayout(select_layout)
         layout.addWidget(format_group)
         
-        # Opciones
         options_group = QGroupBox("Opciones")
         options_layout = QVBoxLayout(options_group)
         
@@ -425,7 +406,6 @@ class AudioBatchConverterDialog(QDialog):
         
         layout.addWidget(options_group)
         
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
         
@@ -530,19 +510,6 @@ def trim_audio(
     end_seconds: float,
     progress_callback: Optional[Callable[[int], None]] = None
 ) -> bool:
-    """
-    Recorta un fragmento de un archivo de audio usando ffmpeg.
-
-    Args:
-        input_path: Ruta del archivo de entrada
-        output_path: Ruta del archivo de salida
-        start_seconds: Segundo de inicio del recorte
-        end_seconds: Segundo de fin del recorte
-        progress_callback: Función opcional para reportar progreso (0-100)
-
-    Returns:
-        True si el recorte fue exitoso, False en caso contrario
-    """
     if not is_ffmpeg_available():
         raise RuntimeError("ffmpeg no está instalado o no está disponible en el PATH")
 
@@ -588,7 +555,6 @@ def trim_audio(
 
 
 class AudioTrimDialog(QDialog):
-    """Diálogo para recortar un fragmento de tiempo de un audio."""
 
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -605,7 +571,6 @@ class AudioTrimDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
 
-        # Información del archivo de entrada
         info_group = QGroupBox("Archivo de entrada")
         info_layout = QGridLayout(info_group)
 
@@ -626,7 +591,6 @@ class AudioTrimDialog(QDialog):
 
         layout.addWidget(info_group)
 
-        # Opciones de recorte
         trim_group = QGroupBox("Rango de recorte")
         trim_layout = QGridLayout(trim_group)
 
@@ -668,7 +632,6 @@ class AudioTrimDialog(QDialog):
 
         layout.addWidget(trim_group)
 
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
 

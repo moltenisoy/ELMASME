@@ -1,7 +1,3 @@
-"""
-Módulo para conversión y manipulación de archivos de imagen.
-Incluye redimensionamiento, información y guardado en distintos formatos.
-"""
 
 import os
 from pathlib import Path
@@ -13,13 +9,11 @@ from PySide6.QtWidgets import (
     QDialog, QComboBox, QCheckBox, QGroupBox, QGridLayout, QSpinBox
 )
 
-# Formatos de imagen soportados
 IMAGE_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff",
     ".heif", ".heic", ".avif"
 }
 
-# Nombres legibles de formatos
 FORMAT_NAMES = {
     ".png": "PNG (Portable Network Graphics)",
     ".jpg": "JPEG (Joint Photographic Experts Group)",
@@ -34,7 +28,6 @@ FORMAT_NAMES = {
     ".avif": "AVIF (AV1 Image File Format)"
 }
 
-# Formatos que soportan transparencia
 TRANSPARENT_FORMATS = {".png", ".gif", ".webp", ".tif", ".tiff", ".avif"}
 
 
@@ -153,12 +146,8 @@ def resize_image(
         w = image.width()
         h = image.height()
         
-        fmt = image.format()
-        if fmt == QImage.Format_RGBA8888 or fmt == QImage.Format_ARGB32:
-            pil_img = PILImage.frombytes("RGBA", (w, h), bytes(image.constBits()))
-        else:
-            converted = image.convertToFormat(QImage.Format_RGBA8888)
-            pil_img = PILImage.frombytes("RGBA", (w, h), bytes(converted.constBits()))
+        converted = image.convertToFormat(QImage.Format_RGBA8888)
+        pil_img = PILImage.frombytes("RGBA", (w, h), bytes(converted.constBits()))
         
         pil_interp = {
             "nearest": PILImage.NEAREST,
@@ -185,7 +174,6 @@ def resize_image(
 
 
 class ImageResizeDialog(QDialog):
-    """Diálogo para redimensionar y convertir imágenes."""
     
     def __init__(self, parent=None, current_width=0, current_height=0):
         super().__init__(parent)

@@ -2,7 +2,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
-from PySide6.QtCore import Qt, QUrl, QTimer
+from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QPixmap
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
@@ -19,8 +19,6 @@ from audio_converter import (
 from audio_playlist import AudioPlaylistWidget
 from progress_bar import ConversionProgressBar
 
-OVERLAY_HEIGHT = 42
-OVERLAY_TRIGGER_ZONE = 0.8
 
 VOLUME_SLIDER_STYLE = """
     QSlider::groove:horizontal {
@@ -70,13 +68,11 @@ class AudioViewer(QWidget):
         self.is_seeking = False
         self.current_path = None
         self._progress_bar = None
-        self._overlay_pinned = False
         self._bg_pixmap = None
         self._midi_tmp = None
 
         self.setMouseTracking(True)
         self._build_ui()
-        self._setup_timers()
         self._connect_signals()
 
     def _build_ui(self):
@@ -87,17 +83,6 @@ class AudioViewer(QWidget):
         )
         self.placeholder.setText("Audio cargado")
         self.placeholder.setMinimumHeight(200)
-        self.placeholder.setMouseTracking(True)
-
-        self.overlay = QWidget(self)
-        self.overlay.setStyleSheet(
-            "background: rgba(0,0,0,0.7); border-radius: 8px;"
-        )
-        self.overlay.hide()
-
-        overlay_layout = QHBoxLayout(self.overlay)
-        overlay_layout.setContentsMargins(8, 4, 8, 4)
-        overlay_layout.setSpacing(6)
 
         self.play_button = QPushButton("▶")
         self.play_button.setFixedSize(36, 28)
@@ -124,11 +109,6 @@ class AudioViewer(QWidget):
         self.volume_slider.valueChanged.connect(self._on_volume_changed)
         self.audio_output.setVolume(0.5)
 
-        self.pin_button = QPushButton("📌")
-        self.pin_button.setFixedSize(26, 22)
-        self.pin_button.setCheckable(True)
-        self.pin_button.clicked.connect(self._toggle_pin)
-
         self.playlist_toggle_button = QPushButton("📃")
         self.playlist_toggle_button.setFixedSize(36, 28)
         self.playlist_toggle_button.setStyleSheet("font-size: 16px;")
@@ -141,16 +121,6 @@ class AudioViewer(QWidget):
         self.bg_image_button.setFixedSize(26, 22)
         self.bg_image_button.setToolTip("Seleccionar imagen de fondo")
         self.bg_image_button.clicked.connect(self._select_bg_image)
-
-        overlay_layout.addWidget(self.play_button)
-        overlay_layout.addWidget(self.pause_button)
-        overlay_layout.addWidget(self.stop_button)
-        overlay_layout.addWidget(self.playlist_toggle_button)
-        overlay_layout.addWidget(vol_label)
-        overlay_layout.addWidget(self.volume_slider)
-        overlay_layout.addStretch()
-        overlay_layout.addWidget(self.bg_image_button)
-        overlay_layout.addWidget(self.pin_button)
 
         self.position_slider = QSlider(Qt.Horizontal)
         self.position_slider.setRange(0, 0)
@@ -170,9 +140,16 @@ class AudioViewer(QWidget):
         controls = QHBoxLayout()
         controls.setContentsMargins(0, 0, 0, 0)
         controls.setSpacing(6)
+        controls.addWidget(self.play_button)
+        controls.addWidget(self.pause_button)
+        controls.addWidget(self.stop_button)
+        controls.addSpacing(8)
+        controls.addWidget(vol_label)
+        controls.addWidget(self.volume_slider)
         controls.addStretch(1)
+        controls.addWidget(self.bg_image_button)
+        controls.addWidget(self.playlist_toggle_button)
         controls.addWidget(self.edition_button)
-        controls.addStretch(1)
 
         self.playlist_widget = AudioPlaylistWidget()
         self.playlist_widget.file_selected.connect(self.load_file)
@@ -197,67 +174,9 @@ class AudioViewer(QWidget):
         layout.setSpacing(0)
         layout.addWidget(self.splitter)
 
-    def _setup_timers(self):
-        self._show_timer = QTimer(self)
-        self._show_timer.setSingleShot(True)
-        self._show_timer.setInterval(1000)
-        self._show_timer.timeout.connect(self._show_overlay)
-
-        self._hide_timer = QTimer(self)
-        self._hide_timer.setSingleShot(True)
-        self._hide_timer.setInterval(2000)
-        self._hide_timer.timeout.connect(self._hide_overlay)
-
     def _connect_signals(self):
         self.player.positionChanged.connect(self._on_position_changed)
         self.player.durationChanged.connect(self._on_duration_changed)
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-        pg = self.placeholder.geometry()
-        pos = event.pos()
-        if pg.contains(pos):
-            local_y = pos.y() - pg.y()
-            bottom_zone = pg.height() * OVERLAY_TRIGGER_ZONE
-            if local_y >= bottom_zone:
-                if not self.overlay.isVisible() and not self._show_timer.isActive():
-                    self._show_timer.start()
-                self._hide_timer.stop()
-            else:
-                self._show_timer.stop()
-                if self.overlay.isVisible() and not self._overlay_pinned:
-                    if not self._hide_timer.isActive():
-                        self._hide_timer.start()
-        else:
-            self._show_timer.stop()
-            if self.overlay.isVisible() and not self._overlay_pinned:
-                if not self._hide_timer.isActive():
-                    self._hide_timer.start()
-
-    def leaveEvent(self, event):
-        super().leaveEvent(event)
-        self._show_timer.stop()
-        if not self._overlay_pinned:
-            self._hide_timer.start()
-
-    def _show_overlay(self):
-        self._reposition_overlay()
-        self.overlay.show()
-        self.overlay.raise_()
-
-    def _hide_overlay(self):
-        if not self._overlay_pinned:
-            self.overlay.hide()
-
-    def _reposition_overlay(self):
-        pg = self.placeholder.geometry()
-        overlay_h = OVERLAY_HEIGHT
-        self.overlay.setGeometry(
-            pg.x(), pg.y() + pg.height() - overlay_h, pg.width(), overlay_h
-        )
-
-    def _toggle_pin(self):
-        self._overlay_pinned = self.pin_button.isChecked()
 
     def _toggle_playlist_visibility(self):
         visible = self.playlist_toggle_button.isChecked()
@@ -294,8 +213,6 @@ class AudioViewer(QWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        if self.overlay.isVisible():
-            self._reposition_overlay()
         if self._bg_pixmap and not self._bg_pixmap.isNull():
             self._apply_bg_image()
 

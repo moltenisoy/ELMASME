@@ -1,7 +1,3 @@
-"""
-Módulo de conversión de archivos de video.
-Incluye funciones de información, conversión y diálogos de conversión.
-"""
 
 import json
 import os
@@ -15,12 +11,10 @@ from PySide6.QtWidgets import (
     QGridLayout, QMessageBox, QFileDialog, QProgressDialog, QApplication
 )
 
-# Formatos de video soportados
 VIDEO_EXTENSIONS = {
-    ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm", ".m4v"
+    ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm", ".m4v", ".flv"
 }
 
-# Nombres legibles de formatos
 FORMAT_NAMES = {
     ".mp4": "MP4 (MPEG-4)",
     ".mkv": "MKV (Matroska)",
@@ -28,10 +22,10 @@ FORMAT_NAMES = {
     ".mov": "MOV (QuickTime)",
     ".wmv": "WMV (Windows Media Video)",
     ".webm": "WEBM (Web Media)",
-    ".m4v": "M4V (iTunes Video)"
+    ".m4v": "M4V (iTunes Video)",
+    ".flv": "FLV (Flash Video)"
 }
 
-# Codecs recomendados por formato
 FORMAT_CODECS = {
     ".mp4": {"video": "libx264", "audio": "aac"},
     ".mkv": {"video": "libx264", "audio": "aac"},
@@ -39,12 +33,12 @@ FORMAT_CODECS = {
     ".mov": {"video": "libx264", "audio": "aac"},
     ".wmv": {"video": "wmv2", "audio": "wmav2"},
     ".webm": {"video": "libvpx-vp9", "audio": "libopus"},
-    ".m4v": {"video": "libx264", "audio": "aac"}
+    ".m4v": {"video": "libx264", "audio": "aac"},
+    ".flv": {"video": "libx264", "audio": "aac"}
 }
 
 
 def get_video_info(path: str) -> Dict:
-    """Obtiene información del archivo de video."""
     info = {
         "path": path,
         "filename": os.path.basename(path),
@@ -62,7 +56,6 @@ def get_video_info(path: str) -> Dict:
     if os.path.exists(path):
         info["size"] = os.path.getsize(path)
     
-    # Intentar obtener metadatos con ffprobe
     try:
         result = subprocess.run(
             ["ffprobe", "-v", "quiet", "-print_format", "json",
@@ -75,7 +68,7 @@ def get_video_info(path: str) -> Dict:
             if "format" in data:
                 fmt = data["format"]
                 info["duration"] = float(fmt.get("duration", 0))
-                info["bitrate"] = int(fmt.get("bit_rate", 0)) // 1000  # kbps
+                info["bitrate"] = int(fmt.get("bit_rate", 0)) // 1000
             
             if "streams" in data:
                 for stream in data["streams"]:
@@ -83,7 +76,6 @@ def get_video_info(path: str) -> Dict:
                         info["width"] = stream.get("width", 0)
                         info["height"] = stream.get("height", 0)
                         info["video_codec"] = stream.get("codec_name", "")
-                        # Calcular FPS
                         avg_frame_rate = stream.get("avg_frame_rate", "0/1")
                         if "/" in avg_frame_rate:
                             num, den = avg_frame_rate.split("/")
@@ -99,7 +91,6 @@ def get_video_info(path: str) -> Dict:
 
 
 def is_ffmpeg_available() -> bool:
-    """Verifica si ffmpeg está instalado y disponible."""
     try:
         result = subprocess.run(
             ["ffmpeg", "-version"],
@@ -205,12 +196,10 @@ def convert_video(
 
 
 def get_supported_output_formats(input_format: str) -> List[str]:
-    """Obtiene la lista de formatos a los que se puede convertir un video."""
     return sorted([ext for ext in VIDEO_EXTENSIONS if ext != input_format.lower()])
 
 
 class VideoConverterDialog(QDialog):
-    """Diálogo para convertir archivos de video."""
     
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -227,7 +216,6 @@ class VideoConverterDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         
-        # Información del archivo de entrada
         info_group = QGroupBox("Archivo de entrada")
         info_layout = QGridLayout(info_group)
         
@@ -255,11 +243,9 @@ class VideoConverterDialog(QDialog):
         
         layout.addWidget(info_group)
         
-        # Opciones de conversión
         convert_group = QGroupBox("Opciones de conversión")
         convert_layout = QVBoxLayout(convert_group)
         
-        # Formato de salida
         format_layout = QHBoxLayout()
         format_layout.addWidget(QLabel("Convertir a:"))
         self.format_combo = QComboBox()
@@ -272,7 +258,6 @@ class VideoConverterDialog(QDialog):
         format_layout.addStretch()
         convert_layout.addLayout(format_layout)
         
-        # Calidad
         quality_layout = QHBoxLayout()
         quality_layout.addWidget(QLabel("Calidad:"))
         self.quality_combo = QComboBox()
@@ -310,7 +295,6 @@ class VideoConverterDialog(QDialog):
         
         layout.addWidget(convert_group)
         
-        # Opciones de guardado
         save_group = QGroupBox("Guardar como")
         save_layout = QVBoxLayout(save_group)
         
@@ -329,7 +313,6 @@ class VideoConverterDialog(QDialog):
         
         layout.addWidget(save_group)
         
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
         
@@ -429,7 +412,6 @@ class VideoConverterDialog(QDialog):
 
 
 class VideoBatchConverterDialog(QDialog):
-    """Diálogo para convertir video a múltiples formatos simultáneamente."""
     
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -446,12 +428,10 @@ class VideoBatchConverterDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         
-        # Información del archivo
         info_label = QLabel(f"Archivo: {os.path.basename(self.input_path)}")
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
         
-        # Calidad
         quality_layout = QHBoxLayout()
         quality_layout.addWidget(QLabel("Calidad:"))
         self.quality_combo = QComboBox()
@@ -463,7 +443,6 @@ class VideoBatchConverterDialog(QDialog):
         quality_layout.addStretch()
         layout.addLayout(quality_layout)
         
-        # Selección de formatos
         format_group = QGroupBox("Seleccionar formatos de salida")
         format_layout = QVBoxLayout(format_group)
         
@@ -476,7 +455,6 @@ class VideoBatchConverterDialog(QDialog):
             self.format_checks[fmt] = check
             format_layout.addWidget(check)
         
-        # Botones de selección rápida
         select_layout = QHBoxLayout()
         select_all_btn = QPushButton("Seleccionar todos")
         select_all_btn.clicked.connect(self._select_all)
@@ -490,7 +468,6 @@ class VideoBatchConverterDialog(QDialog):
         format_layout.addLayout(select_layout)
         layout.addWidget(format_group)
         
-        # Opciones
         options_group = QGroupBox("Opciones")
         options_layout = QVBoxLayout(options_group)
         
@@ -500,7 +477,6 @@ class VideoBatchConverterDialog(QDialog):
         
         layout.addWidget(options_group)
         
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
         
@@ -606,19 +582,6 @@ def trim_video(
     end_seconds: float,
     progress_callback: Optional[Callable[[int], None]] = None
 ) -> bool:
-    """
-    Recorta un fragmento de un archivo de video usando ffmpeg.
-
-    Args:
-        input_path: Ruta del archivo de entrada
-        output_path: Ruta del archivo de salida
-        start_seconds: Segundo de inicio del recorte
-        end_seconds: Segundo de fin del recorte
-        progress_callback: Función opcional para reportar progreso (0-100)
-
-    Returns:
-        True si el recorte fue exitoso, False en caso contrario
-    """
     if not is_ffmpeg_available():
         raise RuntimeError("ffmpeg no está instalado o no está disponible en el PATH")
 
@@ -665,7 +628,6 @@ def trim_video(
 
 
 class VideoTrimDialog(QDialog):
-    """Diálogo para recortar un fragmento de tiempo de un video."""
 
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -682,7 +644,6 @@ class VideoTrimDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
 
-        # Información del archivo de entrada
         info_group = QGroupBox("Archivo de entrada")
         info_layout = QGridLayout(info_group)
 
@@ -703,7 +664,6 @@ class VideoTrimDialog(QDialog):
 
         layout.addWidget(info_group)
 
-        # Opciones de recorte
         trim_group = QGroupBox("Rango de recorte")
         trim_layout = QGridLayout(trim_group)
 
@@ -745,7 +705,6 @@ class VideoTrimDialog(QDialog):
 
         layout.addWidget(trim_group)
 
-        # Botones
         buttons = QHBoxLayout()
         buttons.addStretch()
 

@@ -1,8 +1,4 @@
-"""
-Módulo para manejo de archivos de video.
-Re-exporta desde video_converter, video_player y video_playlist para compatibilidad.
-"""
-from video_converter import (  # noqa: F401
+from video_converter import (
     VIDEO_EXTENSIONS,
     FORMAT_NAMES,
     FORMAT_CODECS,
@@ -13,8 +9,8 @@ from video_converter import (  # noqa: F401
     VideoConverterDialog,
     VideoBatchConverterDialog,
 )
-from video_player import (  # noqa: F401
+from video_player import (
     ClickableVideoWidget,
     VideoViewer,
 )
-from video_playlist import VideoPlaylistWidget  # noqa: F401
+from video_playlist import VideoPlaylistWidget

@@ -1,14 +1,9 @@
-"""
-Barra de progreso flotante para conversiones.
-Se muestra centrada en pantalla, independiente de otros elementos.
-"""
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar, QApplication
 
 
 class ConversionProgressBar(QWidget):
-    """Barra de progreso flotante roja para conversiones de archivos."""
 
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint | Qt.Tool)
@@ -76,7 +71,6 @@ class ConversionProgressBar(QWidget):
         layout.addWidget(self.percent_label)
 
     def start(self, filename: str = ""):
-        """Muestra la barra y la centra en pantalla."""
         self.file_label.setText(f"Convirtiendo: {filename}" if filename else "Convirtiendo...")
         self.progress_bar.setValue(0)
         self.percent_label.setText("0%")
@@ -86,7 +80,6 @@ class ConversionProgressBar(QWidget):
         QApplication.processEvents()
 
     def update_progress(self, value: int, filename: str = ""):
-        """Actualiza el valor de progreso y opcionalmente el nombre de archivo."""
         self.progress_bar.setValue(value)
         self.percent_label.setText(f"{value}%")
         if filename:
@@ -94,7 +87,6 @@ class ConversionProgressBar(QWidget):
         QApplication.processEvents()
 
     def finish(self):
-        """Completa y oculta la barra."""
         self.progress_bar.setValue(100)
         self.percent_label.setText("100%")
         QApplication.processEvents()

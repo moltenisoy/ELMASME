@@ -20,7 +20,6 @@ from windows_integration import (
 
 
 class _LeftElidedLabel(QLabel):
-    """QLabel subclass that elides text from the left when it overflows."""
 
     def __init__(self, parent=None):
         super().__init__(parent)

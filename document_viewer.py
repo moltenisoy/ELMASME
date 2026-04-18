@@ -34,7 +34,11 @@ EPUB_EXTENSIONS = {".epub"}
 
 RTF_EXTENSIONS = {".rtf"}
 
-DOCUMENT_EXTENSIONS = TEXT_DOCUMENT_EXTENSIONS | PDF_EXTENSIONS | DOCX_EXTENSIONS | EPUB_EXTENSIONS | RTF_EXTENSIONS
+ODT_EXTENSIONS = {".odt"}
+
+ODS_EXTENSIONS = {".ods"}
+
+DOCUMENT_EXTENSIONS = TEXT_DOCUMENT_EXTENSIONS | PDF_EXTENSIONS | DOCX_EXTENSIONS | EPUB_EXTENSIONS | RTF_EXTENSIONS | ODT_EXTENSIONS | ODS_EXTENSIONS
 
 EDITABLE_EXTENSIONS: Set[str] = {
     ".txt", ".log", ".ini", ".cfg", ".conf", ".config", ".csv", ".tsv", ".xml",
@@ -62,12 +66,13 @@ TYPE_NAMES = {
     ".sql": "SQL",
     ".docx": "Word Document",
     ".epub": "EPUB eBook",
-    ".rtf": "Rich Text Format"
+    ".rtf": "Rich Text Format",
+    ".odt": "ODT (OpenDocument Text)",
+    ".ods": "ODS (OpenDocument Spreadsheet)"
 }
 
 
 def _extract_docx_text(path: str) -> Optional[str]:
-    """Extract plain text from a .docx file using built-in zipfile + xml."""
     try:
         ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
         with zipfile.ZipFile(path, "r") as z:
@@ -173,6 +178,65 @@ def _extract_rtf_text(path: str) -> Optional[str]:
         lines = [line.strip() for line in rtf_content.splitlines()]
         return "\n".join(lines)
     except (OSError, UnicodeDecodeError):
+        return None
+
+
+def _extract_odt_text(path: str) -> Optional[str]:
+    try:
+        ns_text = "urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+        with zipfile.ZipFile(path, "r") as z:
+            if "content.xml" not in z.namelist():
+                return None
+            with z.open("content.xml") as f:
+                tree = ET.parse(f)
+                root = tree.getroot()
+                paragraphs = []
+                for elem in root.iter():
+                    if elem.tag in (f"{{{ns_text}}}p", f"{{{ns_text}}}h"):
+                        text_parts = []
+                        if elem.text:
+                            text_parts.append(elem.text)
+                        for child in elem:
+                            if child.text:
+                                text_parts.append(child.text)
+                            if child.tail:
+                                text_parts.append(child.tail)
+                        paragraphs.append("".join(text_parts))
+                return "\n".join(paragraphs)
+    except (zipfile.BadZipFile, ET.ParseError, OSError, KeyError):
+        return None
+
+
+def _extract_ods_text(path: str) -> Optional[str]:
+    try:
+        ns_table = "urn:oasis:names:tc:opendocument:xmlns:table:1.0"
+        ns_text = "urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+        with zipfile.ZipFile(path, "r") as z:
+            if "content.xml" not in z.namelist():
+                return None
+            with z.open("content.xml") as f:
+                tree = ET.parse(f)
+                root = tree.getroot()
+                rows = []
+                for row in root.iter(f"{{{ns_table}}}table-row"):
+                    cells = []
+                    for cell in row.iter(f"{{{ns_table}}}table-cell"):
+                        cell_texts = []
+                        for p in cell.iter(f"{{{ns_text}}}p"):
+                            parts = []
+                            if p.text:
+                                parts.append(p.text)
+                            for child in p:
+                                if child.text:
+                                    parts.append(child.text)
+                                if child.tail:
+                                    parts.append(child.tail)
+                            cell_texts.append("".join(parts))
+                        cells.append(" ".join(cell_texts))
+                    if any(c.strip() for c in cells):
+                        rows.append("\t".join(cells))
+                return "\n".join(rows) if rows else None
+    except (zipfile.BadZipFile, ET.ParseError, OSError, KeyError):
         return None
 
 
@@ -346,6 +410,7 @@ class DocumentViewer(QWidget):
         self.edit_mode = True
         self.is_pdf = False
         self._modified = False
+        self._high_contrast = False
 
         self._build_ui()
 
@@ -413,13 +478,27 @@ class DocumentViewer(QWidget):
         self.search_button.setFixedSize(32, 22)
         self.search_button.clicked.connect(self._toggle_search)
 
-        self.toolbar.add_zoom_controls(self.zoom_out_button, self.zoom_in_button, self.search_button)
+        self.contrast_button = QPushButton("◑")
+        self.contrast_button.setToolTip("Alto contraste")
+        self.contrast_button.setFixedSize(32, 22)
+        self.contrast_button.clicked.connect(self._toggle_high_contrast)
+
+        self.status_bar = QWidget()
+        status_layout = QHBoxLayout(self.status_bar)
+        status_layout.setContentsMargins(4, 2, 4, 2)
+        status_layout.setSpacing(6)
+        status_layout.addWidget(self.zoom_out_button)
+        status_layout.addWidget(self.zoom_in_button)
+        status_layout.addWidget(self.search_button)
+        status_layout.addWidget(self.contrast_button)
+        status_layout.addStretch(1)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
         layout.addWidget(self.toolbar)
         layout.addWidget(self.stack, 1)
+        layout.addWidget(self.status_bar)
 
         self._search_widget = FloatingSearchWidget(self.text_view)
 
@@ -447,18 +526,15 @@ class DocumentViewer(QWidget):
                 self._modified = False
                 self.stack.setCurrentWidget(self.pdf_view)
                 self.toolbar.setVisible(False)
-                self.zoom_out_button.setVisible(True)
-                self.zoom_in_button.setVisible(True)
-                self.search_button.setVisible(True)
+                self.status_bar.setVisible(True)
+                self.contrast_button.setVisible(False)
                 self._search_widget.set_pdf_mode(self.pdf_view, self.pdf_document)
                 return
 
             self.message.setText("No fue posible renderizar el PDF.")
             self.stack.setCurrentWidget(self.message)
             self.toolbar.setVisible(False)
-            self.zoom_out_button.setVisible(False)
-            self.zoom_in_button.setVisible(False)
-            self.search_button.setVisible(False)
+            self.status_bar.setVisible(False)
             self._modified = False
             return
 
@@ -470,10 +546,10 @@ class DocumentViewer(QWidget):
             self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
-            self.zoom_out_button.setVisible(True)
-            self.zoom_in_button.setVisible(True)
-            self.search_button.setVisible(True)
+            self.status_bar.setVisible(True)
+            self.contrast_button.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
             return
 
         if ext in DOCX_EXTENSIONS:
@@ -482,9 +558,7 @@ class DocumentViewer(QWidget):
                 self.message.setText("No fue posible extraer el texto del documento DOCX.")
                 self.stack.setCurrentWidget(self.message)
                 self.toolbar.setVisible(False)
-                self.zoom_out_button.setVisible(False)
-                self.zoom_in_button.setVisible(False)
-                self.search_button.setVisible(False)
+                self.status_bar.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -493,10 +567,10 @@ class DocumentViewer(QWidget):
             self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
-            self.zoom_out_button.setVisible(True)
-            self.zoom_in_button.setVisible(True)
-            self.search_button.setVisible(True)
+            self.status_bar.setVisible(True)
+            self.contrast_button.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
             return
 
         if ext in EPUB_EXTENSIONS:
@@ -505,9 +579,7 @@ class DocumentViewer(QWidget):
                 self.message.setText("No fue posible extraer el texto del documento EPUB.")
                 self.stack.setCurrentWidget(self.message)
                 self.toolbar.setVisible(False)
-                self.zoom_out_button.setVisible(False)
-                self.zoom_in_button.setVisible(False)
-                self.search_button.setVisible(False)
+                self.status_bar.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -516,10 +588,10 @@ class DocumentViewer(QWidget):
             self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
-            self.zoom_out_button.setVisible(True)
-            self.zoom_in_button.setVisible(True)
-            self.search_button.setVisible(True)
+            self.status_bar.setVisible(True)
+            self.contrast_button.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
             return
 
         if ext in RTF_EXTENSIONS:
@@ -528,9 +600,7 @@ class DocumentViewer(QWidget):
                 self.message.setText("No fue posible extraer el texto del documento RTF.")
                 self.stack.setCurrentWidget(self.message)
                 self.toolbar.setVisible(False)
-                self.zoom_out_button.setVisible(False)
-                self.zoom_in_button.setVisible(False)
-                self.search_button.setVisible(False)
+                self.status_bar.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -539,18 +609,58 @@ class DocumentViewer(QWidget):
             self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
-            self.zoom_out_button.setVisible(True)
-            self.zoom_in_button.setVisible(True)
-            self.search_button.setVisible(True)
+            self.status_bar.setVisible(True)
+            self.contrast_button.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
+            return
+
+        if ext in ODT_EXTENSIONS:
+            content = _extract_odt_text(path)
+            if content is None:
+                self.message.setText("No fue posible extraer el texto del documento ODT.")
+                self.stack.setCurrentWidget(self.message)
+                self.toolbar.setVisible(False)
+                self.status_bar.setVisible(False)
+                self._modified = False
+                return
+            self.text_view.setPlainText(content)
+            self.current_zoom_index = 2
+            self._apply_text_zoom()
+            self._modified = False
+            self.stack.setCurrentWidget(self.text_view)
+            self.toolbar.setVisible(True)
+            self.status_bar.setVisible(True)
+            self.contrast_button.setVisible(True)
+            self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
+            return
+
+        if ext in ODS_EXTENSIONS:
+            content = _extract_ods_text(path)
+            if content is None:
+                self.message.setText("No fue posible extraer el texto del documento ODS.")
+                self.stack.setCurrentWidget(self.message)
+                self.toolbar.setVisible(False)
+                self.status_bar.setVisible(False)
+                self._modified = False
+                return
+            self.text_view.setPlainText(content)
+            self.current_zoom_index = 2
+            self._apply_text_zoom()
+            self._modified = False
+            self.stack.setCurrentWidget(self.text_view)
+            self.toolbar.setVisible(True)
+            self.status_bar.setVisible(True)
+            self.contrast_button.setVisible(True)
+            self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
             return
 
         self.message.setText("Formato de documento incompatible para visualización directa.")
         self.stack.setCurrentWidget(self.message)
         self.toolbar.setVisible(False)
-        self.zoom_out_button.setVisible(False)
-        self.zoom_in_button.setVisible(False)
-        self.search_button.setVisible(False)
+        self.status_bar.setVisible(False)
         self._modified = False
 
     def save_file(self):
@@ -563,6 +673,9 @@ class DocumentViewer(QWidget):
             content = self.text_view.toPlainText()
             save_text_file(file_path, content)
             self._modified = False
+
+    def export_pdf(self):
+        self.toolbar._export_pdf()
 
     def is_modified(self):
         return self._modified
@@ -605,3 +718,59 @@ class DocumentViewer(QWidget):
             self._search_widget.show()
             self._search_widget.raise_()
             self._search_widget.search_input.setFocus()
+
+    def _toggle_high_contrast(self):
+        self._high_contrast = not self._high_contrast
+        self._apply_contrast()
+
+    def _apply_contrast(self):
+        if self._high_contrast:
+            self.text_view.setStyleSheet("""
+                QTextEdit {
+                    background: #000000;
+                    color: #ffffff;
+                    border: 1px solid rgba(148, 163, 184, 0.25);
+                    border-radius: 8px;
+                    padding: 16px;
+                    font-family: 'Calibri', 'Arial', sans-serif;
+                    font-size: 11pt;
+                    line-height: 1.5;
+                }
+                QTextEdit:focus {
+                    border: 1px solid rgba(59, 130, 246, 0.5);
+                }
+                QScrollBar:vertical, QScrollBar:horizontal {
+                    background: #1a1a1a;
+                    border-radius: 4px;
+                }
+                QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+                    background: #555555;
+                    border-radius: 4px;
+                }
+            """)
+            self.contrast_button.setToolTip("Contraste normal")
+        else:
+            self.text_view.setStyleSheet("""
+                QTextEdit {
+                    background: #ffffff;
+                    color: #1e293b;
+                    border: 1px solid rgba(148, 163, 184, 0.25);
+                    border-radius: 8px;
+                    padding: 16px;
+                    font-family: 'Calibri', 'Arial', sans-serif;
+                    font-size: 11pt;
+                    line-height: 1.5;
+                }
+                QTextEdit:focus {
+                    border: 1px solid rgba(59, 130, 246, 0.5);
+                }
+                QScrollBar:vertical, QScrollBar:horizontal {
+                    background: #f1f5f9;
+                    border-radius: 4px;
+                }
+                QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+                    background: #94a3b8;
+                    border-radius: 4px;
+                }
+            """)
+            self.contrast_button.setToolTip("Alto contraste")

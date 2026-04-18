@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QFont, QKeySequence, QColor, QTextCharFormat
+from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
     QToolButton, QFontComboBox, QComboBox, QColorDialog, QMessageBox,
@@ -378,6 +379,28 @@ class TextEditorToolbar(QFrame):
         """)
         save_group.addWidget(self.save_btn)
 
+        self.export_pdf_btn = QPushButton("📄 PDF")
+        self.export_pdf_btn.setToolTip("Exportar como PDF")
+        self.export_pdf_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(59, 130, 246, 0.2);
+                border: 1px solid rgba(59, 130, 246, 0.4);
+                border-radius: 6px;
+                padding: 4px 12px;
+                color: #60a5fa;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background: rgba(59, 130, 246, 0.3);
+                border-color: rgba(59, 130, 246, 0.6);
+            }
+            QPushButton:pressed {
+                background: rgba(59, 130, 246, 0.4);
+            }
+        """)
+        self.export_pdf_btn.clicked.connect(self._export_pdf)
+        save_group.addWidget(self.export_pdf_btn)
+
         row2.addLayout(save_group)
         row2.addStretch()
 
@@ -394,13 +417,6 @@ class TextEditorToolbar(QFrame):
         default_font = QFont("Calibri", 11)
         self.text_view.setFont(default_font)
         self.font_combo.setCurrentFont(default_font)
-
-    def add_zoom_controls(self, zoom_out_btn, zoom_in_btn, search_btn):
-        row = self.layout().itemAt(1).layout()
-        stretch_idx = row.count() - 1
-        row.insertWidget(stretch_idx, zoom_out_btn)
-        row.insertWidget(stretch_idx + 1, zoom_in_btn)
-        row.insertWidget(stretch_idx + 2, search_btn)
 
     def _setup_shortcuts(self):
         bold_action = QAction(self)
@@ -514,6 +530,19 @@ class TextEditorToolbar(QFrame):
     def _set_alignment(self, alignment):
         self.text_view.setAlignment(alignment)
         self._update_format_buttons()
+
+    def _export_pdf(self):
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Exportar como PDF", "", "PDF (*.pdf)"
+        )
+        if not file_path:
+            return
+        if not file_path.lower().endswith(".pdf"):
+            file_path += ".pdf"
+        printer = QPrinter(QPrinter.HighResolution)
+        printer.setOutputFormat(QPrinter.PdfFormat)
+        printer.setOutputFileName(file_path)
+        self.text_view.document().print_(printer)
 
     def save_current(self, current_path, is_pdf):
         if not current_path:
