@@ -410,6 +410,7 @@ class DocumentViewer(QWidget):
         self.edit_mode = True
         self.is_pdf = False
         self._modified = False
+        self._high_contrast = False
 
         self._build_ui()
 
@@ -477,7 +478,12 @@ class DocumentViewer(QWidget):
         self.search_button.setFixedSize(32, 22)
         self.search_button.clicked.connect(self._toggle_search)
 
-        self.toolbar.add_zoom_controls(self.zoom_out_button, self.zoom_in_button, self.search_button)
+        self.contrast_button = QPushButton("◑")
+        self.contrast_button.setToolTip("Alto contraste")
+        self.contrast_button.setFixedSize(32, 22)
+        self.contrast_button.clicked.connect(self._toggle_high_contrast)
+
+        self.toolbar.add_zoom_controls(self.zoom_out_button, self.zoom_in_button, self.search_button, self.contrast_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -514,6 +520,7 @@ class DocumentViewer(QWidget):
                 self.zoom_out_button.setVisible(True)
                 self.zoom_in_button.setVisible(True)
                 self.search_button.setVisible(True)
+                self.contrast_button.setVisible(False)
                 self._search_widget.set_pdf_mode(self.pdf_view, self.pdf_document)
                 return
 
@@ -523,6 +530,7 @@ class DocumentViewer(QWidget):
             self.zoom_out_button.setVisible(False)
             self.zoom_in_button.setVisible(False)
             self.search_button.setVisible(False)
+            self.contrast_button.setVisible(False)
             self._modified = False
             return
 
@@ -537,7 +545,9 @@ class DocumentViewer(QWidget):
             self.zoom_out_button.setVisible(True)
             self.zoom_in_button.setVisible(True)
             self.search_button.setVisible(True)
+            self.contrast_button.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
             return
 
         if ext in DOCX_EXTENSIONS:
@@ -549,6 +559,7 @@ class DocumentViewer(QWidget):
                 self.zoom_out_button.setVisible(False)
                 self.zoom_in_button.setVisible(False)
                 self.search_button.setVisible(False)
+                self.contrast_button.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -560,7 +571,9 @@ class DocumentViewer(QWidget):
             self.zoom_out_button.setVisible(True)
             self.zoom_in_button.setVisible(True)
             self.search_button.setVisible(True)
+            self.contrast_button.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
             return
 
         if ext in EPUB_EXTENSIONS:
@@ -572,6 +585,7 @@ class DocumentViewer(QWidget):
                 self.zoom_out_button.setVisible(False)
                 self.zoom_in_button.setVisible(False)
                 self.search_button.setVisible(False)
+                self.contrast_button.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -583,7 +597,9 @@ class DocumentViewer(QWidget):
             self.zoom_out_button.setVisible(True)
             self.zoom_in_button.setVisible(True)
             self.search_button.setVisible(True)
+            self.contrast_button.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
             return
 
         if ext in RTF_EXTENSIONS:
@@ -595,6 +611,7 @@ class DocumentViewer(QWidget):
                 self.zoom_out_button.setVisible(False)
                 self.zoom_in_button.setVisible(False)
                 self.search_button.setVisible(False)
+                self.contrast_button.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -606,7 +623,9 @@ class DocumentViewer(QWidget):
             self.zoom_out_button.setVisible(True)
             self.zoom_in_button.setVisible(True)
             self.search_button.setVisible(True)
+            self.contrast_button.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
             return
 
         if ext in ODT_EXTENSIONS:
@@ -618,6 +637,7 @@ class DocumentViewer(QWidget):
                 self.zoom_out_button.setVisible(False)
                 self.zoom_in_button.setVisible(False)
                 self.search_button.setVisible(False)
+                self.contrast_button.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -629,7 +649,9 @@ class DocumentViewer(QWidget):
             self.zoom_out_button.setVisible(True)
             self.zoom_in_button.setVisible(True)
             self.search_button.setVisible(True)
+            self.contrast_button.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
             return
 
         if ext in ODS_EXTENSIONS:
@@ -641,6 +663,7 @@ class DocumentViewer(QWidget):
                 self.zoom_out_button.setVisible(False)
                 self.zoom_in_button.setVisible(False)
                 self.search_button.setVisible(False)
+                self.contrast_button.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -652,7 +675,9 @@ class DocumentViewer(QWidget):
             self.zoom_out_button.setVisible(True)
             self.zoom_in_button.setVisible(True)
             self.search_button.setVisible(True)
+            self.contrast_button.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
+            self._apply_contrast()
             return
 
         self.message.setText("Formato de documento incompatible para visualización directa.")
@@ -661,6 +686,7 @@ class DocumentViewer(QWidget):
         self.zoom_out_button.setVisible(False)
         self.zoom_in_button.setVisible(False)
         self.search_button.setVisible(False)
+        self.contrast_button.setVisible(False)
         self._modified = False
 
     def save_file(self):
@@ -718,3 +744,59 @@ class DocumentViewer(QWidget):
             self._search_widget.show()
             self._search_widget.raise_()
             self._search_widget.search_input.setFocus()
+
+    def _toggle_high_contrast(self):
+        self._high_contrast = not self._high_contrast
+        self._apply_contrast()
+
+    def _apply_contrast(self):
+        if self._high_contrast:
+            self.text_view.setStyleSheet("""
+                QTextEdit {
+                    background: #000000;
+                    color: #ffffff;
+                    border: 1px solid rgba(148, 163, 184, 0.25);
+                    border-radius: 8px;
+                    padding: 16px;
+                    font-family: 'Calibri', 'Arial', sans-serif;
+                    font-size: 11pt;
+                    line-height: 1.5;
+                }
+                QTextEdit:focus {
+                    border: 1px solid rgba(59, 130, 246, 0.5);
+                }
+                QScrollBar:vertical, QScrollBar:horizontal {
+                    background: #1a1a1a;
+                    border-radius: 4px;
+                }
+                QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+                    background: #555555;
+                    border-radius: 4px;
+                }
+            """)
+            self.contrast_button.setToolTip("Contraste normal")
+        else:
+            self.text_view.setStyleSheet("""
+                QTextEdit {
+                    background: #ffffff;
+                    color: #1e293b;
+                    border: 1px solid rgba(148, 163, 184, 0.25);
+                    border-radius: 8px;
+                    padding: 16px;
+                    font-family: 'Calibri', 'Arial', sans-serif;
+                    font-size: 11pt;
+                    line-height: 1.5;
+                }
+                QTextEdit:focus {
+                    border: 1px solid rgba(59, 130, 246, 0.5);
+                }
+                QScrollBar:vertical, QScrollBar:horizontal {
+                    background: #f1f5f9;
+                    border-radius: 4px;
+                }
+                QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+                    background: #94a3b8;
+                    border-radius: 4px;
+                }
+            """)
+            self.contrast_button.setToolTip("Alto contraste")
