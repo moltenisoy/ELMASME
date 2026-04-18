@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
-from PySide6.QtCore import Qt, QUrl, QTimer, QPoint, QEvent, QObject
-from PySide6.QtGui import QCursor
+from PySide6.QtCore import Qt, QUrl, QEvent, QObject
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
@@ -114,25 +113,12 @@ class VideoViewer(QWidget):
         self.is_fullscreen = False
         self.current_path = None
         self._progress_bar = None
-        self._overlay_pinned = False
         self._fs_window = None
 
         self._build_ui()
-        self._setup_timers()
         self._connect_signals()
 
     def _build_ui(self):
-        self.overlay = QWidget(self)
-        self.overlay.setStyleSheet(
-            "background: rgba(0,0,0,0.7); border-radius: 8px;"
-        )
-        self.overlay.hide()
-        self.overlay.installEventFilter(self)
-
-        overlay_layout = QHBoxLayout(self.overlay)
-        overlay_layout.setContentsMargins(8, 4, 8, 4)
-        overlay_layout.setSpacing(6)
-
         self.play_button = QPushButton("▶")
         self.play_button.setFixedSize(36, 28)
         self.play_button.setStyleSheet("font-size: 18px;")
@@ -158,11 +144,6 @@ class VideoViewer(QWidget):
         self.volume_slider.valueChanged.connect(self._on_volume_changed)
         self.audio_output.setVolume(0.5)
 
-        self.pin_button = QPushButton("📌")
-        self.pin_button.setFixedSize(26, 22)
-        self.pin_button.setCheckable(True)
-        self.pin_button.clicked.connect(self._toggle_pin)
-
         self.playlist_toggle_button = QPushButton("📃")
         self.playlist_toggle_button.setFixedSize(36, 28)
         self.playlist_toggle_button.setStyleSheet("font-size: 16px;")
@@ -170,15 +151,6 @@ class VideoViewer(QWidget):
         self.playlist_toggle_button.setCheckable(True)
         self.playlist_toggle_button.setChecked(True)
         self.playlist_toggle_button.clicked.connect(self._toggle_playlist_visibility)
-
-        overlay_layout.addWidget(self.play_button)
-        overlay_layout.addWidget(self.pause_button)
-        overlay_layout.addWidget(self.stop_button)
-        overlay_layout.addWidget(self.playlist_toggle_button)
-        overlay_layout.addWidget(vol_label)
-        overlay_layout.addWidget(self.volume_slider)
-        overlay_layout.addStretch()
-        overlay_layout.addWidget(self.pin_button)
 
         self.position_slider = QSlider(Qt.Horizontal)
         self.position_slider.setRange(0, 0)
@@ -202,10 +174,16 @@ class VideoViewer(QWidget):
         controls = QHBoxLayout()
         controls.setContentsMargins(0, 0, 0, 0)
         controls.setSpacing(6)
+        controls.addWidget(self.play_button)
+        controls.addWidget(self.pause_button)
+        controls.addWidget(self.stop_button)
+        controls.addSpacing(8)
+        controls.addWidget(vol_label)
+        controls.addWidget(self.volume_slider)
         controls.addStretch(1)
+        controls.addWidget(self.playlist_toggle_button)
         controls.addWidget(self.fullscreen_button)
         controls.addWidget(self.edition_button)
-        controls.addStretch(1)
 
         self._top_widget = QWidget()
         self._top_layout = QVBoxLayout(self._top_widget)
@@ -230,85 +208,11 @@ class VideoViewer(QWidget):
         layout.setSpacing(0)
         layout.addWidget(self.splitter)
 
-    def _setup_timers(self):
-        self._show_timer = QTimer(self)
-        self._show_timer.setSingleShot(True)
-        self._show_timer.setInterval(1000)
-        self._show_timer.timeout.connect(self._show_overlay)
-
-        self._hide_timer = QTimer(self)
-        self._hide_timer.setSingleShot(True)
-        self._hide_timer.setInterval(2000)
-        self._hide_timer.timeout.connect(self._hide_overlay)
-
     def _connect_signals(self):
         self.player.positionChanged.connect(self._on_position_changed)
         self.player.durationChanged.connect(self._on_duration_changed)
         self.video_widget.set_click_callback(self._on_video_clicked)
         self.video_widget.set_double_click_callback(self._toggle_fullscreen)
-        self.video_widget.move_callback = self._on_video_mouse_move
-        self.video_widget.leave_callback = self._on_video_leave
-
-    def _on_video_mouse_move(self, pos):
-        video_height = self.video_widget.height()
-        if video_height <= 0:
-            return
-        bottom_zone = video_height * OVERLAY_TRIGGER_ZONE
-        if pos.y() >= bottom_zone:
-            if not self.overlay.isVisible() and not self._show_timer.isActive():
-                self._show_timer.start()
-            self._hide_timer.stop()
-        else:
-            self._show_timer.stop()
-            if self.overlay.isVisible() and not self._overlay_pinned:
-                if not self._hide_timer.isActive():
-                    self._hide_timer.start()
-
-    def _on_video_leave(self):
-        self._show_timer.stop()
-        if not self._overlay_pinned:
-            cursor_pos = QCursor.pos()
-            overlay_global = self.overlay.mapToGlobal(QPoint(0, 0))
-            overlay_rect = self.overlay.rect()
-            overlay_rect.moveTopLeft(overlay_global)
-            if not overlay_rect.contains(cursor_pos):
-                self._hide_timer.start()
-
-    def eventFilter(self, obj, event):
-        if obj is self.overlay:
-            if event.type() == QEvent.Enter:
-                self._hide_timer.stop()
-                self._show_timer.stop()
-                return False
-            elif event.type() == QEvent.Leave:
-                if not self._overlay_pinned:
-                    self._hide_timer.start()
-                return False
-        return super().eventFilter(obj, event)
-
-    def _show_overlay(self):
-        self._reposition_overlay()
-        self.overlay.show()
-        self.overlay.raise_()
-
-    def _hide_overlay(self):
-        if not self._overlay_pinned:
-            self.overlay.hide()
-
-    def _reposition_overlay(self):
-        parent = self.overlay.parentWidget()
-        if parent is None:
-            return
-        video_pos = self.video_widget.mapTo(parent, QPoint(0, 0))
-        vw = self.video_widget.width()
-        vh = self.video_widget.height()
-        overlay_h = OVERLAY_HEIGHT
-        self.overlay.setGeometry(
-            video_pos.x(), video_pos.y() + vh - overlay_h, vw, overlay_h
-        )
-
-    def _toggle_pin(self):
-        self._overlay_pinned = self.pin_button.isChecked()
 
     def _toggle_playlist_visibility(self):
         visible = self.playlist_toggle_button.isChecked()
@@ -316,11 +220,6 @@ class VideoViewer(QWidget):
         self.playlist_toggle_button.setToolTip(
             "Ocultar lista de reproducción" if visible else "Mostrar lista de reproducción"
         )
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        if self.overlay.isVisible():
-            self._reposition_overlay()
 
     def load_file(self, path: str):
         self.current_path = path
@@ -380,9 +279,6 @@ class VideoViewer(QWidget):
         fs_layout.addWidget(self.video_widget)
         self.video_widget.show()
 
-        self.overlay.setParent(self._fs_window)
-        self.overlay.hide()
-
         self._fs_window.installEventFilter(self._FullscreenFilter(self))
         self._fs_window.showFullScreen()
         self.is_fullscreen = True
@@ -394,9 +290,6 @@ class VideoViewer(QWidget):
         self.video_widget.setParent(self._top_widget)
         self._top_layout.insertWidget(0, self.video_widget, 1)
         self.video_widget.show()
-
-        self.overlay.setParent(self)
-        self.overlay.hide()
 
         self._fs_window.close()
         self._fs_window.deleteLater()
