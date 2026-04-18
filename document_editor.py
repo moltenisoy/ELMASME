@@ -85,7 +85,6 @@ class TextEditorToolbar(QFrame):
                 border-radius: 4px;
                 padding: 4px 24px 4px 8px;
                 color: #e5e7eb;
-                min-width: 24px;
             }
             QComboBox:hover {
                 border-color: rgba(96, 165, 250, 0.5);
@@ -115,7 +114,6 @@ class TextEditorToolbar(QFrame):
                 border-radius: 4px;
                 padding: 4px 24px 4px 8px;
                 color: #e5e7eb;
-                min-width: 70px;
             }
             QFontComboBox::drop-down {
                 subcontrol-origin: padding;
