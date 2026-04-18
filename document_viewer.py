@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 
 from document_pdf import PDF_EXTENSIONS
 from document_editor import TextEditorToolbar, read_text_file, save_text_file, is_editable
+from pdf_editor import PdfEditorWidget
 
 TEXT_DOCUMENT_EXTENSIONS = {
     ".txt", ".log", ".ini", ".cfg", ".conf", ".config", ".csv", ".tsv", ".xml",
@@ -409,6 +410,7 @@ class DocumentViewer(QWidget):
         self.current_path = None
         self.edit_mode = True
         self.is_pdf = False
+        self._pdf_editing = False
         self._modified = False
         self._high_contrast = False
 
@@ -467,14 +469,48 @@ class DocumentViewer(QWidget):
             "background:#111827;border-radius:14px;color:#cbd5e1;padding:24px;font-size:15px;"
         )
 
+        # PDF Editor
+        self.pdf_editor = PdfEditorWidget(self)
+        self.pdf_editor.modified_changed.connect(self._on_pdf_editor_modified)
+
         self.stack.addWidget(self.pdf_view)
         self.stack.addWidget(self.text_view)
         self.stack.addWidget(self.message)
+        self.stack.addWidget(self.pdf_editor)
+
+        # PDF edit/view toggle bar (shown only when viewing a PDF)
+        self._pdf_bar = QWidget()
+        pdf_bar_layout = QHBoxLayout(self._pdf_bar)
+        pdf_bar_layout.setContentsMargins(4, 2, 4, 2)
+        pdf_bar_layout.setSpacing(6)
+
+        self._edit_pdf_btn = QPushButton("✏️ Editar PDF")
+        self._edit_pdf_btn.setToolTip("Abrir el editor visual de PDF")
+        self._edit_pdf_btn.setFixedHeight(30)
+        self._edit_pdf_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(59, 130, 246, 0.2);
+                border: 1px solid rgba(59, 130, 246, 0.4);
+                border-radius: 6px;
+                padding: 4px 14px;
+                color: #60a5fa;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background: rgba(59, 130, 246, 0.35);
+                border-color: rgba(59, 130, 246, 0.7);
+            }
+        """)
+        self._edit_pdf_btn.clicked.connect(self._toggle_pdf_edit_mode)
+        pdf_bar_layout.addWidget(self._edit_pdf_btn)
+        pdf_bar_layout.addStretch()
+        self._pdf_bar.setVisible(False)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
         layout.addWidget(self.toolbar)
+        layout.addWidget(self._pdf_bar)
         layout.addWidget(self.stack, 1)
 
         self._search_widget = FloatingSearchWidget(self.text_view)
@@ -490,6 +526,8 @@ class DocumentViewer(QWidget):
     def load_file(self, path: str):
         self.current_path = path
         self.is_pdf = False
+        self._pdf_editing = False
+        self._pdf_bar.setVisible(False)
 
         ext = Path(path).suffix.lower()
 
@@ -503,6 +541,8 @@ class DocumentViewer(QWidget):
                 self._modified = False
                 self.stack.setCurrentWidget(self.pdf_view)
                 self.toolbar.setVisible(False)
+                self._pdf_bar.setVisible(True)
+                self._edit_pdf_btn.setText("✏️ Editar PDF")
                 self._search_widget.set_pdf_mode(self.pdf_view, self.pdf_document)
                 return
 
@@ -626,10 +666,16 @@ class DocumentViewer(QWidget):
         self._modified = False
 
     def save_file(self):
+        if self._pdf_editing:
+            self.pdf_editor.save()
+            return
         self.toolbar.save_current(self.current_path, self.is_pdf)
         self._modified = False
 
     def save_file_as(self):
+        if self._pdf_editing:
+            self.pdf_editor.save_as()
+            return
         file_path, _ = QFileDialog.getSaveFileName(self, "Guardar como", "", "Todos los archivos (*.*)")
         if file_path:
             content = self.text_view.toPlainText()
@@ -640,10 +686,15 @@ class DocumentViewer(QWidget):
         self.toolbar._export_pdf()
 
     def is_modified(self):
+        if self._pdf_editing:
+            return self.pdf_editor.is_modified()
         return self._modified
 
     def discard_changes(self):
         self._modified = False
+        if self._pdf_editing:
+            self.pdf_editor.close_editor()
+            self._pdf_editing = False
 
     def _on_content_changed(self):
         self._modified = True
@@ -736,3 +787,30 @@ class DocumentViewer(QWidget):
                 }
             """)
             self.toolbar.contrast_btn.setToolTip("Alto contraste")
+
+    # ------------------------------------------------------------------
+    #  PDF Editor integration
+    # ------------------------------------------------------------------
+
+    def _toggle_pdf_edit_mode(self):
+        """Switch between PDF viewer and PDF editor."""
+        if self._pdf_editing:
+            # Switch back to view mode
+            self._pdf_editing = False
+            self._edit_pdf_btn.setText("✏️ Editar PDF")
+            self.pdf_editor.close_editor()
+            # Reload the PDF in the viewer
+            if self.current_path:
+                self.pdf_document.load(self.current_path)
+            self.stack.setCurrentWidget(self.pdf_view)
+        else:
+            # Switch to edit mode
+            if not self.current_path:
+                return
+            if self.pdf_editor.load_file(self.current_path):
+                self._pdf_editing = True
+                self._edit_pdf_btn.setText("👁️ Volver a vista")
+                self.stack.setCurrentWidget(self.pdf_editor)
+
+    def _on_pdf_editor_modified(self, modified: bool):
+        self._modified = modified
