@@ -72,6 +72,7 @@ class AudioViewer(QWidget):
         self._progress_bar = None
         self._overlay_pinned = False
         self._bg_pixmap = None
+        self._midi_tmp = None
 
         self.setMouseTracking(True)
         self._build_ui()
@@ -301,6 +302,7 @@ class AudioViewer(QWidget):
     def load_file(self, path: str):
         self.current_path = path
         self.player.stop()
+        self._cleanup_midi_tmp()
         
         ext = Path(path).suffix.lower()
         play_path = path
@@ -314,6 +316,7 @@ class AudioViewer(QWidget):
                 )
                 if result.returncode == 0 and os.path.exists(tmp_wav):
                     play_path = tmp_wav
+                    self._midi_tmp = tmp_wav
             except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
                 pass
         
@@ -338,6 +341,15 @@ class AudioViewer(QWidget):
 
     def stop(self):
         self.player.stop()
+        self._cleanup_midi_tmp()
+
+    def _cleanup_midi_tmp(self):
+        if self._midi_tmp and os.path.exists(self._midi_tmp):
+            try:
+                os.remove(self._midi_tmp)
+            except OSError:
+                pass
+            self._midi_tmp = None
 
     def _stop_playback(self):
         self.player.stop()
