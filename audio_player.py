@@ -1,4 +1,6 @@
 import os
+import subprocess
+import tempfile
 from pathlib import Path
 from PySide6.QtCore import Qt, QUrl, QTimer
 from PySide6.QtGui import QPixmap
@@ -299,7 +301,23 @@ class AudioViewer(QWidget):
     def load_file(self, path: str):
         self.current_path = path
         self.player.stop()
-        self.player.setSource(QUrl.fromLocalFile(path))
+        
+        ext = Path(path).suffix.lower()
+        play_path = path
+        if ext in (".mid", ".midi"):
+            try:
+                tmp_dir = tempfile.gettempdir()
+                tmp_wav = os.path.join(tmp_dir, "elmasme_midi_preview.wav")
+                result = subprocess.run(
+                    ["ffmpeg", "-y", "-i", path, "-c:a", "pcm_s16le", tmp_wav],
+                    capture_output=True, timeout=30
+                )
+                if result.returncode == 0 and os.path.exists(tmp_wav):
+                    play_path = tmp_wav
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
+        
+        self.player.setSource(QUrl.fromLocalFile(play_path))
 
         info = get_audio_info(path)
         info_text = f"Audio: {info['filename']}"
