@@ -233,7 +233,7 @@ class DiffViewerWidget(QWidget):
                 for line in right_lines[j1:j2]:
                     right_formatted.append(("equal", line))
             elif tag == "replace":
-                changed += max(i2 - i1, j2 - j1)
+                changed += (i2 - i1) + (j2 - j1)
                 for line in left_lines[i1:i2]:
                     left_formatted.append(("remove", line))
                 for line in right_lines[j1:j2]:

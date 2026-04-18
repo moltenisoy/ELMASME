@@ -910,10 +910,6 @@ class TextEditorToolbar(QFrame):
         source_doc = self.text_view.document().clone()
         source_doc.setPageSize(printer.pageRect(QPrinter.Point).size())
 
-        page_count = source_doc.pageCount()
-        if page_count < 1:
-            page_count = 1
-
         painter = QPainter()
         if not painter.begin(printer):
             return
@@ -921,7 +917,7 @@ class TextEditorToolbar(QFrame):
         page_rect = printer.pageRect(QPrinter.DevicePixel)
         full_rect = printer.paperRect(QPrinter.DevicePixel)
 
-        header_font = QFont("Calibri, Arial, sans-serif", 9)
+        header_font = QFont("Calibri", 9)
         header_fm = QFontMetrics(header_font)
         header_height = header_fm.height() + 10
         footer_height = header_height
@@ -929,17 +925,17 @@ class TextEditorToolbar(QFrame):
         margin_top = max(0, page_rect.top() - full_rect.top())
         margin_left = max(0, page_rect.left() - full_rect.left())
 
-        content_top = margin_top + (header_height if has_header else 0)
-        content_bottom = page_rect.height() - (footer_height if has_footer else 0)
-        content_height = content_bottom - (header_height if has_header else 0)
+        h_offset = header_height if has_header else 0
+        f_offset = footer_height if has_footer else 0
+        content_top = margin_top + h_offset
 
         filename = os.path.basename(file_path) if file_path else ""
-        today = datetime.date.today().strftime("%Y-%m-%d")
+        date_str = datetime.date.today().strftime("%Y-%m-%d")
 
         def _resolve(text, page_num):
             return text.replace("{page}", str(page_num)).replace(
                 "{filename}", filename
-            ).replace("{date}", today)
+            ).replace("{date}", date_str)
 
         # Print page by page
         source_doc.setPageSize(page_rect.size())
@@ -990,7 +986,7 @@ class TextEditorToolbar(QFrame):
             # Draw document content for this page
             painter.save()
             painter.translate(margin_left, content_top)
-            clip_rect = page_rect.adjusted(0, 0, 0, -header_height - footer_height)
+            clip_rect = page_rect.adjusted(0, 0, 0, -h_offset - f_offset)
             painter.setClipRect(clip_rect.translated(-margin_left, -content_top))
             painter.translate(0, -page * page_rect.height())
             source_doc.drawContents(painter)
