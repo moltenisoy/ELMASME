@@ -71,7 +71,7 @@ class UniversalViewerWindow(QMainWindow):
         self.setCentralWidget(root)
 
         layout = QVBoxLayout(root)
-        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setContentsMargins(2, 0, 2, 2)
         layout.setSpacing(2)
 
         self.tab_widget = QTabWidget()
@@ -82,7 +82,7 @@ class UniversalViewerWindow(QMainWindow):
         viewer_panel = QFrame()
         viewer_panel.setObjectName("Panel")
         viewer_layout = QVBoxLayout(viewer_panel)
-        viewer_layout.setContentsMargins(2, 2, 2, 2)
+        viewer_layout.setContentsMargins(2, 0, 2, 2)
         viewer_layout.addWidget(self.tab_widget)
 
         footer = self._build_footer()
@@ -113,13 +113,15 @@ class UniversalViewerWindow(QMainWindow):
         self.archivo_button.setFixedSize(70, 24)
         self.archivo_button.clicked.connect(self._show_archivo_menu)
 
-        self.settings_button = QPushButton("⚙")
+        self.settings_button = QPushButton()
+        self.settings_button.setText("⚙")
+        self.settings_button.setStyleSheet("font-size: 28px;")
         self.settings_button.setFixedSize(40, 24)
         self.settings_button.clicked.connect(self._show_settings_panel)
 
         self.file_path_label = _LeftElidedLabel()
         self.file_path_label.setObjectName("FilePathLabel")
-        self.file_path_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.file_path_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
 
         self.file_name_label = QLabel("Sin archivo")
         self.file_name_label.setObjectName("FileNameLabel")
@@ -128,8 +130,10 @@ class UniversalViewerWindow(QMainWindow):
         info_layout = QHBoxLayout(info_container)
         info_layout.setContentsMargins(0, 0, 0, 0)
         info_layout.setSpacing(0)
-        info_layout.addWidget(self.file_path_label, 1)
+        info_layout.addStretch(1)
+        info_layout.addWidget(self.file_path_label, 0)
         info_layout.addWidget(self.file_name_label, 0)
+        info_layout.addStretch(1)
 
         self.next_button = QToolButton()
         self.next_button.setText("0/0 Siguiente ▶")

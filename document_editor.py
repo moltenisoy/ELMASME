@@ -48,6 +48,7 @@ class TextEditorToolbar(QFrame):
         self._setup_shortcuts()
 
         self.text_view.cursorPositionChanged.connect(self._update_format_buttons)
+        self.text_view.cursorPositionChanged.connect(self._update_cursor_position)
         self.text_view.textChanged.connect(self._on_text_changed)
 
     def _build_ui(self):
@@ -56,7 +57,7 @@ class TextEditorToolbar(QFrame):
                 background: #1e293b;
                 border: 1px solid rgba(148, 163, 184, 0.2);
                 border-radius: 8px;
-                padding: 4px;
+                padding: 0px 4px 4px 4px;
             }
             QToolButton {
                 background: transparent;
@@ -84,7 +85,7 @@ class TextEditorToolbar(QFrame):
                 border-radius: 4px;
                 padding: 4px 24px 4px 8px;
                 color: #e5e7eb;
-                min-width: 100px;
+                min-width: 24px;
             }
             QComboBox:hover {
                 border-color: rgba(96, 165, 250, 0.5);
@@ -114,7 +115,7 @@ class TextEditorToolbar(QFrame):
                 border-radius: 4px;
                 padding: 4px 24px 4px 8px;
                 color: #e5e7eb;
-                min-width: 140px;
+                min-width: 70px;
             }
             QFontComboBox::drop-down {
                 subcontrol-origin: padding;
@@ -150,7 +151,7 @@ class TextEditorToolbar(QFrame):
         """)
 
         toolbar_layout = QVBoxLayout(self)
-        toolbar_layout.setContentsMargins(6, 4, 6, 4)
+        toolbar_layout.setContentsMargins(6, 0, 6, 4)
         toolbar_layout.setSpacing(4)
 
         row1 = QHBoxLayout()
@@ -162,21 +163,21 @@ class TextEditorToolbar(QFrame):
         self.paste_btn = QToolButton()
         self.paste_btn.setText("📋")
         self.paste_btn.setToolTip("Pegar (Ctrl+V)")
-        self.paste_btn.setFixedSize(28, 26)
+        self.paste_btn.setFixedSize(56, 52)
         self.paste_btn.clicked.connect(self._paste)
         clipboard_group.addWidget(self.paste_btn)
 
         self.cut_btn = QToolButton()
         self.cut_btn.setText("✂️")
         self.cut_btn.setToolTip("Cortar (Ctrl+X)")
-        self.cut_btn.setFixedSize(28, 26)
+        self.cut_btn.setFixedSize(56, 52)
         self.cut_btn.clicked.connect(self._cut)
         clipboard_group.addWidget(self.cut_btn)
 
         self.copy_btn = QToolButton()
         self.copy_btn.setText("📄")
         self.copy_btn.setToolTip("Copiar (Ctrl+C)")
-        self.copy_btn.setFixedSize(28, 26)
+        self.copy_btn.setFixedSize(56, 52)
         self.copy_btn.clicked.connect(self._copy)
         clipboard_group.addWidget(self.copy_btn)
 
@@ -193,10 +194,14 @@ class TextEditorToolbar(QFrame):
         font_group = QHBoxLayout()
         font_group.setSpacing(4)
 
-        font_group.addWidget(QLabel("Fuente:"))
+        self.font_label = QLabel("Fuente:")
+        self.font_label.setFixedHeight(30)
+        self.font_label.setStyleSheet("color: #94a3b8; font-size: 11px; border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 4px; padding: 0px 6px;")
+        font_group.addWidget(self.font_label)
 
         self.font_combo = QFontComboBox()
-        self.font_combo.setMinimumWidth(140)
+        self.font_combo.setFixedWidth(70)
+        self.font_combo.setFixedHeight(30)
         self.font_combo.currentFontChanged.connect(self._change_font)
         font_group.addWidget(self.font_combo)
 
@@ -205,7 +210,7 @@ class TextEditorToolbar(QFrame):
         sizes = ["8", "9", "10", "11", "12", "14", "16", "18", "20", "22", "24", "26", "28", "36", "48", "72"]
         self.font_size_combo.addItems(sizes)
         self.font_size_combo.setCurrentText("11")
-        self.font_size_combo.setFixedWidth(48)
+        self.font_size_combo.setFixedWidth(24)
         self.font_size_combo.currentTextChanged.connect(self._change_font_size)
         font_group.addWidget(self.font_size_combo)
 
@@ -283,7 +288,7 @@ class TextEditorToolbar(QFrame):
         self.align_left_btn.setToolTip("Alinear a la izquierda")
         self.align_left_btn.setCheckable(True)
         self.align_left_btn.setChecked(True)
-        self.align_left_btn.setFixedSize(36, 26)
+        self.align_left_btn.setFixedSize(72, 52)
         self.align_left_btn.clicked.connect(lambda: self._set_alignment(Qt.AlignLeft))
         para_group.addWidget(self.align_left_btn)
 
@@ -291,7 +296,7 @@ class TextEditorToolbar(QFrame):
         self.align_center_btn.setText("≡↔")
         self.align_center_btn.setToolTip("Centrar")
         self.align_center_btn.setCheckable(True)
-        self.align_center_btn.setFixedSize(36, 26)
+        self.align_center_btn.setFixedSize(72, 52)
         self.align_center_btn.clicked.connect(lambda: self._set_alignment(Qt.AlignCenter))
         para_group.addWidget(self.align_center_btn)
 
@@ -299,7 +304,7 @@ class TextEditorToolbar(QFrame):
         self.align_right_btn.setText("≡→")
         self.align_right_btn.setToolTip("Alinear a la derecha")
         self.align_right_btn.setCheckable(True)
-        self.align_right_btn.setFixedSize(36, 26)
+        self.align_right_btn.setFixedSize(72, 52)
         self.align_right_btn.clicked.connect(lambda: self._set_alignment(Qt.AlignRight))
         para_group.addWidget(self.align_right_btn)
 
@@ -307,7 +312,7 @@ class TextEditorToolbar(QFrame):
         self.align_justify_btn.setText("≡≡")
         self.align_justify_btn.setToolTip("Justificar")
         self.align_justify_btn.setCheckable(True)
-        self.align_justify_btn.setFixedSize(36, 26)
+        self.align_justify_btn.setFixedSize(72, 52)
         self.align_justify_btn.clicked.connect(lambda: self._set_alignment(Qt.AlignJustify))
         para_group.addWidget(self.align_justify_btn)
 
@@ -327,21 +332,21 @@ class TextEditorToolbar(QFrame):
         self.undo_btn = QToolButton()
         self.undo_btn.setText("↩️")
         self.undo_btn.setToolTip("Deshacer (Ctrl+Z)")
-        self.undo_btn.setFixedSize(28, 26)
+        self.undo_btn.setFixedSize(56, 52)
         self.undo_btn.clicked.connect(self._undo)
         edit_group.addWidget(self.undo_btn)
 
         self.redo_btn = QToolButton()
         self.redo_btn.setText("↪️")
         self.redo_btn.setToolTip("Rehacer (Ctrl+Y)")
-        self.redo_btn.setFixedSize(28, 26)
+        self.redo_btn.setFixedSize(56, 52)
         self.redo_btn.clicked.connect(self._redo)
         edit_group.addWidget(self.redo_btn)
 
         self.select_all_btn = QToolButton()
-        self.select_all_btn.setText("☑️")
+        self.select_all_btn.setText("Seleccionar todo")
         self.select_all_btn.setToolTip("Seleccionar todo (Ctrl+A)")
-        self.select_all_btn.setFixedSize(28, 26)
+        self.select_all_btn.setFixedSize(120, 52)
         self.select_all_btn.clicked.connect(self._select_all)
         edit_group.addWidget(self.select_all_btn)
 
@@ -379,7 +384,28 @@ class TextEditorToolbar(QFrame):
         """)
         save_group.addWidget(self.save_btn)
 
-        self.export_pdf_btn = QPushButton("📄 PDF")
+        self.save_as_btn = QPushButton("💾 Guardar como")
+        self.save_as_btn.setToolTip("Guardar como...")
+        self.save_as_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(234, 179, 8, 0.2);
+                border: 1px solid rgba(234, 179, 8, 0.4);
+                border-radius: 6px;
+                padding: 4px 12px;
+                color: #facc15;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background: rgba(234, 179, 8, 0.3);
+                border-color: rgba(234, 179, 8, 0.6);
+            }
+            QPushButton:pressed {
+                background: rgba(234, 179, 8, 0.4);
+            }
+        """)
+        save_group.addWidget(self.save_as_btn)
+
+        self.export_pdf_btn = QPushButton("📄 Guardar como PDF")
         self.export_pdf_btn.setToolTip("Exportar como PDF")
         self.export_pdf_btn.setStyleSheet("""
             QPushButton {
@@ -402,6 +428,91 @@ class TextEditorToolbar(QFrame):
         save_group.addWidget(self.export_pdf_btn)
 
         row2.addLayout(save_group)
+        row2.addSpacing(8)
+
+        separator4 = QFrame()
+        separator4.setFrameShape(QFrame.VLine)
+        separator4.setStyleSheet("color: rgba(148, 163, 184, 0.3);")
+        separator4.setFixedWidth(2)
+        row2.addWidget(separator4)
+        row2.addSpacing(4)
+
+        viewer_group = QHBoxLayout()
+        viewer_group.setSpacing(4)
+
+        self.zoom_out_btn = QPushButton("Zoom -")
+        self.zoom_out_btn.setToolTip("Reducir zoom")
+        self.zoom_out_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(148, 163, 184, 0.15);
+                border: 1px solid rgba(148, 163, 184, 0.3);
+                border-radius: 6px;
+                padding: 4px 8px;
+                color: #e5e7eb;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background: rgba(148, 163, 184, 0.25);
+                border-color: rgba(148, 163, 184, 0.5);
+            }
+        """)
+        viewer_group.addWidget(self.zoom_out_btn)
+
+        self.zoom_in_btn = QPushButton("Zoom +")
+        self.zoom_in_btn.setToolTip("Aumentar zoom")
+        self.zoom_in_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(148, 163, 184, 0.15);
+                border: 1px solid rgba(148, 163, 184, 0.3);
+                border-radius: 6px;
+                padding: 4px 8px;
+                color: #e5e7eb;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background: rgba(148, 163, 184, 0.25);
+                border-color: rgba(148, 163, 184, 0.5);
+            }
+        """)
+        viewer_group.addWidget(self.zoom_in_btn)
+
+        self.search_btn = QPushButton("🔍")
+        self.search_btn.setToolTip("Buscar")
+        self.search_btn.setFixedSize(32, 26)
+        self.search_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(148, 163, 184, 0.15);
+                border: 1px solid rgba(148, 163, 184, 0.3);
+                border-radius: 6px;
+                color: #e5e7eb;
+            }
+            QPushButton:hover {
+                background: rgba(148, 163, 184, 0.25);
+                border-color: rgba(148, 163, 184, 0.5);
+            }
+        """)
+        viewer_group.addWidget(self.search_btn)
+
+        self.contrast_btn = QPushButton("Alto contraste")
+        self.contrast_btn.setToolTip("Alternar alto contraste")
+        self.contrast_btn.setFixedSize(110, 26)
+        self.contrast_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(148, 163, 184, 0.15);
+                border: 1px solid rgba(148, 163, 184, 0.3);
+                border-radius: 6px;
+                padding: 4px 8px;
+                color: #e5e7eb;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background: rgba(148, 163, 184, 0.25);
+                border-color: rgba(148, 163, 184, 0.5);
+            }
+        """)
+        viewer_group.addWidget(self.contrast_btn)
+
+        row2.addLayout(viewer_group)
         row2.addStretch()
 
         toolbar_layout.addLayout(row2)
@@ -409,8 +520,13 @@ class TextEditorToolbar(QFrame):
         row3 = QHBoxLayout()
         row3.setSpacing(12)
         self.stats_label = QLabel()
-        self.stats_label.setStyleSheet("color: #94a3b8; font-size: 11px; padding: 2px 4px;")
+        self.stats_label.setStyleSheet("color: #94a3b8; font-size: 11px; padding: 2px 4px; border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 4px;")
         row3.addWidget(self.stats_label)
+
+        self.cursor_label = QLabel()
+        self.cursor_label.setStyleSheet("color: #60a5fa; font-size: 11px; padding: 2px 4px; border: 1px solid rgba(96, 165, 250, 0.4); border-radius: 4px;")
+        row3.addWidget(self.cursor_label)
+
         row3.addStretch()
         toolbar_layout.addLayout(row3)
 
@@ -445,6 +561,12 @@ class TextEditorToolbar(QFrame):
         self.stats_label.setText(
             f"Palabras: {words}  |  Líneas: {lines}  |  Caracteres: {chars}"
         )
+
+    def _update_cursor_position(self):
+        cursor = self.text_view.textCursor()
+        line = cursor.blockNumber() + 1
+        col = cursor.columnNumber() + 1
+        self.cursor_label.setText(f"Línea: {line}  |  Carácter: {col}")
 
     def _update_format_buttons(self):
         cursor = self.text_view.textCursor()

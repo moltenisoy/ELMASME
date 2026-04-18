@@ -452,6 +452,11 @@ class DocumentViewer(QWidget):
 
         self.toolbar = TextEditorToolbar(self.text_view, self)
         self.toolbar.save_btn.clicked.connect(self.save_file)
+        self.toolbar.save_as_btn.clicked.connect(self.save_file_as)
+        self.toolbar.zoom_out_btn.clicked.connect(self.zoom_out)
+        self.toolbar.zoom_in_btn.clicked.connect(self.zoom_in)
+        self.toolbar.search_btn.clicked.connect(self._toggle_search)
+        self.toolbar.contrast_btn.clicked.connect(self._toggle_high_contrast)
 
         self.text_view.textChanged.connect(self._on_content_changed)
 
@@ -466,39 +471,11 @@ class DocumentViewer(QWidget):
         self.stack.addWidget(self.text_view)
         self.stack.addWidget(self.message)
 
-        self.zoom_out_button = QPushButton("Zoom -")
-        self.zoom_out_button.setFixedSize(70, 22)
-        self.zoom_out_button.clicked.connect(self.zoom_out)
-
-        self.zoom_in_button = QPushButton("Zoom +")
-        self.zoom_in_button.setFixedSize(70, 22)
-        self.zoom_in_button.clicked.connect(self.zoom_in)
-
-        self.search_button = QPushButton("🔍")
-        self.search_button.setFixedSize(32, 22)
-        self.search_button.clicked.connect(self._toggle_search)
-
-        self.contrast_button = QPushButton("◑")
-        self.contrast_button.setToolTip("Alto contraste")
-        self.contrast_button.setFixedSize(32, 22)
-        self.contrast_button.clicked.connect(self._toggle_high_contrast)
-
-        self.status_bar = QWidget()
-        status_layout = QHBoxLayout(self.status_bar)
-        status_layout.setContentsMargins(4, 2, 4, 2)
-        status_layout.setSpacing(6)
-        status_layout.addWidget(self.zoom_out_button)
-        status_layout.addWidget(self.zoom_in_button)
-        status_layout.addWidget(self.search_button)
-        status_layout.addWidget(self.contrast_button)
-        status_layout.addStretch(1)
-
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
         layout.addWidget(self.toolbar)
         layout.addWidget(self.stack, 1)
-        layout.addWidget(self.status_bar)
 
         self._search_widget = FloatingSearchWidget(self.text_view)
 
@@ -526,15 +503,12 @@ class DocumentViewer(QWidget):
                 self._modified = False
                 self.stack.setCurrentWidget(self.pdf_view)
                 self.toolbar.setVisible(False)
-                self.status_bar.setVisible(True)
-                self.contrast_button.setVisible(False)
                 self._search_widget.set_pdf_mode(self.pdf_view, self.pdf_document)
                 return
 
             self.message.setText("No fue posible renderizar el PDF.")
             self.stack.setCurrentWidget(self.message)
             self.toolbar.setVisible(False)
-            self.status_bar.setVisible(False)
             self._modified = False
             return
 
@@ -546,8 +520,7 @@ class DocumentViewer(QWidget):
             self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
-            self.status_bar.setVisible(True)
-            self.contrast_button.setVisible(True)
+            self.toolbar.contrast_btn.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
             return
@@ -558,7 +531,6 @@ class DocumentViewer(QWidget):
                 self.message.setText("No fue posible extraer el texto del documento DOCX.")
                 self.stack.setCurrentWidget(self.message)
                 self.toolbar.setVisible(False)
-                self.status_bar.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -567,8 +539,7 @@ class DocumentViewer(QWidget):
             self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
-            self.status_bar.setVisible(True)
-            self.contrast_button.setVisible(True)
+            self.toolbar.contrast_btn.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
             return
@@ -579,7 +550,6 @@ class DocumentViewer(QWidget):
                 self.message.setText("No fue posible extraer el texto del documento EPUB.")
                 self.stack.setCurrentWidget(self.message)
                 self.toolbar.setVisible(False)
-                self.status_bar.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -588,8 +558,7 @@ class DocumentViewer(QWidget):
             self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
-            self.status_bar.setVisible(True)
-            self.contrast_button.setVisible(True)
+            self.toolbar.contrast_btn.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
             return
@@ -600,7 +569,6 @@ class DocumentViewer(QWidget):
                 self.message.setText("No fue posible extraer el texto del documento RTF.")
                 self.stack.setCurrentWidget(self.message)
                 self.toolbar.setVisible(False)
-                self.status_bar.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -609,8 +577,7 @@ class DocumentViewer(QWidget):
             self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
-            self.status_bar.setVisible(True)
-            self.contrast_button.setVisible(True)
+            self.toolbar.contrast_btn.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
             return
@@ -621,7 +588,6 @@ class DocumentViewer(QWidget):
                 self.message.setText("No fue posible extraer el texto del documento ODT.")
                 self.stack.setCurrentWidget(self.message)
                 self.toolbar.setVisible(False)
-                self.status_bar.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -630,8 +596,7 @@ class DocumentViewer(QWidget):
             self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
-            self.status_bar.setVisible(True)
-            self.contrast_button.setVisible(True)
+            self.toolbar.contrast_btn.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
             return
@@ -642,7 +607,6 @@ class DocumentViewer(QWidget):
                 self.message.setText("No fue posible extraer el texto del documento ODS.")
                 self.stack.setCurrentWidget(self.message)
                 self.toolbar.setVisible(False)
-                self.status_bar.setVisible(False)
                 self._modified = False
                 return
             self.text_view.setPlainText(content)
@@ -651,8 +615,7 @@ class DocumentViewer(QWidget):
             self._modified = False
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
-            self.status_bar.setVisible(True)
-            self.contrast_button.setVisible(True)
+            self.toolbar.contrast_btn.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
             return
@@ -660,7 +623,6 @@ class DocumentViewer(QWidget):
         self.message.setText("Formato de documento incompatible para visualización directa.")
         self.stack.setCurrentWidget(self.message)
         self.toolbar.setVisible(False)
-        self.status_bar.setVisible(False)
         self._modified = False
 
     def save_file(self):
@@ -748,7 +710,7 @@ class DocumentViewer(QWidget):
                     border-radius: 4px;
                 }
             """)
-            self.contrast_button.setToolTip("Contraste normal")
+            self.toolbar.contrast_btn.setToolTip("Contraste normal")
         else:
             self.text_view.setStyleSheet("""
                 QTextEdit {
@@ -773,4 +735,4 @@ class DocumentViewer(QWidget):
                     border-radius: 4px;
                 }
             """)
-            self.contrast_button.setToolTip("Alto contraste")
+            self.toolbar.contrast_btn.setToolTip("Alto contraste")
