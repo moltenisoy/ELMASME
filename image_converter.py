@@ -15,7 +15,8 @@ from PySide6.QtWidgets import (
 
 # Formatos de imagen soportados
 IMAGE_EXTENSIONS = {
-    ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff"
+    ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff",
+    ".heif", ".heic", ".avif"
 }
 
 # Nombres legibles de formatos
@@ -27,15 +28,17 @@ FORMAT_NAMES = {
     ".gif": "GIF (Graphics Interchange Format)",
     ".webp": "WEBP (Web Picture Format)",
     ".tif": "TIFF (Tagged Image File Format)",
-    ".tiff": "TIFF (Tagged Image File Format)"
+    ".tiff": "TIFF (Tagged Image File Format)",
+    ".heif": "HEIF (High Efficiency Image Format)",
+    ".heic": "HEIC (High Efficiency Image Coding)",
+    ".avif": "AVIF (AV1 Image File Format)"
 }
 
 # Formatos que soportan transparencia
-TRANSPARENT_FORMATS = {".png", ".gif", ".webp", ".tif", ".tiff"}
+TRANSPARENT_FORMATS = {".png", ".gif", ".webp", ".tif", ".tiff", ".avif"}
 
 
 def get_image_info(path: str) -> Dict:
-    """Obtiene información de la imagen."""
     info = {
         "path": path,
         "filename": os.path.basename(path),
@@ -50,6 +53,19 @@ def get_image_info(path: str) -> Dict:
     if os.path.exists(path):
         info["size"] = os.path.getsize(path)
     
+    ext = info["extension"]
+    if ext in (".heif", ".heic", ".avif"):
+        try:
+            from PIL import Image as PILImage
+            pil_img = PILImage.open(path)
+            info["width"] = pil_img.width
+            info["height"] = pil_img.height
+            info["format"] = pil_img.format or ext[1:].upper()
+            info["has_alpha"] = pil_img.mode in ("RGBA", "LA", "PA")
+            return info
+        except (ImportError, Exception):
+            pass
+    
     reader = QImageReader(path)
     reader.setAutoTransform(True)
     
@@ -60,7 +76,6 @@ def get_image_info(path: str) -> Dict:
     
     info["format"] = reader.format().data().decode().upper() if reader.format() else "Unknown"
     
-    # Verificar si tiene canal alpha
     image = reader.read()
     if not image.isNull():
         info["has_alpha"] = image.hasAlphaChannel()
@@ -74,9 +89,25 @@ def save_image(
     format: Optional[str] = None,
     quality: int = 90
 ) -> bool:
-    """Guarda una imagen en el formato especificado."""
     if image.isNull():
         return False
+    
+    fmt_lower = (format or Path(path).suffix[1:]).lower() if format or Path(path).suffix else ""
+    
+    if fmt_lower in ("heif", "heic", "avif"):
+        try:
+            from PIL import Image as PILImage
+            
+            converted = image.convertToFormat(QImage.Format_RGBA8888)
+            w = converted.width()
+            h = converted.height()
+            pil_img = PILImage.frombytes("RGBA", (w, h), bytes(converted.bits()))
+            
+            save_fmt = "AVIF" if fmt_lower == "avif" else "HEIF"
+            pil_img.save(path, save_fmt, quality=quality)
+            return True
+        except (ImportError, Exception):
+            return False
     
     if format:
         fmt = format.upper()
@@ -87,21 +118,72 @@ def save_image(
         return image.save(path, None, quality)
 
 
+INTERPOLATION_METHODS = {
+    "nearest": Qt.FastTransformation,
+    "bilinear": Qt.SmoothTransformation,
+    "bicubic": Qt.SmoothTransformation,
+    "lanczos": Qt.SmoothTransformation,
+}
+
+INTERPOLATION_NAMES = {
+    "nearest": "Nearest Neighbor",
+    "bilinear": "Bilinear",
+    "bicubic": "Bicubic",
+    "lanczos": "Lanczos",
+}
+
+
 def resize_image(
     image: QImage,
     width: int,
     height: int,
     keep_aspect: bool = True,
-    smooth: bool = True
+    smooth: bool = True,
+    interpolation: str = "bilinear"
 ) -> QImage:
-    """Redimensiona una imagen."""
     if image.isNull():
         return QImage()
     
     aspect_mode = Qt.KeepAspectRatio if keep_aspect else Qt.IgnoreAspectRatio
-    transform_mode = Qt.SmoothTransformation if smooth else Qt.FastTransformation
+    transform_mode = INTERPOLATION_METHODS.get(interpolation, Qt.SmoothTransformation)
     
-    return image.scaled(width, height, aspect_mode, transform_mode)
+    try:
+        from PIL import Image as PILImage
+        import io
+        
+        buffer = image.bits()
+        w = image.width()
+        h = image.height()
+        
+        fmt = image.format()
+        if fmt == QImage.Format_RGBA8888 or fmt == QImage.Format_ARGB32:
+            pil_img = PILImage.frombytes("RGBA", (w, h), bytes(buffer))
+        else:
+            converted = image.convertToFormat(QImage.Format_RGBA8888)
+            pil_img = PILImage.frombytes("RGBA", (w, h), bytes(converted.bits()))
+        
+        pil_interp = {
+            "nearest": PILImage.NEAREST,
+            "bilinear": PILImage.BILINEAR,
+            "bicubic": PILImage.BICUBIC,
+            "lanczos": PILImage.LANCZOS,
+        }.get(interpolation, PILImage.BILINEAR)
+        
+        if keep_aspect:
+            ratio = min(width / w, height / h)
+            new_w = int(w * ratio)
+            new_h = int(h * ratio)
+        else:
+            new_w = width
+            new_h = height
+        
+        resized = pil_img.resize((new_w, new_h), pil_interp)
+        
+        data = resized.tobytes("raw", "RGBA")
+        result = QImage(data, new_w, new_h, new_w * 4, QImage.Format_RGBA8888).copy()
+        return result
+    except (ImportError, Exception):
+        return image.scaled(width, height, aspect_mode, transform_mode)
 
 
 class ImageResizeDialog(QDialog):
@@ -142,6 +224,13 @@ class ImageResizeDialog(QDialog):
         self.maintain_aspect = QCheckBox("Mantener relación de aspecto")
         self.maintain_aspect.setChecked(True)
         size_layout.addWidget(self.maintain_aspect, 2, 0, 1, 2)
+        
+        size_layout.addWidget(QLabel("Interpolación:"), 3, 0)
+        self.interpolation_combo = QComboBox()
+        for key, name in INTERPOLATION_NAMES.items():
+            self.interpolation_combo.addItem(name, key)
+        self.interpolation_combo.setCurrentIndex(1)
+        size_layout.addWidget(self.interpolation_combo, 3, 1)
         
         layout.addWidget(size_group)
         
@@ -212,5 +301,6 @@ class ImageResizeDialog(QDialog):
             "maintain_aspect": self.maintain_aspect.isChecked(),
             "convert": self.convert_check.isChecked(),
             "format": self.format_combo.currentData(),
-            "new_file": self.new_file_radio.isChecked()
+            "new_file": self.new_file_radio.isChecked(),
+            "interpolation": self.interpolation_combo.currentData()
         }

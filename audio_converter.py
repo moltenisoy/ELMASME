@@ -18,13 +18,12 @@ from PySide6.QtWidgets import (
 
 # Formatos de audio soportados
 AUDIO_EXTENSIONS = {
-    ".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma"
+    ".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma",
+    ".mid", ".midi"
 }
 
-# Formatos que Qt Multimedia puede reproducir directamente
 QT_SUPPORTED_AUDIO = {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac"}
 
-# Nombres legibles de formatos
 FORMAT_NAMES = {
     ".mp3": "MP3 (MPEG Audio)",
     ".wav": "WAV (Waveform Audio)",
@@ -32,7 +31,9 @@ FORMAT_NAMES = {
     ".ogg": "OGG Vorbis",
     ".m4a": "M4A (AAC Audio)",
     ".aac": "AAC (Advanced Audio Coding)",
-    ".wma": "WMA (Windows Media Audio)"
+    ".wma": "WMA (Windows Media Audio)",
+    ".mid": "MIDI (Musical Instrument Digital Interface)",
+    ".midi": "MIDI (Musical Instrument Digital Interface)"
 }
 
 
@@ -91,24 +92,13 @@ def convert_audio(
     input_path: str,
     output_path: str,
     output_format: str,
-    progress_callback: Optional[Callable[[int], None]] = None
+    progress_callback: Optional[Callable[[int], None]] = None,
+    bitrate: Optional[int] = None,
+    sample_rate: Optional[int] = None
 ) -> bool:
-    """
-    Convierte un archivo de audio a otro formato usando ffmpeg.
-    
-    Args:
-        input_path: Ruta del archivo de entrada
-        output_path: Ruta del archivo de salida
-        output_format: Extensión de salida (ej: ".mp3", ".wav")
-        progress_callback: Función opcional para reportar progreso (0-100)
-    
-    Returns:
-        True si la conversión fue exitosa, False en caso contrario
-    """
     if not is_ffmpeg_available():
         raise RuntimeError("ffmpeg no está instalado o no está disponible en el PATH")
     
-    # Mapeo de extensiones a codecs de ffmpeg
     codec_map = {
         ".mp3": "libmp3lame",
         ".wav": "pcm_s16le",
@@ -123,12 +113,20 @@ def convert_audio(
     
     cmd = [
         "ffmpeg",
-        "-y",  # Sobrescribir sin preguntar
+        "-y",
         "-i", input_path,
         "-c:a", codec,
-        "-q:a", "2",  # Calidad alta
-        output_path
     ]
+    
+    if bitrate:
+        cmd.extend(["-b:a", f"{bitrate}k"])
+    else:
+        cmd.extend(["-q:a", "2"])
+    
+    if sample_rate:
+        cmd.extend(["-ar", str(sample_rate)])
+    
+    cmd.append(output_path)
     
     try:
         process = subprocess.Popen(
@@ -138,10 +136,8 @@ def convert_audio(
             universal_newlines=True
         )
         
-        # Monitorear progreso (simplificado)
         if progress_callback:
             progress_callback(0)
-            # Simular progreso ya que ffmpeg no reporta fácilmente
             for i in range(10):
                 time.sleep(0.1)
                 progress_callback((i + 1) * 10)
@@ -229,6 +225,28 @@ class AudioConverterDialog(QDialog):
         self.copy_check.setToolTip("Mantiene la misma calidad pero cambia el contenedor")
         convert_layout.addWidget(self.copy_check)
         
+        bitrate_layout = QHBoxLayout()
+        bitrate_layout.addWidget(QLabel("Bitrate:"))
+        self.bitrate_combo = QComboBox()
+        self.bitrate_combo.addItem("Automático", 0)
+        for br in [64, 128, 192, 256, 320]:
+            self.bitrate_combo.addItem(f"{br} kbps", br)
+        self.bitrate_combo.setCurrentIndex(0)
+        bitrate_layout.addWidget(self.bitrate_combo)
+        bitrate_layout.addStretch()
+        convert_layout.addLayout(bitrate_layout)
+        
+        samplerate_layout = QHBoxLayout()
+        samplerate_layout.addWidget(QLabel("Sample Rate:"))
+        self.samplerate_combo = QComboBox()
+        self.samplerate_combo.addItem("Original", 0)
+        for sr in [22050, 44100, 48000]:
+            self.samplerate_combo.addItem(f"{sr} Hz", sr)
+        self.samplerate_combo.setCurrentIndex(0)
+        samplerate_layout.addWidget(self.samplerate_combo)
+        samplerate_layout.addStretch()
+        convert_layout.addLayout(samplerate_layout)
+        
         layout.addWidget(convert_group)
         
         # Opciones de guardado
@@ -269,7 +287,6 @@ class AudioConverterDialog(QDialog):
         output_format = self.format_combo.currentData()
         
         if self.new_file_radio.isChecked():
-            # Generar nombre sugerido
             original_dir = os.path.dirname(self.input_path)
             original_name = os.path.splitext(os.path.basename(self.input_path))[0]
             suggested_name = f"{original_name}_converted{output_format}"
@@ -285,15 +302,16 @@ class AudioConverterDialog(QDialog):
                 return
             self.output_path = file_path
         else:
-            # Sobrescribir (realmente crear nuevo y reemplazar)
             original_dir = os.path.dirname(self.input_path)
             original_name = os.path.splitext(os.path.basename(self.input_path))[0]
             self.output_path = os.path.join(original_dir, f"{original_name}{output_format}")
         
-        # Realizar conversión
         progress = QProgressDialog("Convirtiendo audio...", "Cancelar", 0, 100, self)
         progress.setWindowModality(Qt.WindowModal)
         progress.setMinimumDuration(0)
+        
+        bitrate = self.bitrate_combo.currentData() or None
+        sample_rate = self.samplerate_combo.currentData() or None
         
         try:
             def update_progress(value):
@@ -304,7 +322,9 @@ class AudioConverterDialog(QDialog):
                 self.input_path,
                 self.output_path,
                 output_format,
-                update_progress
+                update_progress,
+                bitrate=bitrate,
+                sample_rate=sample_rate
             )
             
             progress.setValue(100)
