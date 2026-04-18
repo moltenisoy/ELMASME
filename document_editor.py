@@ -198,7 +198,7 @@ class TextEditorToolbar(QFrame):
         font_group.addWidget(self.font_label)
 
         self.font_combo = QFontComboBox()
-        self.font_combo.setFixedWidth(70)
+        self.font_combo.setFixedWidth(180)
         self.font_combo.setFixedHeight(30)
         self.font_combo.currentFontChanged.connect(self._change_font)
         font_group.addWidget(self.font_combo)
@@ -208,7 +208,7 @@ class TextEditorToolbar(QFrame):
         sizes = ["8", "9", "10", "11", "12", "14", "16", "18", "20", "22", "24", "26", "28", "36", "48", "72"]
         self.font_size_combo.addItems(sizes)
         self.font_size_combo.setCurrentText("11")
-        self.font_size_combo.setFixedWidth(24)
+        self.font_size_combo.setFixedWidth(65)
         self.font_size_combo.currentTextChanged.connect(self._change_font_size)
         font_group.addWidget(self.font_size_combo)
 

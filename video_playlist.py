@@ -38,6 +38,42 @@ def _format_duration(seconds: float) -> str:
     return f"{m}:{s:02d}"
 
 
+class _ExternalDropListWidget(QListWidget):
+    """QListWidget that accepts external file drops (URLs) and internal reorder."""
+
+    external_files_dropped = Signal(list)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+        self.viewport().setAcceptDrops(True)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls():
+            paths = []
+            for url in event.mimeData().urls():
+                path = url.toLocalFile()
+                if path and os.path.isfile(path):
+                    paths.append(path)
+            if paths:
+                self.external_files_dropped.emit(paths)
+            event.acceptProposedAction()
+        else:
+            super().dropEvent(event)
+
+
 class VideoPlaylistWidget(QWidget):
 
     file_selected = Signal(str)
@@ -58,6 +94,14 @@ class VideoPlaylistWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 2, 0, 0)
         layout.setSpacing(2)
+
+        self.list_widget = _ExternalDropListWidget()
+        self.list_widget.setMinimumHeight(40)
+        self.list_widget.setAlternatingRowColors(True)
+        self.list_widget.setDragDropMode(QAbstractItemView.InternalMove)
+        self.list_widget.setDefaultDropAction(Qt.MoveAction)
+        self.list_widget.external_files_dropped.connect(self._on_external_drop)
+        layout.addWidget(self.list_widget, 1)
 
         header = QHBoxLayout()
         header.setSpacing(2)
@@ -121,15 +165,6 @@ class VideoPlaylistWidget(QWidget):
 
         layout.addLayout(header)
 
-        self.list_widget = QListWidget()
-        self.list_widget.setMinimumHeight(60)
-        self.list_widget.setAlternatingRowColors(True)
-        self.list_widget.setDragDropMode(QAbstractItemView.InternalMove)
-        self.list_widget.setDefaultDropAction(Qt.MoveAction)
-        self.list_widget.setAcceptDrops(True)
-        self.list_widget.viewport().setAcceptDrops(True)
-        layout.addWidget(self.list_widget, 1)
-
     def _toggle_list(self):
         self._list_visible = not self._list_visible
         self.list_widget.setVisible(self._list_visible)
@@ -150,6 +185,10 @@ class VideoPlaylistWidget(QWidget):
         self.save_playlist_btn.clicked.connect(self._save_playlist)
         self.load_playlist_btn.clicked.connect(self._load_playlist)
         self.list_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
+
+    def _on_external_drop(self, paths):
+        for path in paths:
+            self._add_path(path)
 
     def _add_files(self):
         extensions = " ".join(f"*{ext}" for ext in sorted(VIDEO_EXTENSIONS))
