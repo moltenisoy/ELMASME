@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
-from PySide6.QtCore import Qt, QUrl, QTimer
+from PySide6.QtCore import Qt, QUrl, QTimer, QPoint, QEvent, QObject
+from PySide6.QtGui import QCursor
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
@@ -114,6 +115,7 @@ class VideoViewer(QWidget):
         self.current_path = None
         self._progress_bar = None
         self._overlay_pinned = False
+        self._fs_window = None
 
         self._build_ui()
         self._setup_timers()
@@ -125,6 +127,7 @@ class VideoViewer(QWidget):
             "background: rgba(0,0,0,0.7); border-radius: 8px;"
         )
         self.overlay.hide()
+        self.overlay.installEventFilter(self)
 
         overlay_layout = QHBoxLayout(self.overlay)
         overlay_layout.setContentsMargins(8, 4, 8, 4)
@@ -204,19 +207,19 @@ class VideoViewer(QWidget):
         controls.addWidget(self.edition_button)
         controls.addStretch(1)
 
-        top_widget = QWidget()
-        top_layout = QVBoxLayout(top_widget)
-        top_layout.setContentsMargins(0, 0, 0, 0)
-        top_layout.setSpacing(4)
-        top_layout.addWidget(self.video_widget, 1)
-        top_layout.addWidget(self.position_slider)
-        top_layout.addLayout(controls)
+        self._top_widget = QWidget()
+        self._top_layout = QVBoxLayout(self._top_widget)
+        self._top_layout.setContentsMargins(0, 0, 0, 0)
+        self._top_layout.setSpacing(4)
+        self._top_layout.addWidget(self.video_widget, 1)
+        self._top_layout.addWidget(self.position_slider)
+        self._top_layout.addLayout(controls)
 
         self.playlist_widget = VideoPlaylistWidget()
         self.playlist_widget.file_selected.connect(self.load_file)
 
         self.splitter = QSplitter(Qt.Vertical)
-        self.splitter.addWidget(top_widget)
+        self.splitter.addWidget(self._top_widget)
         self.splitter.addWidget(self.playlist_widget)
         self.splitter.setStretchFactor(0, 3)
         self.splitter.setStretchFactor(1, 1)
@@ -264,7 +267,24 @@ class VideoViewer(QWidget):
     def _on_video_leave(self):
         self._show_timer.stop()
         if not self._overlay_pinned:
-            self._hide_timer.start()
+            cursor_pos = QCursor.pos()
+            overlay_global = self.overlay.mapToGlobal(QPoint(0, 0))
+            overlay_rect = self.overlay.rect()
+            overlay_rect.moveTopLeft(overlay_global)
+            if not overlay_rect.contains(cursor_pos):
+                self._hide_timer.start()
+
+    def eventFilter(self, obj, event):
+        if obj is self.overlay:
+            if event.type() == QEvent.Enter:
+                self._hide_timer.stop()
+                self._show_timer.stop()
+                return False
+            elif event.type() == QEvent.Leave:
+                if not self._overlay_pinned:
+                    self._hide_timer.start()
+                return False
+        return super().eventFilter(obj, event)
 
     def _show_overlay(self):
         self._reposition_overlay()
@@ -276,10 +296,15 @@ class VideoViewer(QWidget):
             self.overlay.hide()
 
     def _reposition_overlay(self):
-        vg = self.video_widget.geometry()
+        parent = self.overlay.parentWidget()
+        if parent is None:
+            return
+        video_pos = self.video_widget.mapTo(parent, QPoint(0, 0))
+        vw = self.video_widget.width()
+        vh = self.video_widget.height()
         overlay_h = OVERLAY_HEIGHT
         self.overlay.setGeometry(
-            vg.x(), vg.y() + vg.height() - overlay_h, vg.width(), overlay_h
+            video_pos.x(), video_pos.y() + vh - overlay_h, vw, overlay_h
         )
 
     def _toggle_pin(self):
@@ -296,10 +321,6 @@ class VideoViewer(QWidget):
         super().resizeEvent(event)
         if self.overlay.isVisible():
             self._reposition_overlay()
-
-    def enterEvent(self, event):
-        super().enterEvent(event)
-        self._hide_timer.stop()
 
     def load_file(self, path: str):
         self.current_path = path
@@ -340,22 +361,63 @@ class VideoViewer(QWidget):
         self.audio_output.setVolume(volume)
 
     def _toggle_fullscreen(self):
-        window = self.window()
-        if window is None:
-            return
         if not self.is_fullscreen:
-            window.showFullScreen()
-            self.is_fullscreen = True
+            self._enter_fullscreen()
         else:
-            window.showNormal()
-            self.is_fullscreen = False
+            self._exit_fullscreen()
+
+    def _enter_fullscreen(self):
+        self._fs_window = QWidget()
+        self._fs_window.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
+        self._fs_window.setAttribute(Qt.WA_DeleteOnClose, False)
+        self._fs_window.setStyleSheet("background: black;")
+
+        fs_layout = QVBoxLayout(self._fs_window)
+        fs_layout.setContentsMargins(0, 0, 0, 0)
+        fs_layout.setSpacing(0)
+
+        self.video_widget.setParent(self._fs_window)
+        fs_layout.addWidget(self.video_widget)
+        self.video_widget.show()
+
+        self.overlay.setParent(self._fs_window)
+        self.overlay.hide()
+
+        self._fs_window.installEventFilter(self._FullscreenFilter(self))
+        self._fs_window.showFullScreen()
+        self.is_fullscreen = True
+
+    def _exit_fullscreen(self):
+        if not self._fs_window:
+            return
+
+        self.video_widget.setParent(self._top_widget)
+        self._top_layout.insertWidget(0, self.video_widget, 1)
+        self.video_widget.show()
+
+        self.overlay.setParent(self)
+        self.overlay.hide()
+
+        self._fs_window.close()
+        self._fs_window.deleteLater()
+        self._fs_window = None
+        self.is_fullscreen = False
+
+    class _FullscreenFilter(QObject):
+        def __init__(self, viewer):
+            super().__init__(viewer)
+            self._viewer = viewer
+
+        def eventFilter(self, obj, event):
+            if event.type() == QEvent.KeyPress:
+                if event.key() == Qt.Key_Escape:
+                    self._viewer._exit_fullscreen()
+                    return True
+            return False
 
     def exit_fullscreen(self):
         if self.is_fullscreen:
-            window = self.window()
-            if window:
-                window.showNormal()
-            self.is_fullscreen = False
+            self._exit_fullscreen()
 
     def _show_converter(self):
         if not self.current_path:

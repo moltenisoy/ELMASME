@@ -1,6 +1,8 @@
 import os
+import zipfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Set, Dict
+from typing import Optional, Set, Dict
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QFont, QKeySequence, QTextDocument
 from PySide6.QtPdf import QPdfDocument, QPdfSearchModel
@@ -22,10 +24,12 @@ TEXT_DOCUMENT_EXTENSIONS = {
     ".mk", ".gradle", ".groovy", ".java", ".c", ".h", ".cpp", ".hpp", ".cs",
     ".vb", ".py", ".rb", ".php", ".go", ".rs", ".swift", ".kt", ".kts",
     ".scala", ".sh", ".bash", ".zsh", ".fish", ".asm", ".s", ".v", ".sv",
-    ".verilog", ".vhdl", ".hex", ".srec", ".map", ".lst", ".doc", ".docx"
+    ".verilog", ".vhdl", ".hex", ".srec", ".map", ".lst"
 }
 
-DOCUMENT_EXTENSIONS = TEXT_DOCUMENT_EXTENSIONS | PDF_EXTENSIONS
+DOCX_EXTENSIONS = {".docx"}
+
+DOCUMENT_EXTENSIONS = TEXT_DOCUMENT_EXTENSIONS | PDF_EXTENSIONS | DOCX_EXTENSIONS
 
 EDITABLE_EXTENSIONS: Set[str] = {
     ".txt", ".log", ".ini", ".cfg", ".conf", ".config", ".csv", ".tsv", ".xml",
@@ -51,9 +55,30 @@ TYPE_NAMES = {
     ".xml": "XML",
     ".csv": "CSV",
     ".sql": "SQL",
-    ".doc": "Word Document",
     ".docx": "Word Document"
 }
+
+
+def _extract_docx_text(path: str) -> Optional[str]:
+    """Extract plain text from a .docx file using built-in zipfile + xml."""
+    try:
+        ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+        with zipfile.ZipFile(path, "r") as z:
+            if "word/document.xml" not in z.namelist():
+                return None
+            with z.open("word/document.xml") as f:
+                tree = ET.parse(f)
+                root = tree.getroot()
+                paragraphs = []
+                for p in root.iter(f"{{{ns}}}p"):
+                    texts = []
+                    for t in p.iter(f"{{{ns}}}t"):
+                        if t.text:
+                            texts.append(t.text)
+                    paragraphs.append("".join(texts))
+                return "\n".join(paragraphs)
+    except (zipfile.BadZipFile, ET.ParseError, OSError, KeyError):
+        return None
 
 
 def get_document_info(path: str) -> Dict:
@@ -353,6 +378,29 @@ class DocumentViewer(QWidget):
 
         if ext in TEXT_DOCUMENT_EXTENSIONS:
             content = read_text_file(path)
+            self.text_view.setPlainText(content)
+            self.current_zoom_index = 2
+            self._apply_text_zoom()
+            self._modified = False
+            self.stack.setCurrentWidget(self.text_view)
+            self.toolbar.setVisible(True)
+            self.zoom_out_button.setVisible(True)
+            self.zoom_in_button.setVisible(True)
+            self.search_button.setVisible(True)
+            self._search_widget.set_text_mode(self.text_view)
+            return
+
+        if ext in DOCX_EXTENSIONS:
+            content = _extract_docx_text(path)
+            if content is None:
+                self.message.setText("No fue posible extraer el texto del documento DOCX.")
+                self.stack.setCurrentWidget(self.message)
+                self.toolbar.setVisible(False)
+                self.zoom_out_button.setVisible(False)
+                self.zoom_in_button.setVisible(False)
+                self.search_button.setVisible(False)
+                self._modified = False
+                return
             self.text_view.setPlainText(content)
             self.current_zoom_index = 2
             self._apply_text_zoom()
