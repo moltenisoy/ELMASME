@@ -306,34 +306,25 @@ class DocumentViewer(QWidget):
         self.stack.addWidget(self.text_view)
         self.stack.addWidget(self.message)
 
-        zoom_controls = QHBoxLayout()
-        zoom_controls.setContentsMargins(0, 0, 0, 0)
-        zoom_controls.setSpacing(6)
-        zoom_controls.addStretch(1)
-
         self.zoom_out_button = QPushButton("Zoom -")
         self.zoom_out_button.setFixedSize(70, 22)
         self.zoom_out_button.clicked.connect(self.zoom_out)
-        zoom_controls.addWidget(self.zoom_out_button)
 
         self.zoom_in_button = QPushButton("Zoom +")
         self.zoom_in_button.setFixedSize(70, 22)
         self.zoom_in_button.clicked.connect(self.zoom_in)
-        zoom_controls.addWidget(self.zoom_in_button)
 
         self.search_button = QPushButton("🔍")
         self.search_button.setFixedSize(32, 22)
         self.search_button.clicked.connect(self._toggle_search)
-        zoom_controls.addWidget(self.search_button)
 
-        zoom_controls.addStretch(1)
+        self.toolbar.add_zoom_controls(self.zoom_out_button, self.zoom_in_button, self.search_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
         layout.addWidget(self.toolbar)
         layout.addWidget(self.stack, 1)
-        layout.addLayout(zoom_controls)
 
         self._search_widget = FloatingSearchWidget(self.text_view)
 
