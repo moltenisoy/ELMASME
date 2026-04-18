@@ -387,6 +387,13 @@ class TextEditorToolbar(QFrame):
         self.text_view.setFont(default_font)
         self.font_combo.setCurrentFont(default_font)
 
+    def add_zoom_controls(self, zoom_out_btn, zoom_in_btn, search_btn):
+        row = self.layout().itemAt(1).layout()
+        stretch_idx = row.count() - 1
+        row.insertWidget(stretch_idx, zoom_out_btn)
+        row.insertWidget(stretch_idx + 1, zoom_in_btn)
+        row.insertWidget(stretch_idx + 2, search_btn)
+
     def _setup_shortcuts(self):
         bold_action = QAction(self)
         bold_action.setShortcut(QKeySequence.Bold)

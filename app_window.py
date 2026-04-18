@@ -72,15 +72,15 @@ class UniversalViewerWindow(QMainWindow):
     def _build_footer(self) -> QFrame:
         footer = QFrame()
         footer.setObjectName("FooterPanel")
-        footer.setFixedHeight(38)
+        footer.setFixedHeight(28)
 
         footer_layout = QHBoxLayout(footer)
-        footer_layout.setContentsMargins(4, 2, 4, 2)
+        footer_layout.setContentsMargins(4, 0, 4, 0)
         footer_layout.setSpacing(4)
 
         self.prev_button = QToolButton()
-        self.prev_button.setText("◀ Anterior")
-        self.prev_button.setFixedSize(QSize(100, 30))
+        self.prev_button.setText("◀ Anterior 0/0")
+        self.prev_button.setFixedSize(QSize(130, 24))
         self.prev_button.clicked.connect(self.go_previous)
 
         self.archivo_button = QPushButton("Archivo")
@@ -88,7 +88,7 @@ class UniversalViewerWindow(QMainWindow):
         self.archivo_button.clicked.connect(self._show_archivo_menu)
 
         self.settings_button = QPushButton("⚙")
-        self.settings_button.setFixedSize(30, 24)
+        self.settings_button.setFixedSize(40, 24)
         self.settings_button.clicked.connect(self._show_settings_panel)
 
         self.file_name_label = QLabel("Sin archivo")
@@ -107,17 +107,9 @@ class UniversalViewerWindow(QMainWindow):
         info_layout.addWidget(self.file_name_label)
         info_layout.addWidget(self.file_path_label)
 
-        self.nav_info_label = QLabel("0 de 0")
-        self.nav_info_label.setObjectName("CounterLabel")
-        self.nav_info_label.setAlignment(Qt.AlignCenter)
-
-        self.theme_button = QPushButton("🎨 Tema")
-        self.theme_button.setFixedSize(80, 24)
-        self.theme_button.clicked.connect(self._show_theme_menu)
-
         self.next_button = QToolButton()
-        self.next_button.setText("Siguiente ▶")
-        self.next_button.setFixedSize(QSize(100, 30))
+        self.next_button.setText("0/0 Siguiente ▶")
+        self.next_button.setFixedSize(QSize(130, 24))
         self.next_button.clicked.connect(self.go_next)
 
         footer_layout.addWidget(self.prev_button)
@@ -125,9 +117,7 @@ class UniversalViewerWindow(QMainWindow):
         footer_layout.addWidget(self.settings_button)
         footer_layout.addStretch(1)
         footer_layout.addWidget(info_container)
-        footer_layout.addWidget(self.nav_info_label)
         footer_layout.addStretch(1)
-        footer_layout.addWidget(self.theme_button)
         footer_layout.addWidget(self.next_button)
 
         return footer
@@ -148,7 +138,7 @@ class UniversalViewerWindow(QMainWindow):
     def _show_settings_panel(self):
         dialog = QDialog(self)
         dialog.setWindowTitle("Ajustes")
-        dialog.setFixedSize(450, 280)
+        dialog.setFixedSize(450, 340)
 
         dlg_layout = QVBoxLayout(dialog)
         dlg_layout.setSpacing(12)
@@ -180,6 +170,19 @@ class UniversalViewerWindow(QMainWindow):
         self._no_multi_checkbox.toggled.connect(self._on_no_multi_playback_changed)
         dlg_layout.addWidget(self._no_multi_checkbox)
 
+        dlg_layout.addSpacing(10)
+
+        tema_label = QLabel("Tema")
+        tema_label.setStyleSheet("font-weight:bold;font-size:14px;")
+        dlg_layout.addWidget(tema_label)
+
+        tema_layout = QHBoxLayout()
+        for i, name in enumerate(THEME_NAMES):
+            btn = QPushButton(name)
+            btn.clicked.connect(lambda checked, idx=i: self._switch_theme(idx))
+            tema_layout.addWidget(btn)
+        dlg_layout.addLayout(tema_layout)
+
         dlg_layout.addStretch()
 
         cerrar_btn = QPushButton("Cerrar")
@@ -195,14 +198,6 @@ class UniversalViewerWindow(QMainWindow):
 
     def _on_no_multi_playback_changed(self, checked):
         self._no_multi_playback = checked
-
-    def _show_theme_menu(self):
-        menu = QMenu(self)
-        for i, name in enumerate(THEME_NAMES):
-            action = QAction(name, self)
-            action.triggered.connect(lambda checked, idx=i: self._switch_theme(idx))
-            menu.addAction(action)
-        menu.exec(self.theme_button.mapToGlobal(self.theme_button.rect().topLeft()))
 
     def _switch_theme(self, index):
         self._current_theme_index = index
@@ -320,7 +315,8 @@ class UniversalViewerWindow(QMainWindow):
         if not data:
             self.prev_button.setEnabled(False)
             self.next_button.setEnabled(False)
-            self.nav_info_label.setText("0 de 0")
+            self.prev_button.setText("◀ Anterior 0/0")
+            self.next_button.setText("0/0 Siguiente ▶")
             self.file_name_label.setText("Sin archivo")
             self.file_path_label.setText("")
             return
@@ -333,7 +329,9 @@ class UniversalViewerWindow(QMainWindow):
 
         self.prev_button.setEnabled(nav.has_previous())
         self.next_button.setEnabled(nav.has_next())
-        self.nav_info_label.setText(f"{idx} de {total}")
+        counter_text = f"{idx}/{total}"
+        self.prev_button.setText(f"◀ Anterior {counter_text}")
+        self.next_button.setText(f"{counter_text} Siguiente ▶")
 
         if path:
             self.file_name_label.setText(os.path.basename(path))
@@ -390,7 +388,7 @@ class UniversalViewerWindow(QMainWindow):
 
         dialog = QDialog(self)
         dialog.setWindowTitle("Cambios no guardados")
-        dialog.setFixedSize(450, 130)
+        dialog.setFixedSize(520, 130)
 
         dlg_layout = QVBoxLayout(dialog)
         dlg_layout.addWidget(QLabel("Hay cambios no guardados. ¿Qué desea hacer?"))
@@ -399,6 +397,7 @@ class UniversalViewerWindow(QMainWindow):
 
         save_btn = QPushButton("Guardar")
         save_as_btn = QPushButton("Guardar como")
+        discard_btn = QPushButton("Cerrar sin guardar")
         cancel_btn = QPushButton("Cancelar")
 
         result = {"choice": None}
@@ -411,12 +410,18 @@ class UniversalViewerWindow(QMainWindow):
             result["choice"] = "save_as"
             dialog.accept()
 
+        def on_discard():
+            result["choice"] = "discard"
+            dialog.accept()
+
         save_btn.clicked.connect(on_save)
         save_as_btn.clicked.connect(on_save_as)
+        discard_btn.clicked.connect(on_discard)
         cancel_btn.clicked.connect(dialog.reject)
 
         btn_layout.addWidget(save_btn)
         btn_layout.addWidget(save_as_btn)
+        btn_layout.addWidget(discard_btn)
         btn_layout.addWidget(cancel_btn)
         dlg_layout.addLayout(btn_layout)
 
@@ -430,6 +435,8 @@ class UniversalViewerWindow(QMainWindow):
                 viewer.save_document()
             elif result["choice"] == "save_as":
                 viewer.save_document_as()
+            elif result["choice"] == "discard":
+                viewer.discard_changes()
             return False
 
         return True
