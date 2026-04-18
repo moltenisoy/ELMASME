@@ -1,9 +1,11 @@
 import os
+import datetime
 from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import (
     QAction, QFont, QKeySequence, QColor, QTextCharFormat,
     QTextTableFormat, QTextLength, QTextFrameFormat,
+    QPainter, QFontMetrics,
 )
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtWidgets import (
@@ -195,6 +197,10 @@ class TextEditorToolbar(QFrame):
     def __init__(self, text_view: QTextEdit, parent=None):
         super().__init__(parent)
         self.text_view = text_view
+        self._header_footer_config = {
+            "header_left": "", "header_center": "", "header_right": "",
+            "footer_left": "", "footer_center": "{page}", "footer_right": "",
+        }
         self._build_ui()
         self._setup_shortcuts()
 
@@ -862,11 +868,6 @@ class TextEditorToolbar(QFrame):
     #  Header / footer for printing
     # ------------------------------------------------------------------
 
-    _header_footer_config = {
-        "header_left": "", "header_center": "", "header_right": "",
-        "footer_left": "", "footer_center": "{page}", "footer_right": "",
-    }
-
     def _configure_header_footer(self):
         cfg = self._header_footer_config
         dlg = HeaderFooterDialog(
@@ -882,7 +883,6 @@ class TextEditorToolbar(QFrame):
             self._header_footer_config = dlg.get_values()
 
     def _export_pdf(self):
-        import datetime
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Exportar como PDF", "", "PDF (*.pdf)"
         )
@@ -914,8 +914,6 @@ class TextEditorToolbar(QFrame):
         if page_count < 1:
             page_count = 1
 
-        from PySide6.QtGui import QPainter, QFontMetrics
-
         painter = QPainter()
         if not painter.begin(printer):
             return
@@ -923,7 +921,7 @@ class TextEditorToolbar(QFrame):
         page_rect = printer.pageRect(QPrinter.DevicePixel)
         full_rect = printer.paperRect(QPrinter.DevicePixel)
 
-        header_font = QFont("Calibri", 9)
+        header_font = QFont("Calibri, Arial, sans-serif", 9)
         header_fm = QFontMetrics(header_font)
         header_height = header_fm.height() + 10
         footer_height = header_height

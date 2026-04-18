@@ -3,7 +3,7 @@
 import os
 import difflib
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QTextCharFormat, QFont
+from PySide6.QtGui import QColor, QTextCharFormat, QFont, QTextCursor
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
     QFileDialog, QSplitter, QFrame,
@@ -301,4 +301,4 @@ class DiffViewerWidget(QWidget):
             cursor.insertText(line, fmt)
 
         text_edit.setTextCursor(cursor)
-        text_edit.moveCursor(cursor.Start)
+        text_edit.moveCursor(QTextCursor.MoveOperation.Start)
