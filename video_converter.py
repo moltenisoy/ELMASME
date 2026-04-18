@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 
 # Formatos de video soportados
 VIDEO_EXTENSIONS = {
-    ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm", ".m4v"
+    ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm", ".m4v", ".flv"
 }
 
 # Nombres legibles de formatos
@@ -28,7 +28,8 @@ FORMAT_NAMES = {
     ".mov": "MOV (QuickTime)",
     ".wmv": "WMV (Windows Media Video)",
     ".webm": "WEBM (Web Media)",
-    ".m4v": "M4V (iTunes Video)"
+    ".m4v": "M4V (iTunes Video)",
+    ".flv": "FLV (Flash Video)"
 }
 
 # Codecs recomendados por formato
@@ -39,7 +40,8 @@ FORMAT_CODECS = {
     ".mov": {"video": "libx264", "audio": "aac"},
     ".wmv": {"video": "wmv2", "audio": "wmav2"},
     ".webm": {"video": "libvpx-vp9", "audio": "libopus"},
-    ".m4v": {"video": "libx264", "audio": "aac"}
+    ".m4v": {"video": "libx264", "audio": "aac"},
+    ".flv": {"video": "libx264", "audio": "aac"}
 }
 
 

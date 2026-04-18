@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 # Formatos de audio soportados
 AUDIO_EXTENSIONS = {
     ".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma",
-    ".mid", ".midi"
+    ".mid", ".midi", ".opus"
 }
 
 QT_SUPPORTED_AUDIO = {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac"}
@@ -33,7 +33,8 @@ FORMAT_NAMES = {
     ".aac": "AAC (Advanced Audio Coding)",
     ".wma": "WMA (Windows Media Audio)",
     ".mid": "MIDI (Musical Instrument Digital Interface)",
-    ".midi": "MIDI (Musical Instrument Digital Interface)"
+    ".midi": "MIDI (Musical Instrument Digital Interface)",
+    ".opus": "OPUS (Opus Audio Codec)"
 }
 
 
@@ -106,7 +107,8 @@ def convert_audio(
         ".ogg": "libvorbis",
         ".m4a": "aac",
         ".aac": "aac",
-        ".wma": "wmav2"
+        ".wma": "wmav2",
+        ".opus": "libopus"
     }
     
     codec = codec_map.get(output_format.lower(), "copy")

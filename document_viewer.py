@@ -34,7 +34,11 @@ EPUB_EXTENSIONS = {".epub"}
 
 RTF_EXTENSIONS = {".rtf"}
 
-DOCUMENT_EXTENSIONS = TEXT_DOCUMENT_EXTENSIONS | PDF_EXTENSIONS | DOCX_EXTENSIONS | EPUB_EXTENSIONS | RTF_EXTENSIONS
+ODT_EXTENSIONS = {".odt"}
+
+ODS_EXTENSIONS = {".ods"}
+
+DOCUMENT_EXTENSIONS = TEXT_DOCUMENT_EXTENSIONS | PDF_EXTENSIONS | DOCX_EXTENSIONS | EPUB_EXTENSIONS | RTF_EXTENSIONS | ODT_EXTENSIONS | ODS_EXTENSIONS
 
 EDITABLE_EXTENSIONS: Set[str] = {
     ".txt", ".log", ".ini", ".cfg", ".conf", ".config", ".csv", ".tsv", ".xml",
@@ -62,7 +66,9 @@ TYPE_NAMES = {
     ".sql": "SQL",
     ".docx": "Word Document",
     ".epub": "EPUB eBook",
-    ".rtf": "Rich Text Format"
+    ".rtf": "Rich Text Format",
+    ".odt": "ODT (OpenDocument Text)",
+    ".ods": "ODS (OpenDocument Spreadsheet)"
 }
 
 
@@ -173,6 +179,65 @@ def _extract_rtf_text(path: str) -> Optional[str]:
         lines = [line.strip() for line in rtf_content.splitlines()]
         return "\n".join(lines)
     except (OSError, UnicodeDecodeError):
+        return None
+
+
+def _extract_odt_text(path: str) -> Optional[str]:
+    try:
+        ns_text = "urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+        with zipfile.ZipFile(path, "r") as z:
+            if "content.xml" not in z.namelist():
+                return None
+            with z.open("content.xml") as f:
+                tree = ET.parse(f)
+                root = tree.getroot()
+                paragraphs = []
+                for elem in root.iter():
+                    if elem.tag in (f"{{{ns_text}}}p", f"{{{ns_text}}}h"):
+                        text_parts = []
+                        if elem.text:
+                            text_parts.append(elem.text)
+                        for child in elem:
+                            if child.text:
+                                text_parts.append(child.text)
+                            if child.tail:
+                                text_parts.append(child.tail)
+                        paragraphs.append("".join(text_parts))
+                return "\n".join(paragraphs)
+    except (zipfile.BadZipFile, ET.ParseError, OSError, KeyError):
+        return None
+
+
+def _extract_ods_text(path: str) -> Optional[str]:
+    try:
+        ns_table = "urn:oasis:names:tc:opendocument:xmlns:table:1.0"
+        ns_text = "urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+        with zipfile.ZipFile(path, "r") as z:
+            if "content.xml" not in z.namelist():
+                return None
+            with z.open("content.xml") as f:
+                tree = ET.parse(f)
+                root = tree.getroot()
+                rows = []
+                for row in root.iter(f"{{{ns_table}}}table-row"):
+                    cells = []
+                    for cell in row.iter(f"{{{ns_table}}}table-cell"):
+                        cell_texts = []
+                        for p in cell.iter(f"{{{ns_text}}}p"):
+                            parts = []
+                            if p.text:
+                                parts.append(p.text)
+                            for child in p:
+                                if child.text:
+                                    parts.append(child.text)
+                                if child.tail:
+                                    parts.append(child.tail)
+                            cell_texts.append("".join(parts))
+                        cells.append(" ".join(cell_texts))
+                    if any(c.strip() for c in cells):
+                        rows.append("\t".join(cells))
+                return "\n".join(rows) if rows else None
+    except (zipfile.BadZipFile, ET.ParseError, OSError, KeyError):
         return None
 
 
@@ -545,6 +610,52 @@ class DocumentViewer(QWidget):
             self._search_widget.set_text_mode(self.text_view)
             return
 
+        if ext in ODT_EXTENSIONS:
+            content = _extract_odt_text(path)
+            if content is None:
+                self.message.setText("No fue posible extraer el texto del documento ODT.")
+                self.stack.setCurrentWidget(self.message)
+                self.toolbar.setVisible(False)
+                self.zoom_out_button.setVisible(False)
+                self.zoom_in_button.setVisible(False)
+                self.search_button.setVisible(False)
+                self._modified = False
+                return
+            self.text_view.setPlainText(content)
+            self.current_zoom_index = 2
+            self._apply_text_zoom()
+            self._modified = False
+            self.stack.setCurrentWidget(self.text_view)
+            self.toolbar.setVisible(True)
+            self.zoom_out_button.setVisible(True)
+            self.zoom_in_button.setVisible(True)
+            self.search_button.setVisible(True)
+            self._search_widget.set_text_mode(self.text_view)
+            return
+
+        if ext in ODS_EXTENSIONS:
+            content = _extract_ods_text(path)
+            if content is None:
+                self.message.setText("No fue posible extraer el texto del documento ODS.")
+                self.stack.setCurrentWidget(self.message)
+                self.toolbar.setVisible(False)
+                self.zoom_out_button.setVisible(False)
+                self.zoom_in_button.setVisible(False)
+                self.search_button.setVisible(False)
+                self._modified = False
+                return
+            self.text_view.setPlainText(content)
+            self.current_zoom_index = 2
+            self._apply_text_zoom()
+            self._modified = False
+            self.stack.setCurrentWidget(self.text_view)
+            self.toolbar.setVisible(True)
+            self.zoom_out_button.setVisible(True)
+            self.zoom_in_button.setVisible(True)
+            self.search_button.setVisible(True)
+            self._search_widget.set_text_mode(self.text_view)
+            return
+
         self.message.setText("Formato de documento incompatible para visualización directa.")
         self.stack.setCurrentWidget(self.message)
         self.toolbar.setVisible(False)
@@ -563,6 +674,9 @@ class DocumentViewer(QWidget):
             content = self.text_view.toPlainText()
             save_text_file(file_path, content)
             self._modified = False
+
+    def export_pdf(self):
+        self.toolbar._export_pdf()
 
     def is_modified(self):
         return self._modified
