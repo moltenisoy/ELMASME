@@ -25,7 +25,7 @@ _THEMES = {
             background: rgba(70,70,70,0.55);
         }
         QLabel#FileNameLabel { font-size: 13px; font-weight: 600; color: #f8fafc; }
-        QLabel#FilePathLabel { color: #94a3b8; font-size: 11px; }
+        QLabel#FilePathLabel { color: #94a3b8; font-size: 13px; }
         QLabel#CounterLabel {
             font-size: 12px; font-weight: 500; color: #cbd5e1;
             background: rgba(10,10,10,0.6); padding: 4px 12px; border-radius: 12px;
@@ -34,12 +34,6 @@ _THEMES = {
             background: rgba(10,10,10,0.92);
             border: 1px solid rgba(148,163,184,0.12);
             border-radius: 12px;
-        }
-        QFrame#FooterPanel {
-            background: rgba(10,10,10,0.85);
-            border: 1px solid rgba(148,163,184,0.1);
-            border-radius: 10px;
-            padding: 4px;
         }
         QTextEdit {
             background: #1a1a1a; color: #f1f5f9;
@@ -121,7 +115,7 @@ _THEMES = {
             background: #dbeafe;
         }
         QLabel#FileNameLabel { font-size: 13px; font-weight: 600; color: #0f172a; }
-        QLabel#FilePathLabel { color: #64748b; font-size: 11px; }
+        QLabel#FilePathLabel { color: #64748b; font-size: 13px; }
         QLabel#CounterLabel {
             font-size: 12px; font-weight: 500; color: #475569;
             background: #f1f5f9; padding: 4px 12px; border-radius: 12px;
@@ -130,12 +124,6 @@ _THEMES = {
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
-        }
-        QFrame#FooterPanel {
-            background: #f1f5f9;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 4px;
         }
         QTextEdit {
             background: #ffffff; color: #1e293b;
@@ -226,7 +214,7 @@ _THEMES = {
             color: #ff003c;
         }
         QLabel#FileNameLabel { font-size: 13px; font-weight: 600; color: #fcdb03; }
-        QLabel#FilePathLabel { color: #00ffd5; font-size: 11px; }
+        QLabel#FilePathLabel { color: #00ffd5; font-size: 13px; }
         QLabel#CounterLabel {
             font-size: 12px; font-weight: 500; color: #fcdb03;
             background: rgba(252,219,3,0.1); padding: 4px 12px;
@@ -236,12 +224,6 @@ _THEMES = {
             background: rgba(13,13,23,0.95);
             border: 1px solid rgba(252,219,3,0.4);
             border-radius: 0px;
-        }
-        QFrame#FooterPanel {
-            background: rgba(13,13,23,0.9);
-            border: 1px solid rgba(252,219,3,0.3);
-            border-radius: 0px;
-            padding: 4px;
         }
         QTextEdit {
             background: #0d0d17; color: #00ffd5;
@@ -331,7 +313,7 @@ _THEMES = {
             background: #004400;
         }
         QLabel#FileNameLabel { font-size: 13px; font-weight: 600; color: #00ff00; }
-        QLabel#FilePathLabel { color: #00aa00; font-size: 11px; }
+        QLabel#FilePathLabel { color: #00aa00; font-size: 13px; }
         QLabel#CounterLabel {
             font-size: 12px; font-weight: 500; color: #00ff00;
             background: rgba(0,170,0,0.15); padding: 4px 12px; border-radius: 2px;
@@ -340,12 +322,6 @@ _THEMES = {
             background: rgba(0,17,0,0.95);
             border: 1px solid rgba(0,170,0,0.4);
             border-radius: 2px;
-        }
-        QFrame#FooterPanel {
-            background: rgba(0,17,0,0.9);
-            border: 1px solid rgba(0,170,0,0.3);
-            border-radius: 2px;
-            padding: 4px;
         }
         QTextEdit {
             background: #001100; color: #00ff00;
