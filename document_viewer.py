@@ -73,7 +73,6 @@ TYPE_NAMES = {
 
 
 def _extract_docx_text(path: str) -> Optional[str]:
-    """Extract plain text from a .docx file using built-in zipfile + xml."""
     try:
         ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
         with zipfile.ZipFile(path, "r") as z:

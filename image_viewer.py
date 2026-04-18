@@ -1,7 +1,3 @@
-"""
-Módulo para visualización de imágenes.
-Incluye zoom, desplazamiento (pan) y pantalla completa.
-"""
 
 import os
 from pathlib import Path
@@ -23,7 +19,6 @@ from image_converter import (
 
 
 class PanLabel(QLabel):
-    """Label que soporta pan/drag con el mouse."""
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -37,18 +32,15 @@ class PanLabel(QLabel):
         self.setCursor(Qt.OpenHandCursor)
     
     def set_pan_limits(self, max_offset_x: int, max_offset_y: int):
-        """Establece los límites de desplazamiento."""
         self._max_offset_x = max(0, max_offset_x)
         self._max_offset_y = max(0, max_offset_y)
         self._clamp_offset()
     
     def _clamp_offset(self):
-        """Restringe el offset dentro de los límites."""
         self._offset_x = max(-self._max_offset_x, min(self._max_offset_x, self._offset_x))
         self._offset_y = max(-self._max_offset_y, min(self._max_offset_y, self._offset_y))
     
     def reset_pan(self):
-        """Resetea el desplazamiento."""
         self._offset_x = 0
         self._offset_y = 0
         self._dragging = False
@@ -62,7 +54,6 @@ class PanLabel(QLabel):
         self._clamp_offset()
     
     def pan(self, dx: int, dy: int):
-        """Desplaza la imagen por el delta especificado."""
         self._offset_x += dx
         self._offset_y += dy
         self._clamp_offset()
@@ -91,7 +82,6 @@ class PanLabel(QLabel):
 
 
 class ImageViewer(QWidget):
-    """Visor de imágenes con zoom, pan (arrastre) y conversión."""
     
     def __init__(self):
         super().__init__()
@@ -213,11 +203,10 @@ class ImageViewer(QWidget):
         self._update_scaled()
     
     def keyPressEvent(self, event):
-        """Maneja teclas de dirección para pan cuando hay zoom."""
         if self._pixmap.isNull():
             return
         
-        step = 50  # Píxeles de desplazamiento por tecla
+        step = 50
         
         if event.key() == Qt.Key_Left:
             self.label.pan(step, 0)
@@ -239,7 +228,6 @@ class ImageViewer(QWidget):
         self._update_scaled()
     
     def _update_scaled(self):
-        """Actualiza la imagen escalada según el zoom actual."""
         if self._pixmap.isNull():
             self.label.clear()
             self.label.setText("No se pudo mostrar la imagen.")
@@ -247,7 +235,6 @@ class ImageViewer(QWidget):
         
         zoom = self.zoom_levels[self.current_zoom_index]
         
-        # Calcular tamaño escalado
         scaled_width = int(self._pixmap.width() * zoom)
         scaled_height = int(self._pixmap.height() * zoom)
         
@@ -260,7 +247,6 @@ class ImageViewer(QWidget):
         
         self.label.setPixmap(scaled)
         
-        # Configurar límites de pan
         viewport_width = self.scroll_area.viewport().width()
         viewport_height = self.scroll_area.viewport().height()
         
@@ -271,13 +257,11 @@ class ImageViewer(QWidget):
         self.update_pixmap_position()
     
     def update_pixmap_position(self):
-        """Actualiza la posición de la imagen según el offset de pan."""
         if self.label.pixmap() is None:
             return
         
         offset_x, offset_y = self.label.get_offset()
         
-        # Aplicar margen para centrar con el offset
         pixmap = self.label.pixmap()
         container = self.scroll_area.widget()
         
@@ -286,41 +270,35 @@ class ImageViewer(QWidget):
         pixmap_width = pixmap.width()
         pixmap_height = pixmap.height()
         
-        # Calcular posición centrada con offset
         x = (container_width - pixmap_width) // 2 + offset_x
         y = (container_height - pixmap_height) // 2 + offset_y
         
         self.label.setGeometry(x, y, pixmap_width, pixmap_height)
     
     def zoom_in(self):
-        """Aumenta el zoom."""
         if self.current_zoom_index < len(self.zoom_levels) - 1:
             self.current_zoom_index += 1
             self._update_scaled()
     
     def zoom_out(self):
-        """Reduce el zoom."""
         if self.current_zoom_index > 0:
             self.current_zoom_index -= 1
-            if self.current_zoom_index == 3:  # 1.0x
+            if self.current_zoom_index == 3:
                 self.label.reset_pan()
             self._update_scaled()
     
     def reset_zoom(self):
-        """Restablece el zoom al 100%."""
         self.current_zoom_index = 3
         self.label.reset_pan()
         self._update_scaled()
     
     def copy_image(self):
-        """Copia la imagen al portapapeles."""
         from PySide6.QtWidgets import QApplication
         if not self._pixmap.isNull():
             clipboard = QApplication.clipboard()
             clipboard.setPixmap(self._pixmap)
     
     def toggle_fullscreen(self):
-        """Activa/desactiva pantalla completa."""
         if self.fullscreen_window is None:
             self.fullscreen_window = QLabel()
             self.fullscreen_window.setAlignment(Qt.AlignCenter)
@@ -342,12 +320,10 @@ class ImageViewer(QWidget):
         self.fullscreen_window.show()
     
     def exit_fullscreen(self):
-        """Sale del modo pantalla completa."""
         if self.fullscreen_window:
             self.fullscreen_window.close()
     
     def show_resize_dialog(self):
-        """Muestra el diálogo de redimensionamiento."""
         if self._original_image is None or self.current_path is None:
             return
         
@@ -362,11 +338,9 @@ class ImageViewer(QWidget):
             self.apply_transform(result)
     
     def apply_transform(self, result: Dict):
-        """Aplica las transformaciones a la imagen."""
         if self._original_image is None:
             return
         
-        # Redimensionar
         new_image = resize_image(
             self._original_image,
             result["width"],
@@ -375,13 +349,11 @@ class ImageViewer(QWidget):
             interpolation=result.get("interpolation", "bilinear")
         )
         
-        # Determinar formato de salida
         output_format = result["format"].upper() if result["convert"] else None
         if output_format == "JPEG":
             output_format = "JPG"
         
         if result["new_file"]:
-            # Guardar como nuevo archivo
             original_dir = os.path.dirname(self.current_path)
             original_name = os.path.splitext(os.path.basename(self.current_path))[0]
             ext = output_format.lower() if output_format else os.path.splitext(self.current_path)[1][1:]
@@ -403,7 +375,6 @@ class ImageViewer(QWidget):
                 else:
                     QMessageBox.critical(self, "Error", "No se pudo guardar la imagen.")
         else:
-            # Sobrescribir archivo original
             if output_format:
                 temp_path = os.path.splitext(self.current_path)[0] + f"_temp.{output_format.lower()}"
                 if save_image(new_image, temp_path, output_format):
@@ -416,5 +387,4 @@ class ImageViewer(QWidget):
                 if save_image(new_image, self.current_path):
                     QMessageBox.information(self, "Éxito", "Imagen actualizada correctamente.")
             
-            # Recargar la imagen
             self.load_file(self.current_path)
