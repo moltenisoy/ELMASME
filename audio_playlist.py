@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import subprocess
 from pathlib import Path
 from typing import List, Optional
 
@@ -14,6 +15,29 @@ from PySide6.QtWidgets import (
 from audio_converter import AUDIO_EXTENSIONS
 
 
+def _get_audio_duration(path: str) -> float:
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-v", "quiet", "-print_format", "json",
+             "-show_format", path],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            return float(data.get("format", {}).get("duration", 0))
+    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError, ValueError):
+        pass
+    return 0
+
+
+def _format_duration(seconds: float) -> str:
+    if seconds <= 0:
+        return ""
+    m = int(seconds // 60)
+    s = int(seconds % 60)
+    return f"{m}:{s:02d}"
+
+
 class AudioPlaylistWidget(QWidget):
 
     file_selected = Signal(str)
@@ -25,6 +49,7 @@ class AudioPlaylistWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._paths = []
+        self._durations = {}
         self._list_visible = True
         self._build_ui()
         self._connect_signals()
@@ -40,6 +65,10 @@ class AudioPlaylistWidget(QWidget):
         title = QLabel("Lista de reproducción")
         title.setStyleSheet("font-weight: bold; font-size: 12px;")
         header.addWidget(title)
+
+        self.total_duration_label = QLabel()
+        self.total_duration_label.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        header.addWidget(self.total_duration_label)
         header.addStretch()
 
         self.add_btn = QPushButton("+ Agregar")
@@ -140,10 +169,17 @@ class AudioPlaylistWidget(QWidget):
         if path in self._paths:
             return
         self._paths.append(path)
-        item = QListWidgetItem(os.path.basename(path))
+        dur = _get_audio_duration(path)
+        self._durations[path] = dur
+        dur_str = _format_duration(dur)
+        display = os.path.basename(path)
+        if dur_str:
+            display = f"{display}  [{dur_str}]"
+        item = QListWidgetItem(display)
         item.setData(Qt.UserRole, path)
         item.setToolTip(path)
         self.list_widget.addItem(item)
+        self._update_total_duration()
 
     def _remove_selected(self):
         row = self.list_widget.currentRow()
@@ -152,10 +188,27 @@ class AudioPlaylistWidget(QWidget):
             path = item.data(Qt.UserRole)
             if path in self._paths:
                 self._paths.remove(path)
+            self._durations.pop(path, None)
+            self._update_total_duration()
 
     def _clear_all(self):
         self.list_widget.clear()
         self._paths.clear()
+        self._durations.clear()
+        self._update_total_duration()
+
+    def _update_total_duration(self):
+        total = sum(self._durations.get(p, 0) for p in self._paths)
+        if total > 0:
+            h = int(total // 3600)
+            m = int((total % 3600) // 60)
+            s = int(total % 60)
+            if h > 0:
+                self.total_duration_label.setText(f"[{h}:{m:02d}:{s:02d}]")
+            else:
+                self.total_duration_label.setText(f"[{m}:{s:02d}]")
+        else:
+            self.total_duration_label.setText("")
 
     def _sort_by(self, key: str):
         self._sync_paths_from_list()
@@ -174,7 +227,12 @@ class AudioPlaylistWidget(QWidget):
     def _rebuild_list(self):
         self.list_widget.clear()
         for path in self._paths:
-            item = QListWidgetItem(os.path.basename(path))
+            dur = self._durations.get(path, 0)
+            dur_str = _format_duration(dur)
+            display = os.path.basename(path)
+            if dur_str:
+                display = f"{display}  [{dur_str}]"
+            item = QListWidgetItem(display)
             item.setData(Qt.UserRole, path)
             item.setToolTip(path)
             self.list_widget.addItem(item)

@@ -12,6 +12,8 @@ from document_editor import (  # noqa: F401
 from document_viewer import (  # noqa: F401
     TEXT_DOCUMENT_EXTENSIONS,
     DOCX_EXTENSIONS,
+    EPUB_EXTENSIONS,
+    RTF_EXTENSIONS,
     DOCUMENT_EXTENSIONS,
     EDITABLE_EXTENSIONS,
     TYPE_NAMES,

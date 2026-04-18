@@ -1,4 +1,5 @@
 import os
+import re
 import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -29,7 +30,11 @@ TEXT_DOCUMENT_EXTENSIONS = {
 
 DOCX_EXTENSIONS = {".docx"}
 
-DOCUMENT_EXTENSIONS = TEXT_DOCUMENT_EXTENSIONS | PDF_EXTENSIONS | DOCX_EXTENSIONS
+EPUB_EXTENSIONS = {".epub"}
+
+RTF_EXTENSIONS = {".rtf"}
+
+DOCUMENT_EXTENSIONS = TEXT_DOCUMENT_EXTENSIONS | PDF_EXTENSIONS | DOCX_EXTENSIONS | EPUB_EXTENSIONS | RTF_EXTENSIONS
 
 EDITABLE_EXTENSIONS: Set[str] = {
     ".txt", ".log", ".ini", ".cfg", ".conf", ".config", ".csv", ".tsv", ".xml",
@@ -55,7 +60,9 @@ TYPE_NAMES = {
     ".xml": "XML",
     ".csv": "CSV",
     ".sql": "SQL",
-    ".docx": "Word Document"
+    ".docx": "Word Document",
+    ".epub": "EPUB eBook",
+    ".rtf": "Rich Text Format"
 }
 
 
@@ -78,6 +85,94 @@ def _extract_docx_text(path: str) -> Optional[str]:
                     paragraphs.append("".join(texts))
                 return "\n".join(paragraphs)
     except (zipfile.BadZipFile, ET.ParseError, OSError, KeyError):
+        return None
+
+
+def _extract_epub_text(path: str) -> Optional[str]:
+    try:
+        with zipfile.ZipFile(path, "r") as z:
+            container_path = "META-INF/container.xml"
+            if container_path not in z.namelist():
+                return None
+            with z.open(container_path) as cf:
+                container = ET.parse(cf)
+                ns_container = "urn:oasis:names:tc:opendocument:xmlns:container"
+                rootfile_el = container.find(f".//{{{ns_container}}}rootfile")
+                if rootfile_el is None:
+                    rootfile_el = container.find(".//{http://www.idpf.org/2007/opf}rootfile")
+                if rootfile_el is None:
+                    for el in container.iter():
+                        if el.tag.endswith("rootfile") and el.get("full-path"):
+                            rootfile_el = el
+                            break
+                if rootfile_el is None:
+                    return None
+                opf_path = rootfile_el.get("full-path")
+            if not opf_path or opf_path not in z.namelist():
+                return None
+            opf_dir = os.path.dirname(opf_path)
+            with z.open(opf_path) as opf_file:
+                opf_tree = ET.parse(opf_file)
+                opf_root = opf_tree.getroot()
+            ns_opf = "http://www.idpf.org/2007/opf"
+            manifest = {}
+            for item in opf_root.iter():
+                if item.tag.endswith("}item") or item.tag == "item":
+                    item_id = item.get("id", "")
+                    href = item.get("href", "")
+                    media_type = item.get("media-type", "")
+                    manifest[item_id] = (href, media_type)
+            spine_items = []
+            for itemref in opf_root.iter():
+                if itemref.tag.endswith("}itemref") or itemref.tag == "itemref":
+                    idref = itemref.get("idref", "")
+                    if idref in manifest:
+                        spine_items.append(manifest[idref])
+            if not spine_items:
+                for item_id, (href, media_type) in manifest.items():
+                    if "html" in media_type or "xhtml" in media_type:
+                        spine_items.append((href, media_type))
+            all_text = []
+            tag_re = re.compile(r"<[^>]+>")
+            for href, media_type in spine_items:
+                full_path = os.path.join(opf_dir, href).replace("\\", "/")
+                if full_path.startswith("/"):
+                    full_path = full_path[1:]
+                if full_path not in z.namelist():
+                    continue
+                with z.open(full_path) as html_file:
+                    raw = html_file.read()
+                    try:
+                        html_content = raw.decode("utf-8")
+                    except UnicodeDecodeError:
+                        html_content = raw.decode("latin-1", errors="replace")
+                    text = tag_re.sub("", html_content)
+                    text = text.replace("&nbsp;", " ").replace("&amp;", "&")
+                    text = text.replace("&lt;", "<").replace("&gt;", ">")
+                    text = text.replace("&quot;", '"').replace("&apos;", "'")
+                    lines = [line.strip() for line in text.splitlines()]
+                    cleaned = "\n".join(line for line in lines if line)
+                    if cleaned:
+                        all_text.append(cleaned)
+            return "\n\n".join(all_text) if all_text else None
+    except (zipfile.BadZipFile, ET.ParseError, OSError, KeyError):
+        return None
+
+
+def _extract_rtf_text(path: str) -> Optional[str]:
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            rtf_content = f.read()
+        if not rtf_content.startswith("{\\rtf"):
+            return None
+        rtf_content = re.sub(r"\\[a-z]+\d*\s?", " ", rtf_content)
+        rtf_content = re.sub(r"\{[^}]*\}", "", rtf_content)
+        rtf_content = rtf_content.replace("{", "").replace("}", "")
+        rtf_content = re.sub(r"\\[\'\\]([0-9a-fA-F]{2})", lambda m: chr(int(m.group(1), 16)), rtf_content)
+        rtf_content = rtf_content.replace("\\\n", "\n").replace("\\par", "\n")
+        lines = [line.strip() for line in rtf_content.splitlines()]
+        return "\n".join(lines)
+    except (OSError, UnicodeDecodeError):
         return None
 
 
@@ -385,6 +480,52 @@ class DocumentViewer(QWidget):
             content = _extract_docx_text(path)
             if content is None:
                 self.message.setText("No fue posible extraer el texto del documento DOCX.")
+                self.stack.setCurrentWidget(self.message)
+                self.toolbar.setVisible(False)
+                self.zoom_out_button.setVisible(False)
+                self.zoom_in_button.setVisible(False)
+                self.search_button.setVisible(False)
+                self._modified = False
+                return
+            self.text_view.setPlainText(content)
+            self.current_zoom_index = 2
+            self._apply_text_zoom()
+            self._modified = False
+            self.stack.setCurrentWidget(self.text_view)
+            self.toolbar.setVisible(True)
+            self.zoom_out_button.setVisible(True)
+            self.zoom_in_button.setVisible(True)
+            self.search_button.setVisible(True)
+            self._search_widget.set_text_mode(self.text_view)
+            return
+
+        if ext in EPUB_EXTENSIONS:
+            content = _extract_epub_text(path)
+            if content is None:
+                self.message.setText("No fue posible extraer el texto del documento EPUB.")
+                self.stack.setCurrentWidget(self.message)
+                self.toolbar.setVisible(False)
+                self.zoom_out_button.setVisible(False)
+                self.zoom_in_button.setVisible(False)
+                self.search_button.setVisible(False)
+                self._modified = False
+                return
+            self.text_view.setPlainText(content)
+            self.current_zoom_index = 2
+            self._apply_text_zoom()
+            self._modified = False
+            self.stack.setCurrentWidget(self.text_view)
+            self.toolbar.setVisible(True)
+            self.zoom_out_button.setVisible(True)
+            self.zoom_in_button.setVisible(True)
+            self.search_button.setVisible(True)
+            self._search_widget.set_text_mode(self.text_view)
+            return
+
+        if ext in RTF_EXTENSIONS:
+            content = _extract_rtf_text(path)
+            if content is None:
+                self.message.setText("No fue posible extraer el texto del documento RTF.")
                 self.stack.setCurrentWidget(self.message)
                 self.toolbar.setVisible(False)
                 self.zoom_out_button.setVisible(False)

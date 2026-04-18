@@ -4,6 +4,7 @@ Incluye zoom, desplazamiento (pan) y pantalla completa.
 """
 
 import os
+from pathlib import Path
 from typing import Dict, Tuple
 from PySide6.QtCore import Qt, QSize, QPoint
 from PySide6.QtGui import QAction, QImageReader, QPixmap, QImage, QKeySequence
@@ -188,8 +189,21 @@ class ImageViewer(QWidget):
         self.addAction(copy_action)
     
     def load_file(self, path: str):
-        """Carga un archivo de imagen."""
         self.current_path = path
+        ext = Path(path).suffix.lower()
+        if ext in (".heif", ".heic", ".avif"):
+            try:
+                from PIL import Image as PILImage
+                pil_img = PILImage.open(path).convert("RGBA")
+                data = pil_img.tobytes("raw", "RGBA")
+                self._original_image = QImage(data, pil_img.width, pil_img.height, pil_img.width * 4, QImage.Format_RGBA8888).copy()
+                self._pixmap = QPixmap.fromImage(self._original_image)
+                self.current_zoom_index = 3
+                self.label.reset_pan()
+                self._update_scaled()
+                return
+            except (ImportError, Exception):
+                pass
         reader = QImageReader(path)
         reader.setAutoTransform(True)
         self._original_image = reader.read()
@@ -357,7 +371,8 @@ class ImageViewer(QWidget):
             self._original_image,
             result["width"],
             result["height"],
-            result.get("maintain_aspect", True)
+            result.get("maintain_aspect", True),
+            interpolation=result.get("interpolation", "bilinear")
         )
         
         # Determinar formato de salida
