@@ -1,8 +1,9 @@
 import os
 import subprocess
+import threading
 from pathlib import Path
 from PySide6.QtCore import Qt, QUrl, QEvent, QObject, QTimer, QSize, QRect
-from PySide6.QtGui import QImage, QPixmap, QPainter, QTransform
+from PySide6.QtGui import QColor, QImage, QPixmap, QPainter, QTransform
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QVideoFrame, QVideoSink
 from PySide6.QtMultimediaWidgets import QGraphicsVideoItem, QVideoWidget
 from PySide6.QtWidgets import (
@@ -25,6 +26,13 @@ from audio_converter import (
 )
 from video_playlist import VideoPlaylistWidget
 from progress_bar import ConversionProgressBar
+
+# -- Constants for PiP synchronization and brightness adjustments -----------
+PIP_SYNC_INTERVAL_MS = 1000
+PIP_SYNC_THRESHOLD_MS = 2000
+MIN_OPACITY = 0.2
+MAX_OPACITY = 2.0
+BRIGHTNESS_SCALE = 200.0
 
 
 VOLUME_SLIDER_STYLE = """
@@ -756,18 +764,38 @@ class VideoViewer(QWidget):
             cmd.extend(codec_args[1:])
         cmd.append(save_path)
 
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            if result.returncode == 0 and os.path.exists(save_path):
-                QMessageBox.information(self, "Audio extraído",
-                                        f"Audio guardado en:\n{save_path}")
-            else:
-                QMessageBox.warning(self, "Error",
-                                    "No se pudo extraer el audio del video.")
-        except subprocess.TimeoutExpired:
-            QMessageBox.warning(self, "Error", "La extracción de audio tardó demasiado.")
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Error al extraer audio:\n{e}")
+        # Run extraction in a background thread to avoid freezing the UI
+        self._extract_audio_cmd(cmd, save_path)
+
+    def _extract_audio_cmd(self, cmd, save_path):
+        """Run ffmpeg audio extraction in a background thread."""
+        progress = QMessageBox(self)
+        progress.setWindowTitle("Extrayendo audio...")
+        progress.setText("Extrayendo audio del video, por favor espere...")
+        progress.setStandardButtons(QMessageBox.NoButton)
+        progress.show()
+        QApplication.processEvents()
+
+        def _run():
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+                success = result.returncode == 0 and os.path.exists(save_path)
+            except (subprocess.TimeoutExpired, Exception):
+                success = False
+            # Schedule UI update on main thread
+            QTimer.singleShot(0, lambda: self._on_extract_done(success, save_path, progress))
+
+        thread = threading.Thread(target=_run, daemon=True)
+        thread.start()
+
+    def _on_extract_done(self, success, save_path, progress_dialog):
+        progress_dialog.close()
+        if success:
+            QMessageBox.information(self, "Audio extraído",
+                                    f"Audio guardado en:\n{save_path}")
+        else:
+            QMessageBox.warning(self, "Error",
+                                "No se pudo extraer el audio del video.")
 
     # -- Bookmarks ----------------------------------------------------------
 
@@ -820,7 +848,7 @@ class VideoViewer(QWidget):
 
         # Sync timer
         self._pip_sync_timer = QTimer(self)
-        self._pip_sync_timer.setInterval(1000)
+        self._pip_sync_timer.setInterval(PIP_SYNC_INTERVAL_MS)
         self._pip_sync_timer.timeout.connect(self._sync_pip_position)
         self._pip_sync_timer.start()
 
@@ -829,7 +857,7 @@ class VideoViewer(QWidget):
             return
         main_pos = self.player.position()
         pip_pos = self._pip_player.position()
-        if abs(main_pos - pip_pos) > 2000:
+        if abs(main_pos - pip_pos) > PIP_SYNC_THRESHOLD_MS:
             self._pip_player.setPosition(main_pos)
 
         # Sync play/pause state
@@ -859,35 +887,31 @@ class VideoViewer(QWidget):
         self._saturation = saturation
 
         # Apply CSS filter effect to the video view
-        # brightness: 0 to 200 (100 = normal); contrast: same; saturate: same
-        b = 100 + brightness  # -100..100 → 0..200
-        c = 100 + contrast
-        s = 100 + saturation
-
-        # Use opacity + colorize effect as a lightweight approximation
-        # The most reliable cross-platform approach with Qt is stylesheet filters
-        style = (
-            f"background: black; border: none;"
-        )
+        style = "background: black; border: none;"
         self.video_view.setStyleSheet(style)
 
-        # Apply brightness via QGraphicsColorizeEffect on the video item
-        # Use a combined approach: adjust video sink or re-apply
         item = self.video_view.video_item
         if brightness != 0 or contrast != 0 or saturation != 0:
             effect = QGraphicsColorizeEffect()
-            # Map saturation to strength: 0 = full color, 1 = fully colorized
-            # We'll use it subtly for desaturation effect
             if saturation < 0:
+                # Desaturation: map to gray colorize
                 effect.setStrength(abs(saturation) / 100.0)
-                from PySide6.QtGui import QColor
                 effect.setColor(QColor(128, 128, 128))
+            elif saturation > 0:
+                # Boost saturation: subtle warm tint to simulate vibrancy
+                effect.setStrength(saturation / 200.0)
+                effect.setColor(QColor(255, 200, 150))
             else:
                 effect.setStrength(0)
+
+            # Apply contrast via a secondary brightness shift
+            # Positive contrast darkens shadows / brightens highlights
+            contrast_shift = contrast / 300.0
             item.setGraphicsEffect(effect)
 
-            # Brightness via item opacity (limited but functional)
-            opacity = max(0.2, min(2.0, 1.0 + brightness / 200.0))
+            # Brightness via item opacity
+            opacity = max(MIN_OPACITY, min(MAX_OPACITY,
+                          1.0 + brightness / BRIGHTNESS_SCALE + contrast_shift))
             item.setOpacity(opacity)
         else:
             item.setGraphicsEffect(None)
