@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from content_viewers import ViewerHost
 from file_navigation import FileNavigator
 from formats import display_type, supported_extensions
+from settings import load_settings, save_settings
 from themes import THEME_NAMES, get_theme
 from windows_integration import (
     register_file_associations,
@@ -52,8 +53,11 @@ class UniversalViewerWindow(QMainWindow):
         super().__init__()
         self.setAcceptDrops(True)
         self._tab_data = {}
-        self._current_theme_index = 0
-        self._no_multi_playback = False
+
+        saved = load_settings()
+        self._current_theme_index = saved.get("theme_index", 0)
+        self._no_multi_playback = saved.get("no_multi_playback", False)
+
         self.setWindowTitle("Universal Viewer")
         self.resize(1280, 800)
         self._build_ui()
@@ -224,10 +228,18 @@ class UniversalViewerWindow(QMainWindow):
 
     def _on_no_multi_playback_changed(self, checked):
         self._no_multi_playback = checked
+        self._save_current_settings()
 
     def _switch_theme(self, index):
         self._current_theme_index = index
         self._apply_theme(THEME_NAMES[index])
+        self._save_current_settings()
+
+    def _save_current_settings(self):
+        save_settings({
+            "theme_index": self._current_theme_index,
+            "no_multi_playback": self._no_multi_playback,
+        })
 
     def _setup_shortcuts(self):
         left_action = QAction(self)

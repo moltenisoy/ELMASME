@@ -165,9 +165,10 @@ class AudioViewer(QWidget):
         self.splitter = QSplitter(Qt.Vertical)
         self.splitter.addWidget(top_widget)
         self.splitter.addWidget(self.playlist_widget)
-        self.splitter.setStretchFactor(0, 3)
+        self.splitter.setStretchFactor(0, 6)
         self.splitter.setStretchFactor(1, 1)
         self.splitter.setChildrenCollapsible(False)
+        self.splitter.setSizes([500, 80])
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
