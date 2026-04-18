@@ -19,8 +19,6 @@ from audio_converter import (
 from audio_playlist import AudioPlaylistWidget
 from progress_bar import ConversionProgressBar
 
-OVERLAY_HEIGHT = 42
-OVERLAY_TRIGGER_ZONE = 0.8
 
 VOLUME_SLIDER_STYLE = """
     QSlider::groove:horizontal {

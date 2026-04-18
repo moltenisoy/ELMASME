@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 from typing import Dict, Tuple
-from PySide6.QtCore import Qt, QSize, QPoint
+from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QAction, QImageReader, QPixmap, QImage, QKeySequence
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QToolButton,
@@ -133,45 +133,44 @@ class ImageViewer(QWidget):
         
         self.zoom_in_button = QToolButton()
         self.zoom_in_button.setText("Zoom +")
-        self.zoom_in_button.setFixedSize(QSize(70, 22))
+        self.zoom_in_button.setFixedSize(70, 22)
         self.zoom_in_button.clicked.connect(self.zoom_in)
         
         self.zoom_out_button = QToolButton()
         self.zoom_out_button.setText("Zoom -")
-        self.zoom_out_button.setFixedSize(QSize(70, 22))
+        self.zoom_out_button.setFixedSize(70, 22)
         self.zoom_out_button.clicked.connect(self.zoom_out)
         
         self.reset_zoom_button = QToolButton()
         self.reset_zoom_button.setText("100%")
-        self.reset_zoom_button.setFixedSize(QSize(60, 22))
+        self.reset_zoom_button.setFixedSize(60, 22)
         self.reset_zoom_button.clicked.connect(self.reset_zoom)
         
         self.fullscreen_button = QToolButton()
         self.fullscreen_button.setText("Pantalla completa")
-        self.fullscreen_button.setFixedSize(QSize(120, 22))
+        self.fullscreen_button.setFixedSize(120, 22)
         self.fullscreen_button.clicked.connect(self.toggle_fullscreen)
         
         self.resize_button = QToolButton()
         self.resize_button.setText("Redimensionar")
-        self.resize_button.setFixedSize(QSize(100, 22))
+        self.resize_button.setFixedSize(100, 22)
         self.resize_button.clicked.connect(self.show_resize_dialog)
         
-        controls = QHBoxLayout()
-        controls.setContentsMargins(0, 0, 0, 0)
-        controls.setSpacing(6)
-        controls.addStretch(1)
-        controls.addWidget(self.zoom_out_button)
-        controls.addWidget(self.reset_zoom_button)
-        controls.addWidget(self.zoom_in_button)
-        controls.addWidget(self.fullscreen_button)
-        controls.addWidget(self.resize_button)
-        controls.addStretch(1)
+        toolbar = QHBoxLayout()
+        toolbar.setContentsMargins(0, 0, 0, 0)
+        toolbar.setSpacing(6)
+        toolbar.addWidget(self.zoom_out_button)
+        toolbar.addWidget(self.reset_zoom_button)
+        toolbar.addWidget(self.zoom_in_button)
+        toolbar.addStretch(1)
+        toolbar.addWidget(self.fullscreen_button)
+        toolbar.addWidget(self.resize_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
+        layout.addLayout(toolbar)
         layout.addWidget(self.scroll_area, 1)
-        layout.addLayout(controls)
 
         copy_action = QAction(self)
         copy_action.setShortcut(QKeySequence.Copy)
