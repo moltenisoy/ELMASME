@@ -1,0 +1,540 @@
+================================================================================
+                    GUIA ESTRUCTURAL DEL PROYECTO ELMASME
+                         (Universal Viewer / Visor Universal)
+================================================================================
+
+Fecha de generacion: Abril 2026
+Proposito de este archivo: Servir como referencia rapida para agentes de codigo
+y desarrolladores que necesiten comprender la arquitectura del proyecto sin tener
+que leer todos los archivos fuente.
+
+================================================================================
+SECCION 1 - EXPLICACION TECNICA Y SINTETICA DEL PROYECTO
+================================================================================
+
+ELMASME es una aplicacion de escritorio multiplataforma construida con Python y
+PySide6 (bindings de Qt 6) que funciona como un visor universal de archivos. Su
+proposito es abrir, visualizar, editar y convertir multiples tipos de archivos
+multimedia y documentos desde una unica interfaz.
+
+TECNOLOGIAS BASE:
+- Lenguaje: Python 3
+- Framework GUI: PySide6 (Qt 6)
+- Conversion multimedia: FFmpeg / FFprobe (dependencia externa)
+- Lectura PDF: QPdfDocument / QPdfView (integrado en PySide6)
+- Lectura DOCX: zipfile + xml.etree.ElementTree (libreria estandar Python)
+- Integracion Windows: ctypes + winreg (registro del sistema)
+
+ARQUITECTURA GENERAL:
+La aplicacion sigue un patron de enrutamiento por tipo de contenido. El flujo es:
+
+  1. main.py inicia la aplicacion Qt y crea la ventana principal.
+  2. app_window.py gestiona la interfaz con pestanas (tabs), navegacion entre
+     archivos, menu de configuracion, temas y botones del footer.
+  3. Cuando se abre un archivo o carpeta, file_navigation.py construye una lista
+     de archivos compatibles en el directorio y permite navegar secuencialmente.
+  4. content_viewers.py recibe la ruta del archivo, consulta formats.py para
+     determinar el tipo (imagen, audio, video, pdf, texto, docx) y enruta al
+     visor especializado correspondiente usando un QStackedWidget.
+  5. Cada tipo de contenido tiene su propio conjunto de modulos:
+     - Imagen: image_viewer.py + image_converter.py
+     - Audio: audio_player.py + audio_converter.py + audio_playlist.py
+     - Video: video_player.py + video_converter.py + video_playlist.py
+     - Documento: document_viewer.py + document_editor.py + document_pdf.py
+  6. Los modulos *_handler.py son capas de re-exportacion que agrupan las
+     importaciones de cada subsistema para simplificar los imports.
+
+PATRON DE MODULOS:
+Cada tipo de archivo sigue la estructura:
+  - *_handler.py  -> Modulo agregador (re-exporta clases y constantes)
+  - *_viewer.py o *_player.py -> Interfaz grafica del visor/reproductor
+  - *_converter.py -> Logica de conversion de formatos
+  - *_playlist.py  -> Gestion de listas de reproduccion (solo audio y video)
+
+SISTEMA DE TEMAS:
+themes.py define 4 temas visuales (Oscuro, Claro, Cyberpunk 2038, Retro Terminal)
+como cadenas QSS (Qt Style Sheets). Se aplican globalmente a toda la aplicacion.
+El usuario los selecciona desde el dialogo de configuracion en app_window.py.
+
+SISTEMA DE CONVERSION:
+Las conversiones de audio y video dependen de FFmpeg. Usan subprocesos con
+callbacks de progreso que se muestran en progress_bar.py (barra flotante).
+Las conversiones de imagen usan QImage de PySide6 directamente.
+
+INTEGRACION WINDOWS:
+windows_integration.py maneja el registro de asociaciones de archivo en el
+registro de Windows (HKEY_CURRENT_USER), permitiendo que el sistema operativo
+abra archivos con ELMASME por defecto.
+
+FORMATOS SOPORTADOS ACTUALMENTE:
+  Imagen: .png, .jpg, .jpeg, .bmp, .gif, .webp, .tif, .tiff
+  Audio:  .mp3, .wav, .flac, .ogg, .m4a, .aac, .wma
+  Video:  .mp4, .mkv, .avi, .mov, .wmv, .webm, .m4v
+  PDF:    .pdf
+  DOCX:   .docx (solo lectura)
+  Texto:  .txt, .py, .js, .json, .html, .css, .md, .xml, .yaml, .yml, .toml,
+          .ini, .cfg, .conf, .log, .csv, .tsv, .sql, .sh, .bat, .ps1, .rb,
+          .php, .java, .c, .cpp, .h, .hpp, .cs, .go, .rs, .ts, .jsx, .tsx,
+          .vue, .svelte, .r, .m, .swift, .kt, .dart, .lua, .pl, .tex
+
+
+================================================================================
+SECCION 2 - MAPA ESTRUCTURAL DE ARCHIVOS
+================================================================================
+
+A continuacion se describe cada archivo, su responsabilidad y con que otros
+archivos se relaciona. Use esta seccion para determinar que archivos necesita
+leer o modificar segun la tarea asignada.
+
+------------------------------------------------------------------------------
+ARCHIVO: main.py
+RESPONSABILIDAD: Punto de entrada de la aplicacion.
+FUNCIONES CLAVE: resolve_start_path(), main()
+DEPENDE DE: app_window.py
+MODIFICAR SI: Necesita cambiar la forma en que se inicia la app, argumentos de
+  linea de comandos, o configuracion inicial de QApplication.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: app_window.py
+RESPONSABILIDAD: Ventana principal, sistema de pestanas (tabs), footer con
+  botones de navegacion, dialogo de configuracion, gestion de temas.
+CLASE PRINCIPAL: UniversalViewerWindow(QMainWindow)
+DEPENDE DE: content_viewers.py, file_navigation.py, formats.py, themes.py,
+  windows_integration.py
+MODIFICAR SI: Necesita cambiar la interfaz principal, agregar/quitar botones
+  del footer, modificar el sistema de tabs, cambiar la navegacion entre archivos,
+  modificar el dialogo de configuracion, o agregar nuevas funciones globales.
+NOTAS: No tiene barra de menu superior (QMenuBar). Todo el acceso es por footer.
+  El footer tiene: boton Archivo, navegacion (anterior/siguiente con contador),
+  y boton de configuracion (engranaje). El tema se selecciona dentro del dialogo
+  de configuracion.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: formats.py
+RESPONSABILIDAD: Identificacion centralizada de tipos de archivo.
+FUNCIONES CLAVE: get_content_type(path), is_supported(path), display_type(path),
+  supported_extensions(), get_file_category(path)
+DEPENDE DE: Constantes de extensiones de todos los *_handler.py
+MODIFICAR SI: Necesita agregar soporte para un nuevo tipo de archivo, cambiar
+  la clasificacion de un formato, o modificar las etiquetas de tipo.
+NOTAS: Es el HUB central de identificacion. Cualquier nuevo formato debe
+  registrarse aqui y en el handler correspondiente.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: file_navigation.py
+RESPONSABILIDAD: Gestion de la lista de archivos y navegacion secuencial.
+CLASE PRINCIPAL: FileNavigator
+DEPENDE DE: formats.py (is_supported)
+MODIFICAR SI: Necesita cambiar el orden de archivos, el filtrado, o la logica
+  de navegacion anterior/siguiente.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: themes.py
+RESPONSABILIDAD: Definicion de temas visuales (hojas de estilo QSS).
+FUNCION CLAVE: get_theme(name)
+TEMAS DISPONIBLES: "Oscuro", "Claro", "Cyberpunk 2038", "Retro Terminal"
+DEPENDE DE: Nada (modulo independiente)
+MODIFICAR SI: Necesita agregar nuevos temas, cambiar colores/estilos de temas
+  existentes, o agregar estilos para nuevos widgets.
+NOTAS: El tema Oscuro usa base negra (#0a0a0a). Todos los temas incluyen estilos
+  para QToolTip, QDialog, QMessageBox, QInputDialog.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: content_viewers.py
+RESPONSABILIDAD: Router de contenido. Usa QStackedWidget para mostrar el visor
+  correcto segun el tipo de archivo.
+CLASE PRINCIPAL: ViewerHost(QWidget)
+DEPENDE DE: image_handler, audio_handler, video_handler, document_handler,
+  formats.py
+MODIFICAR SI: Necesita agregar un nuevo tipo de visor (ej: visor 3D, visor de
+  hojas de calculo), cambiar la logica de enrutamiento, o agregar funciones
+  transversales a todos los visores.
+NOTAS: Contiene las instancias de ImageViewer, AudioViewer, VideoViewer,
+  DocumentViewer y un QLabel para mensajes. Tambien gestiona operaciones de
+  guardado de documentos.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: image_viewer.py
+RESPONSABILIDAD: Visualizacion de imagenes con zoom, pan y pantalla completa.
+CLASES: PanLabel(QLabel), ImageViewer(QWidget)
+DEPENDE DE: image_converter.py
+MODIFICAR SI: Necesita cambiar controles de zoom, agregar filtros visuales,
+  modificar el comportamiento de pantalla completa, o agregar nuevas herramientas
+  de visualizacion de imagen.
+FUNCIONES DESTACADAS: zoom_in/out, toggle_fullscreen, show_resize_dialog,
+  copy_image (copiar al portapapeles).
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: image_converter.py
+RESPONSABILIDAD: Conversion de formato y redimensionado de imagenes.
+CLASE: ImageResizeDialog(QDialog)
+FUNCIONES: get_image_info(), save_image(), resize_image()
+CONSTANTES: IMAGE_EXTENSIONS, FORMAT_NAMES, TRANSPARENT_FORMATS
+DEPENDE DE: PySide6 (QImage)
+MODIFICAR SI: Necesita agregar formatos de imagen, cambiar opciones de
+  conversion, agregar filtros de imagen, o modificar el dialogo de redimension.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: image_handler.py
+RESPONSABILIDAD: Modulo agregador que re-exporta desde image_converter e
+  image_viewer.
+MODIFICAR SI: Se agrega un nuevo submodulo de imagen que necesite ser exportado.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: audio_player.py
+RESPONSABILIDAD: Reproductor de audio con controles overlay, playlist y edicion.
+CLASE: AudioViewer(QWidget)
+DEPENDE DE: audio_converter.py, audio_playlist.py, progress_bar.py
+MODIFICAR SI: Necesita cambiar la interfaz del reproductor de audio, agregar
+  nuevos controles de reproduccion, modificar el overlay, o cambiar la
+  integracion con playlists.
+CONSTANTES: OVERLAY_HEIGHT=42, OVERLAY_TRIGGER_ZONE=0.8
+NOTAS: Los controles se ocultan automaticamente tras 2 segundos. El overlay
+  aparece cuando el cursor entra en la zona inferior (80%). Tiene boton de pin
+  para mantener visible. Menu "Edicion" con: Convertir, Convertir playlist, Recortar.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: audio_converter.py
+RESPONSABILIDAD: Conversion de formatos de audio y extraccion de metadatos.
+CLASES: AudioConverterDialog, AudioBatchConverterDialog, AudioTrimDialog
+FUNCIONES: get_audio_info(), convert_audio(), is_ffmpeg_available()
+CONSTANTES: AUDIO_EXTENSIONS, QT_SUPPORTED_AUDIO, FORMAT_NAMES
+DEPENDE DE: FFmpeg/FFprobe (subproceso externo)
+MODIFICAR SI: Necesita agregar formatos de audio, cambiar parametros de
+  conversion, agregar opciones de calidad, o modificar la extraccion de metadatos.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: audio_playlist.py
+RESPONSABILIDAD: Widget de lista de reproduccion para audio.
+CLASE: AudioPlaylistWidget(QWidget)
+SENAL: file_selected(str) - emitida al hacer doble clic.
+DEPENDE DE: audio_converter.py (AUDIO_EXTENSIONS)
+MODIFICAR SI: Necesita cambiar la interfaz de playlist, agregar modos de
+  reproduccion, cambiar el formato de guardado (actualmente JSON), o modificar
+  el sistema drag-and-drop.
+FUNCIONES: Agregar/eliminar/ordenar archivos, guardar/cargar playlists JSON,
+  modos de reproduccion (secuencial, repetir, aleatorio).
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: video_player.py
+RESPONSABILIDAD: Reproductor de video con controles overlay, pantalla completa
+  y playlist.
+CLASES: ClickableVideoWidget(QVideoWidget), VideoViewer(QWidget)
+DEPENDE DE: video_converter.py, audio_converter.py, video_playlist.py,
+  progress_bar.py
+MODIFICAR SI: Necesita cambiar la interfaz del reproductor de video, agregar
+  controles, modificar pantalla completa, cambiar el overlay, o integrar nuevas
+  funciones de reproduccion.
+CONSTANTES: OVERLAY_HEIGHT=42, OVERLAY_TRIGGER_ZONE=0.8
+NOTAS: Doble clic alterna pantalla completa. Pantalla completa usa QWidget
+  frameless con reparenting del video widget. ESC sale de pantalla completa
+  via _FullscreenFilter.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: video_converter.py
+RESPONSABILIDAD: Conversion de formatos de video con presets de calidad.
+CLASES: VideoConverterDialog, VideoBatchConverterDialog, VideoTrimDialog
+FUNCIONES: get_video_info(), convert_video(), is_ffmpeg_available()
+CONSTANTES: VIDEO_EXTENSIONS, FORMAT_NAMES, FORMAT_CODECS
+DEPENDE DE: FFmpeg/FFprobe (subproceso externo)
+MODIFICAR SI: Necesita agregar formatos de video, cambiar codecs, ajustar
+  presets de calidad, o modificar la extraccion de metadatos.
+NOTAS: Presets de calidad: low, medium, high, original. Codecs de video:
+  libx264, libxvid, libvpx-vp9, etc. Codecs de audio: aac, mp3, wmav2, libopus.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: video_playlist.py
+RESPONSABILIDAD: Widget de lista de reproduccion para video.
+CLASE: VideoPlaylistWidget(QWidget)
+DEPENDE DE: video_converter.py (VIDEO_EXTENSIONS)
+MODIFICAR SI: Necesita cambiar la interfaz de playlist de video. Estructura
+  identica a audio_playlist.py pero con extensiones de video.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: video_handler.py
+RESPONSABILIDAD: Modulo agregador que re-exporta desde video_converter,
+  video_player y video_playlist.
+MODIFICAR SI: Se agrega un nuevo submodulo de video que necesite ser exportado.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: document_viewer.py
+RESPONSABILIDAD: Visor multiformato de documentos (PDF, texto plano, DOCX).
+CLASES: FloatingSearchWidget(QWidget), DocumentViewer(QWidget)
+DEPENDE DE: document_pdf.py, document_editor.py
+MODIFICAR SI: Necesita agregar soporte para nuevos tipos de documento, cambiar
+  la visualizacion de PDF, modificar el editor de texto, agregar funciones de
+  busqueda, o cambiar el zoom de documentos.
+CONSTANTES: TEXT_DOCUMENT_EXTENSIONS (40+ formatos), DOCX_EXTENSIONS,
+  DOCUMENT_EXTENSIONS, EDITABLE_EXTENSIONS, TYPE_NAMES
+NOTAS: PDF se visualiza con QPdfView (solo lectura). Texto se edita con QTextEdit
+  + TextEditorToolbar. DOCX se extrae como texto plano (solo lectura, sin
+  formato). La busqueda flotante funciona tanto en PDF como en texto.
+  Niveles de zoom: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0]
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: document_editor.py
+RESPONSABILIDAD: Barra de herramientas de edicion de texto y utilidades de
+  lectura/escritura de archivos.
+CLASE: TextEditorToolbar(QFrame)
+FUNCIONES: read_text_file(), save_text_file(), is_editable()
+DEPENDE DE: Nada externo (solo PySide6)
+MODIFICAR SI: Necesita agregar herramientas de edicion (listas, tablas,
+  indentacion), cambiar la barra de formato, o modificar la lectura/escritura.
+NOTAS: Barra incluye: Cortar/Copiar/Pegar, Fuente y tamano, Negrita/Cursiva/
+  Subrayado/Tachado, Color de texto/resaltado, Alineacion, Deshacer/Rehacer,
+  Seleccionar todo, Guardar. Fuente por defecto: Calibri 11pt.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: document_pdf.py
+RESPONSABILIDAD: Utilidades especificas para PDF.
+FUNCION: extract_pdf_text(pdf_document)
+CONSTANTE: PDF_EXTENSIONS = {'.pdf'}
+MODIFICAR SI: Necesita cambiar la extraccion de texto de PDF o agregar
+  funcionalidades especificas de PDF.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: document_handler.py
+RESPONSABILIDAD: Modulo agregador que re-exporta desde document_pdf,
+  document_editor y document_viewer.
+MODIFICAR SI: Se agrega un nuevo submodulo de documentos que necesite exportarse.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: progress_bar.py
+RESPONSABILIDAD: Barra de progreso flotante para conversiones.
+CLASE: ConversionProgressBar(QWidget)
+DEPENDE DE: Nada externo (solo PySide6)
+MODIFICAR SI: Necesita cambiar la apariencia de la barra de progreso, agregar
+  boton de cancelacion, o cambiar el comportamiento de finalizacion.
+NOTAS: Ventana frameless, siempre visible encima, tamano fijo 480x100,
+  tema rojo (#dc2626). Se centra en pantalla.
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ARCHIVO: windows_integration.py
+RESPONSABILIDAD: Registro de asociaciones de archivo en Windows (registro del SO).
+FUNCIONES: register_file_associations(), unregister_file_associations(),
+  check_association_registered(), open_windows_default_apps_settings()
+CONSTANTES: APP_PROG_ID, APP_FRIENDLY_NAME, APP_DESCRIPTION
+DEPENDE DE: formats.py (ASSOCIATION_EXTENSIONS)
+MODIFICAR SI: Necesita cambiar la integracion con Windows, agregar acciones del
+  menu contextual, modificar el icono de la app, o cambiar las rutas del registro.
+NOTAS: Usa HKEY_CURRENT_USER (no requiere admin). Auto-detecta si se ejecuta
+  como script Python o como ejecutable congelado (PyInstaller/cx_Freeze).
+------------------------------------------------------------------------------
+
+
+================================================================================
+SECCION 2B - GUIA RAPIDA: QUE ARCHIVOS MODIFICAR SEGUN LA TAREA
+================================================================================
+
+TAREA                                    ARCHIVOS A MODIFICAR
+---------------------------------------  ------------------------------------------
+Agregar nuevo formato de imagen          image_converter.py, formats.py
+Agregar nuevo formato de audio           audio_converter.py, formats.py
+Agregar nuevo formato de video           video_converter.py, formats.py
+Agregar nuevo formato de documento       document_viewer.py, formats.py
+Agregar nuevo TIPO de contenido          content_viewers.py, formats.py + nuevo modulo
+Cambiar interfaz del reproductor audio   audio_player.py
+Cambiar interfaz del reproductor video   video_player.py
+Cambiar el visor de imagenes             image_viewer.py
+Cambiar el editor de documentos          document_editor.py, document_viewer.py
+Cambiar temas/colores                    themes.py
+Agregar nuevo tema                       themes.py, app_window.py (lista de temas)
+Cambiar navegacion de archivos           file_navigation.py, app_window.py
+Cambiar footer/botones principales       app_window.py
+Cambiar dialogo de configuracion         app_window.py
+Agregar funcion de conversion            *_converter.py correspondiente
+Cambiar formato de playlist              audio_playlist.py y/o video_playlist.py
+Cambiar barra de progreso                progress_bar.py
+Integracion con Windows                  windows_integration.py
+Cambiar punto de entrada                 main.py
+Cambiar busqueda en documentos           document_viewer.py (FloatingSearchWidget)
+Agregar zoom a un visor                  Visor correspondiente (*_viewer.py / *_player.py)
+
+
+================================================================================
+SECCION 3 - SUGERENCIAS DE PROFUNDIZACION EN OPCIONES DE CADA GESTOR
+================================================================================
+
+Las siguientes sugerencias proponen profundizar las opciones que ya existen en
+cada gestor de tipo de archivo, ampliando sus capacidades actuales:
+
+1. IMAGEN - Agregar seleccion de algoritmo de interpolacion en el redimensionado
+   (nearest-neighbor, bilinear, bicubic, lanczos) en ImageResizeDialog para que
+   el usuario elija la calidad del reescalado.
+   Archivo: image_converter.py
+
+2. IMAGEN - Implementar conversion por lotes (batch) de imagenes, similar a como
+   ya existe AudioBatchConverterDialog y VideoBatchConverterDialog, permitiendo
+   convertir multiples imagenes de una carpeta a un formato destino.
+   Archivos: image_converter.py, image_viewer.py
+
+3. AUDIO - Agregar seleccion de bitrate especifico (64, 128, 192, 256, 320 kbps)
+   y sample rate (22050, 44100, 48000 Hz) en AudioConverterDialog para control
+   fino de la calidad de conversion.
+   Archivo: audio_converter.py
+
+4. AUDIO - Implementar visualizacion de forma de onda (waveform) o espectrograma
+   basico en el reproductor de audio para retroalimentacion visual durante la
+   reproduccion.
+   Archivo: audio_player.py
+
+5. VIDEO - Agregar seleccion de resolucion de salida (480p, 720p, 1080p, 4K) y
+   framerate objetivo en VideoConverterDialog, ademas de los presets de calidad
+   existentes.
+   Archivo: video_converter.py
+
+6. VIDEO - Implementar captura de fotograma (screenshot) del video en reproduccion,
+   permitiendo guardar el frame actual como imagen en formato seleccionable.
+   Archivo: video_player.py
+
+7. DOCUMENTO - Agregar resaltado de sintaxis (syntax highlighting) para archivos
+   de codigo fuente (.py, .js, .java, etc.) usando un lexer basico por
+   extensiones, con coloreado de palabras clave, strings y comentarios.
+   Archivos: document_viewer.py, document_editor.py
+
+8. DOCUMENTO - Implementar contador de palabras, lineas y caracteres visible en
+   la barra de estado del editor de texto, actualizandose en tiempo real.
+   Archivos: document_viewer.py, document_editor.py
+
+9. PLAYLIST - Agregar informacion de duracion total de la playlist y duracion
+   individual de cada pista visible en la lista, extrayendo metadatos al agregar.
+   Archivos: audio_playlist.py, video_playlist.py
+
+10. PLAYLIST - Implementar busqueda/filtro dentro de la playlist para localizar
+    rapidamente archivos por nombre cuando la lista es extensa.
+    Archivos: audio_playlist.py, video_playlist.py
+
+
+================================================================================
+SECCION 4 - SUGERENCIAS DE NUEVOS TIPOS DE ARCHIVO A AGREGAR
+================================================================================
+
+Los siguientes tipos de archivo podrian ampliar la compatibilidad del visor:
+
+1. SVG (.svg) - Graficos vectoriales escalables. Se pueden renderizar con
+   QSvgWidget de PySide6. Agregaria al gestor de imagenes.
+   Archivos a modificar: image_converter.py (extensiones), image_viewer.py
+   (renderizado SVG), formats.py
+
+2. EPUB (.epub) - Libros electronicos. Son archivos ZIP con HTML/CSS/imagenes.
+   Se podrian extraer y renderizar en el visor de documentos.
+   Archivos a modificar: document_viewer.py, formats.py, posible nuevo modulo
+
+3. RTF (.rtf) - Formato de texto enriquecido. Qt tiene soporte parcial via
+   QTextEdit. Se podria integrar en el visor de documentos.
+   Archivos a modificar: document_viewer.py, document_editor.py, formats.py
+
+4. HEIF/HEIC (.heif, .heic) - Formato de imagen moderno de Apple/Android.
+   Requiere libreria pillow-heif o similar para decodificar.
+   Archivos a modificar: image_converter.py, formats.py
+
+5. AVIF (.avif) - Formato de imagen de nueva generacion basado en AV1.
+   Soportado por Pillow 9.1+.
+   Archivos a modificar: image_converter.py, formats.py
+
+6. MIDI (.mid, .midi) - Archivos de musica MIDI. Se podrian reproducir con
+   pygame.midi o similar, o convertir a audio con FluidSynth.
+   Archivos a modificar: audio_converter.py, audio_player.py, formats.py
+
+7. ODS/ODT (.ods, .odt) - Formatos de documento abierto (LibreOffice).
+   Son archivos ZIP con XML, similar a DOCX.
+   Archivos a modificar: document_viewer.py, formats.py
+
+8. ICO (.ico) - Iconos de Windows. Qt los soporta nativamente via QImage.
+   Archivos a modificar: image_converter.py, formats.py
+
+9. FLV (.flv) - Flash Video. Soportado por FFmpeg para conversion y por
+   Qt multimedia para reproduccion en algunos sistemas.
+   Archivos a modificar: video_converter.py, formats.py
+
+10. OPUS (.opus) - Codec de audio moderno de alta eficiencia. Soportado por
+    FFmpeg y parcialmente por Qt multimedia.
+    Archivos a modificar: audio_converter.py, formats.py
+
+
+================================================================================
+SECCION 5 - SUGERENCIAS DE NUEVAS FUNCIONES E IMPLEMENTACIONES
+================================================================================
+
+Las siguientes sugerencias son funciones nuevas que NO tienen relacion con
+brillo, ecualizacion ni subtitulos:
+
+1. SISTEMA DE MARCADORES (BOOKMARKS)
+   Permitir al usuario marcar archivos como favoritos dentro de una carpeta.
+   Los marcadores se guardarian en un JSON local y serian accesibles desde un
+   panel lateral o boton dedicado para saltar rapidamente a archivos frecuentes.
+   Archivos: app_window.py (UI), nuevo modulo bookmarks.py
+
+2. HISTORIAL DE ARCHIVOS RECIENTES
+   Mantener un registro de los ultimos N archivos abiertos, accesible desde el
+   menu Archivo. Guardado en un JSON persistente en el directorio de usuario.
+   Archivos: app_window.py, nuevo modulo recent_files.py
+
+3. COMPARADOR LADO A LADO (SPLIT VIEW)
+   Permitir abrir dos archivos (imagenes o documentos) en vista dividida para
+   compararlos visualmente. Util para comparar versiones de un mismo archivo.
+   Archivos: content_viewers.py, image_viewer.py, document_viewer.py
+
+4. METADATOS EXIF/ID3 PANEL
+   Panel desplegable que muestre los metadatos completos del archivo actual:
+   EXIF para imagenes (camara, GPS, fecha), ID3 para audio (artista, album),
+   y propiedades de video (codec, bitrate, resolucion) en un formato legible.
+   Archivos: nuevo modulo metadata_panel.py, content_viewers.py
+
+5. SISTEMA DE ETIQUETAS (TAGS) POR COLOR
+   Permitir al usuario asignar etiquetas de color (rojo, verde, azul, etc.)
+   a los archivos para clasificarlos. Las etiquetas se mostrarian como indicador
+   visual junto al nombre del archivo y se podrian filtrar.
+   Archivos: app_window.py, file_navigation.py, nuevo modulo tags.py
+
+6. EXPORTACION A PDF DESDE TEXTO
+   Permitir exportar el contenido del editor de texto como archivo PDF,
+   manteniendo el formato (fuente, tamano, colores) del editor.
+   Archivos: document_editor.py, document_viewer.py
+
+7. MODO PRESENTACION (SLIDESHOW) PARA IMAGENES
+   Reproduccion automatica secuencial de imagenes con intervalo configurable
+   (3s, 5s, 10s) y transiciones simples. Incluir controles de play/pause/stop.
+   Archivos: image_viewer.py, nuevo modulo slideshow.py
+
+8. MINIATURA/PREVIEW EN NAVEGACION
+   Mostrar una miniatura o preview del archivo anterior y siguiente al hacer
+   hover sobre los botones de navegacion, para saber que viene sin necesidad
+   de navegar.
+   Archivos: app_window.py, image_viewer.py
+
+9. ATAJOS DE TECLADO CONFIGURABLES
+   Panel en configuracion que permita ver y personalizar todos los atajos de
+   teclado de la aplicacion. Guardados en un JSON de preferencias del usuario.
+   Archivos: app_window.py, nuevo modulo shortcuts.py
+
+10. SISTEMA DE PLUGINS/EXTENSIONES
+    Arquitectura basica de plugins que permita agregar nuevos visores o
+    herramientas sin modificar el codigo fuente. Los plugins serian modulos
+    Python en una carpeta designada que se carguen dinamicamente al inicio.
+    Archivos: main.py, content_viewers.py, nuevo modulo plugin_loader.py
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
