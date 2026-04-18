@@ -149,18 +149,16 @@ def resize_image(
     
     try:
         from PIL import Image as PILImage
-        import io
         
-        buffer = image.bits()
         w = image.width()
         h = image.height()
         
         fmt = image.format()
         if fmt == QImage.Format_RGBA8888 or fmt == QImage.Format_ARGB32:
-            pil_img = PILImage.frombytes("RGBA", (w, h), bytes(buffer))
+            pil_img = PILImage.frombytes("RGBA", (w, h), bytes(image.constBits()))
         else:
             converted = image.convertToFormat(QImage.Format_RGBA8888)
-            pil_img = PILImage.frombytes("RGBA", (w, h), bytes(converted.bits()))
+            pil_img = PILImage.frombytes("RGBA", (w, h), bytes(converted.constBits()))
         
         pil_interp = {
             "nearest": PILImage.NEAREST,
