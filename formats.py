@@ -61,7 +61,7 @@ def get_content_type(path: str) -> str:
         return "presentation"
     if ext in EBOOK_EXTENSIONS:
         return "ebook"
-    if ext in TEXT_DOCUMENT_EXTENSIONS or ext in DOCX_EXTENSIONS or ext in EPUB_EXTENSIONS or ext in RTF_EXTENSIONS or ext in ODT_EXTENSIONS or ext in ODS_EXTENSIONS:
+    if ext in TEXT_DOCUMENT_EXTENSIONS or ext in DOCX_EXTENSIONS or ext in EPUB_EXTENSIONS or ext in RTF_EXTENSIONS or ext in ODT_EXTENSIONS:
         return "text"
     
     return "unsupported"

@@ -567,7 +567,13 @@ class VideoBatchConverterDialog(QDialog):
             )
         
         if self.open_folder_check.isChecked() and self.output_paths:
-            os.startfile(original_dir)
+            import sys, subprocess
+            if sys.platform == "win32":
+                os.startfile(original_dir)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", original_dir])
+            else:
+                subprocess.Popen(["xdg-open", original_dir])
         
         self.accept()
     
