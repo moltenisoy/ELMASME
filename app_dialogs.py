@@ -1,7 +1,9 @@
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QCheckBox, QTextEdit,
+    QCheckBox, QTextEdit, QGridLayout, QLineEdit, QMessageBox,
+    QKeySequenceEdit,
 )
 
 
@@ -9,10 +11,11 @@ class SettingsDialog(QDialog):
 
     def __init__(self, parent, theme_names, current_theme_index, no_multi_playback,
                  on_register, on_unregister, on_open_defaults,
-                 on_no_multi_changed, on_switch_theme):
+                 on_no_multi_changed, on_switch_theme,
+                 shortcuts=None, on_shortcuts_changed=None):
         super().__init__(parent)
         self.setWindowTitle("Ajustes")
-        self.setFixedSize(450, 340)
+        self.setFixedSize(450, 420)
 
         dlg_layout = QVBoxLayout(self)
         dlg_layout.setSpacing(12)
@@ -57,11 +60,31 @@ class SettingsDialog(QDialog):
             tema_layout.addWidget(btn)
         dlg_layout.addLayout(tema_layout)
 
+        dlg_layout.addSpacing(10)
+
+        atajos_label = QLabel("Atajos de teclado")
+        atajos_label.setStyleSheet("font-weight:bold;font-size:14px;")
+        dlg_layout.addWidget(atajos_label)
+
+        self._shortcuts = dict(shortcuts) if shortcuts else {}
+        self._on_shortcuts_changed = on_shortcuts_changed
+
+        atajos_btn = QPushButton("⌨️ Configurar atajos de teclado")
+        atajos_btn.clicked.connect(self._open_shortcuts_dialog)
+        dlg_layout.addWidget(atajos_btn)
+
         dlg_layout.addStretch()
 
         cerrar_btn = QPushButton("Cerrar")
         cerrar_btn.clicked.connect(self.accept)
         dlg_layout.addWidget(cerrar_btn, alignment=Qt.AlignRight)
+
+    def _open_shortcuts_dialog(self):
+        dialog = ShortcutConfigDialog(self._shortcuts, self)
+        if dialog.exec() == QDialog.Accepted:
+            self._shortcuts = dialog.get_shortcuts()
+            if self._on_shortcuts_changed:
+                self._on_shortcuts_changed(self._shortcuts)
 
 
 class OpenChoiceDialog(QDialog):
@@ -175,3 +198,80 @@ class WelcomeDialog(QDialog):
 
     def no_show_checked(self):
         return self._no_show_checkbox.isChecked()
+
+
+_SHORTCUT_LABELS = {
+    "navigate_left": "Archivo anterior",
+    "navigate_right": "Archivo siguiente",
+    "escape": "Salir / Cerrar",
+    "open_file": "Abrir archivo",
+}
+
+
+class ShortcutConfigDialog(QDialog):
+    """Dialog for configuring keyboard shortcuts."""
+
+    def __init__(self, shortcuts: dict, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Configurar atajos de teclado")
+        self.setMinimumSize(480, 280)
+        self._shortcuts = dict(shortcuts)
+        self._editors = {}
+        self._build_ui()
+
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel(
+            "Haga clic en un campo y presione la combinación de teclas deseada:"
+        ))
+
+        grid = QGridLayout()
+        grid.setSpacing(8)
+
+        row = 0
+        for key, current_seq in sorted(self._shortcuts.items()):
+            label_text = _SHORTCUT_LABELS.get(key, key)
+            grid.addWidget(QLabel(label_text), row, 0)
+
+            editor = QKeySequenceEdit()
+            editor.setKeySequence(QKeySequence(current_seq))
+            grid.addWidget(editor, row, 1)
+            self._editors[key] = editor
+
+            reset_btn = QPushButton("↺")
+            reset_btn.setFixedWidth(32)
+            reset_btn.setToolTip("Restablecer valor predeterminado")
+            from settings import _DEFAULTS
+            default_val = _DEFAULTS.get("shortcuts", {}).get(key, "")
+            reset_btn.clicked.connect(
+                lambda checked, ed=editor, dv=default_val: ed.setKeySequence(QKeySequence(dv))
+            )
+            grid.addWidget(reset_btn, row, 2)
+
+            row += 1
+
+        layout.addLayout(grid)
+        layout.addStretch()
+
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+
+        save_btn = QPushButton("Guardar")
+        save_btn.clicked.connect(self._on_save)
+        btn_layout.addWidget(save_btn)
+
+        cancel_btn = QPushButton("Cancelar")
+        cancel_btn.clicked.connect(self.reject)
+        btn_layout.addWidget(cancel_btn)
+
+        layout.addLayout(btn_layout)
+
+    def _on_save(self):
+        for key, editor in self._editors.items():
+            seq = editor.keySequence()
+            self._shortcuts[key] = seq.toString()
+        self.accept()
+
+    def get_shortcuts(self) -> dict:
+        return self._shortcuts

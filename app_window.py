@@ -167,6 +167,8 @@ class UniversalViewerWindow(QMainWindow):
         menu.exec(self.archivo_button.mapToGlobal(self.archivo_button.rect().topLeft()))
 
     def _show_settings_panel(self):
+        saved = load_settings()
+        shortcuts = saved.get("shortcuts", {})
         dialog = SettingsDialog(
             self,
             THEME_NAMES,
@@ -177,6 +179,8 @@ class UniversalViewerWindow(QMainWindow):
             open_windows_default_apps_settings,
             self._on_no_multi_playback_changed,
             self._switch_theme,
+            shortcuts=shortcuts,
+            on_shortcuts_changed=self._apply_shortcuts,
         )
         dialog.move(
             self.x() + (self.width() - dialog.width()) // 2,
@@ -212,25 +216,42 @@ class UniversalViewerWindow(QMainWindow):
             self._save_current_settings()
 
     def _setup_shortcuts(self):
+        saved = load_settings()
+        shortcuts = saved.get("shortcuts", {})
+        self._shortcut_actions = {}
+
         left_action = QAction(self)
-        left_action.setShortcut(QKeySequence(Qt.Key_Left))
+        left_action.setShortcut(QKeySequence(shortcuts.get("navigate_left", "Left")))
         left_action.triggered.connect(self.handle_left_key)
         self.addAction(left_action)
+        self._shortcut_actions["navigate_left"] = left_action
 
         right_action = QAction(self)
-        right_action.setShortcut(QKeySequence(Qt.Key_Right))
+        right_action.setShortcut(QKeySequence(shortcuts.get("navigate_right", "Right")))
         right_action.triggered.connect(self.handle_right_key)
         self.addAction(right_action)
+        self._shortcut_actions["navigate_right"] = right_action
 
         esc_action = QAction(self)
-        esc_action.setShortcut(QKeySequence(Qt.Key_Escape))
+        esc_action.setShortcut(QKeySequence(shortcuts.get("escape", "Escape")))
         esc_action.triggered.connect(self.handle_escape_key)
         self.addAction(esc_action)
+        self._shortcut_actions["escape"] = esc_action
 
         open_action = QAction(self)
-        open_action.setShortcut(QKeySequence.Open)
+        open_action.setShortcut(QKeySequence(shortcuts.get("open_file", "Ctrl+O")))
         open_action.triggered.connect(self.open_file_dialog)
         self.addAction(open_action)
+        self._shortcut_actions["open_file"] = open_action
+
+    def _apply_shortcuts(self, shortcuts: dict):
+        """Apply new shortcut bindings from the config dialog."""
+        for key, seq_str in shortcuts.items():
+            if key in self._shortcut_actions:
+                self._shortcut_actions[key].setShortcut(QKeySequence(seq_str))
+        saved = load_settings()
+        saved["shortcuts"] = shortcuts
+        save_settings(saved)
 
     def _center_window(self):
         screen = self.screen()
