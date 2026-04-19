@@ -6,6 +6,8 @@ from audio_converter import (
     is_ffmpeg_available,
     convert_audio,
     get_supported_output_formats,
+)
+from audio_converter_dialogs import (
     AudioConverterDialog,
     AudioBatchConverterDialog,
 )
