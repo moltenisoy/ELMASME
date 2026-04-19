@@ -2,6 +2,7 @@
 import json
 import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Optional, List, Dict, Callable
@@ -495,13 +496,15 @@ class AudioBatchConverterDialog(QDialog):
             )
         
         if self.open_folder_check.isChecked() and self.output_paths:
-            import sys, subprocess
-            if sys.platform == "win32":
-                os.startfile(original_dir)
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", original_dir])
-            else:
-                subprocess.Popen(["xdg-open", original_dir])
+            try:
+                if sys.platform == "win32":
+                    os.startfile(original_dir)
+                elif sys.platform == "darwin":
+                    subprocess.Popen(["open", original_dir])
+                else:
+                    subprocess.Popen(["xdg-open", original_dir])
+            except OSError:
+                pass
         
         self.accept()
     
