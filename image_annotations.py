@@ -72,19 +72,18 @@ def _make_tool_button(text: str, tooltip: str, checkable: bool = True) -> QToolB
 
 
 def _draw_arrowhead(painter: QPainter, start: QPointF, end: QPointF, size: float = 12.0):
-    """Draw a triangular arrowhead at *end* pointing away from *start*."""
     dx = end.x() - start.x()
     dy = end.y() - start.y()
     length = math.hypot(dx, dy)
     if length < 1e-3:
         return
     ux, uy = dx / length, dy / length
-    px, py = -uy, ux  # perpendicular
+    perp_x, perp_y = -uy, ux
 
-    p1 = QPointF(end.x() - ux * size + px * size * 0.4,
-                 end.y() - uy * size + py * size * 0.4)
-    p2 = QPointF(end.x() - ux * size - px * size * 0.4,
-                 end.y() - uy * size - py * size * 0.4)
+    p1 = QPointF(end.x() - ux * size + perp_x * size * 0.4,
+                 end.y() - uy * size + perp_y * size * 0.4)
+    p2 = QPointF(end.x() - ux * size - perp_x * size * 0.4,
+                 end.y() - uy * size - perp_y * size * 0.4)
 
     head = QPolygonF([end, p1, p2])
     painter.save()
@@ -94,7 +93,6 @@ def _draw_arrowhead(painter: QPainter, start: QPointF, end: QPointF, size: float
 
 
 class AnnotationOverlay(QWidget):
-    """Transparent overlay that allows drawing annotations on top of an image."""
 
     annotations_saved = Signal(QImage)
 
@@ -117,9 +115,6 @@ class AnnotationOverlay(QWidget):
 
         self._build_toolbar()
 
-    # ------------------------------------------------------------------
-    # Toolbar
-    # ------------------------------------------------------------------
 
     def _build_toolbar(self):
         self._toolbar = QFrame(self)
@@ -192,9 +187,6 @@ class AnnotationOverlay(QWidget):
         self._toolbar.move(x, 6)
         self._toolbar.raise_()
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
 
     def set_base_image(self, image: QImage):
         self._base_image = image
@@ -204,7 +196,6 @@ class AnnotationOverlay(QWidget):
         self.update()
 
     def burn_to_image(self, base_image: QImage) -> QImage:
-        """Render all annotations onto a copy of *base_image* and return it."""
         result = base_image.copy()
         if not self._annotations:
             return result
@@ -219,9 +210,6 @@ class AnnotationOverlay(QWidget):
         painter.end()
         return result
 
-    # ------------------------------------------------------------------
-    # Tool / colour helpers
-    # ------------------------------------------------------------------
 
     def _select_tool(self, tool: str):
         self._current_tool = tool
@@ -249,9 +237,6 @@ class AnnotationOverlay(QWidget):
             result = self.burn_to_image(self._base_image)
             self.annotations_saved.emit(result)
 
-    # ------------------------------------------------------------------
-    # Painting
-    # ------------------------------------------------------------------
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -301,7 +286,6 @@ class AnnotationOverlay(QWidget):
                 painter.drawPath(path)
 
     def _paint_in_progress(self, painter: QPainter):
-        """Draw the shape currently being created (rubber-band feedback)."""
         if not self._drawing:
             return
 
@@ -329,9 +313,6 @@ class AnnotationOverlay(QWidget):
             painter.setBrush(Qt.NoBrush)
             painter.drawPath(path)
 
-    # ------------------------------------------------------------------
-    # Mouse events
-    # ------------------------------------------------------------------
 
     def mousePressEvent(self, event):
         if event.button() != Qt.LeftButton:
@@ -396,9 +377,6 @@ class AnnotationOverlay(QWidget):
 
         self.update()
 
-    # ------------------------------------------------------------------
-    # Geometry
-    # ------------------------------------------------------------------
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

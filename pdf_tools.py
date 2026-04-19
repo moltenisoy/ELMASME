@@ -1,4 +1,3 @@
-"""Utilidades PDF: fusionar, dividir, extraer texto e imágenes (backend PyMuPDF)."""
 
 from __future__ import annotations
 
@@ -19,11 +18,8 @@ from PySide6.QtWidgets import (
     QLineEdit,
 )
 
-import fitz  # PyMuPDF
+import fitz
 
-# ---------------------------------------------------------------------------
-# Estilos compartidos
-# ---------------------------------------------------------------------------
 
 _DIALOG_STYLE = """
     QDialog { background: #1e293b; }
@@ -52,16 +48,8 @@ _DIALOG_STYLE = """
     }
 """
 
-# ---------------------------------------------------------------------------
-# Funciones utilitarias
-# ---------------------------------------------------------------------------
-
 
 def merge_pdfs(input_paths: list[str], output_path: str) -> bool:
-    """Fusiona varios PDF en un único archivo de salida.
-
-    Returns ``True`` si la operación fue exitosa, ``False`` en caso contrario.
-    """
     try:
         result = fitz.open()
         for path in input_paths:
@@ -75,11 +63,6 @@ def merge_pdfs(input_paths: list[str], output_path: str) -> bool:
 
 
 def split_pdf(input_path: str, output_dir: str) -> list[str]:
-    """Divide un PDF en archivos individuales por página.
-
-    Returns una lista con las rutas de los archivos creados, o lista vacía
-    si ocurre un error.
-    """
     created: list[str] = []
     try:
         os.makedirs(output_dir, exist_ok=True)
@@ -98,10 +81,6 @@ def split_pdf(input_path: str, output_dir: str) -> list[str]:
 
 
 def extract_pdf_text(input_path: str, output_path: str) -> bool:
-    """Extrae todo el texto de un PDF y lo guarda en un archivo .txt.
-
-    Returns ``True`` si la operación fue exitosa, ``False`` en caso contrario.
-    """
     try:
         with fitz.open(input_path) as doc:
             text_parts: list[str] = []
@@ -115,11 +94,6 @@ def extract_pdf_text(input_path: str, output_path: str) -> bool:
 
 
 def extract_pdf_images(input_path: str, output_dir: str) -> list[str]:
-    """Extrae todas las imágenes incrustadas de un PDF.
-
-    Returns una lista con las rutas de los archivos creados, o lista vacía
-    si ocurre un error.
-    """
     created: list[str] = []
     try:
         os.makedirs(output_dir, exist_ok=True)
@@ -144,13 +118,7 @@ def extract_pdf_images(input_path: str, output_dir: str) -> list[str]:
     return created
 
 
-# ---------------------------------------------------------------------------
-# Diálogos de interfaz
-# ---------------------------------------------------------------------------
-
-
 class MergePdfDialog(QDialog):
-    """Diálogo para seleccionar varios PDF y fusionarlos en uno solo."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -159,7 +127,6 @@ class MergePdfDialog(QDialog):
         self._output_path: str = ""
         self._build_ui()
 
-    # -- construcción de la interfaz ----------------------------------------
 
     def _build_ui(self):
         self.setStyleSheet(_DIALOG_STYLE)
@@ -170,7 +137,6 @@ class MergePdfDialog(QDialog):
         self.list_widget = QListWidget()
         layout.addWidget(self.list_widget)
 
-        # Botones de gestión de la lista
         list_btns = QHBoxLayout()
 
         self.add_btn = QPushButton("➕ Agregar")
@@ -195,7 +161,6 @@ class MergePdfDialog(QDialog):
 
         layout.addLayout(list_btns)
 
-        # Ruta de salida
         out_row = QHBoxLayout()
         out_row.addWidget(QLabel("Archivo de salida:"))
         self.output_edit = QLineEdit()
@@ -207,7 +172,6 @@ class MergePdfDialog(QDialog):
         out_row.addWidget(self.browse_btn)
         layout.addLayout(out_row)
 
-        # OK / Cancelar
         buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
@@ -215,7 +179,6 @@ class MergePdfDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-    # -- slots --------------------------------------------------------------
 
     def _on_add(self):
         paths, _ = QFileDialog.getOpenFileNames(
@@ -284,14 +247,12 @@ class MergePdfDialog(QDialog):
                 self, "Error", "No se pudo fusionar los archivos PDF."
             )
 
-    # -- acceso público ------------------------------------------------------
 
     def get_output_path(self) -> str:
         return self._output_path
 
 
 class SplitPdfDialog(QDialog):
-    """Diálogo para dividir un PDF en páginas individuales."""
 
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)
@@ -310,7 +271,6 @@ class SplitPdfDialog(QDialog):
             QLabel(f"Archivo: {os.path.basename(self._input_path)}")
         )
 
-        # Directorio de salida
         dir_row = QHBoxLayout()
         dir_row.addWidget(QLabel("Directorio de salida:"))
         self.dir_edit = QLineEdit()
@@ -322,7 +282,6 @@ class SplitPdfDialog(QDialog):
         dir_row.addWidget(self.browse_btn)
         layout.addLayout(dir_row)
 
-        # OK / Cancelar
         buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
@@ -365,7 +324,6 @@ class SplitPdfDialog(QDialog):
 
 
 class ExtractTextDialog(QDialog):
-    """Diálogo simple de confirmación para extraer texto de un PDF."""
 
     def __init__(self, input_path: str, parent=None):
         super().__init__(parent)

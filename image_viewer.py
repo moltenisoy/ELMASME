@@ -34,7 +34,6 @@ class PanLabel(QLabel):
         self._max_offset_x = 0
         self._max_offset_y = 0
         self._image_viewer = None
-        # Crop selection state
         self._crop_mode = False
         self._selecting = False
         self._has_selection = False
@@ -132,14 +131,12 @@ class PanLabel(QLabel):
         if sel.width() < 2 or sel.height() < 2:
             return
         painter = QPainter(self)
-        # Dark overlay outside selection
         dark = QColor(0, 0, 0, 120)
         full = self.rect()
         painter.fillRect(full.x(), full.y(), full.width(), sel.y() - full.y(), dark)
         painter.fillRect(full.x(), sel.bottom() + 1, full.width(), full.bottom() - sel.bottom(), dark)
         painter.fillRect(full.x(), sel.y(), sel.x() - full.x(), sel.height() + 1, dark)
         painter.fillRect(sel.right() + 1, sel.y(), full.right() - sel.right(), sel.height() + 1, dark)
-        # Selection border
         pen = QPen(QColor(59, 130, 246), 2, Qt.DashLine)
         painter.setPen(pen)
         painter.setBrush(Qt.NoBrush)
@@ -463,9 +460,6 @@ class ImageViewer(QWidget):
             
             self.load_file(self.current_path)
     
-    # ------------------------------------------------------------------
-    # Interactive crop mode
-    # ------------------------------------------------------------------
     def _toggle_crop_mode(self):
         if self._original_image is None or self.current_path is None:
             return
@@ -473,7 +467,6 @@ class ImageViewer(QWidget):
         self.label._crop_mode = self._crop_mode
 
         if self._crop_mode:
-            # Exit annotation mode if active
             if self._annotation_mode:
                 self.toggle_annotation_mode()
             self.label.setCursor(Qt.CrossCursor)
@@ -510,7 +503,6 @@ class ImageViewer(QWidget):
         self.label.clear_selection()
 
     def _image_rect_from_selection(self, sel_rect):
-        """Convert label (scaled) coordinates to original image coordinates."""
         zoom = self.zoom_levels[self.current_zoom_index]
         x = max(0, int(sel_rect.x() / zoom))
         y = max(0, int(sel_rect.y() / zoom))
@@ -573,7 +565,6 @@ class ImageViewer(QWidget):
     def toggle_annotation_mode(self):
         self._annotation_mode = not self._annotation_mode
         if self._annotation_mode:
-            # Exit crop mode if active
             if self._crop_mode:
                 self._toggle_crop_mode()
             if not hasattr(self, '_annotation_overlay') or self._annotation_overlay is None:
@@ -593,7 +584,6 @@ class ImageViewer(QWidget):
     def _on_annotations_saved(self, annotated_image):
         if self._original_image is None or self.current_path is None:
             return
-        # Burn annotations onto the original image at full resolution
         from image_annotations import AnnotationOverlay
         if hasattr(self, '_annotation_overlay') and self._annotation_overlay is not None:
             result = self._annotation_overlay.burn_to_image(self._original_image)

@@ -46,7 +46,6 @@ def is_editable(path: str) -> bool:
 
 
 class InsertTableDialog(QDialog):
-    """Dialog to configure rows and columns for a table insertion."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -101,7 +100,6 @@ class InsertTableDialog(QDialog):
 
 
 class HeaderFooterDialog(QDialog):
-    """Dialog to configure header and footer text for printing."""
 
     def __init__(self, header_left="", header_center="", header_right="",
                  footer_left="", footer_center="", footer_right="",
@@ -137,7 +135,6 @@ class HeaderFooterDialog(QDialog):
         hint.setStyleSheet("color: #94a3b8; font-size: 11px;")
         layout.addWidget(hint)
 
-        # Header group
         header_group = QGroupBox("Encabezado")
         hg_layout = QGridLayout(header_group)
         hg_layout.setSpacing(6)
@@ -152,7 +149,6 @@ class HeaderFooterDialog(QDialog):
         hg_layout.addWidget(self.header_right, 2, 1)
         layout.addWidget(header_group)
 
-        # Footer group
         footer_group = QGroupBox("Pie de página")
         fg_layout = QGridLayout(footer_group)
         fg_layout.setSpacing(6)
@@ -841,9 +837,6 @@ class TextEditorToolbar(QFrame):
         self.text_view.setAlignment(alignment)
         self._update_format_buttons()
 
-    # ------------------------------------------------------------------
-    #  Insert table
-    # ------------------------------------------------------------------
 
     def _insert_table(self):
         dlg = InsertTableDialog(self)
@@ -864,9 +857,6 @@ class TextEditorToolbar(QFrame):
         fmt.setColumnWidthConstraints(constraints)
         cursor.insertTable(rows, cols, fmt)
 
-    # ------------------------------------------------------------------
-    #  Header / footer for printing
-    # ------------------------------------------------------------------
 
     def _configure_header_footer(self):
         cfg = self._header_footer_config
@@ -902,7 +892,6 @@ class TextEditorToolbar(QFrame):
             self.text_view.document().print_(printer)
             return
 
-        # Build a temporary document with header/footer on each page
         printer = QPrinter(QPrinter.HighResolution)
         printer.setOutputFormat(QPrinter.PdfFormat)
         printer.setOutputFileName(file_path)
@@ -937,7 +926,6 @@ class TextEditorToolbar(QFrame):
                 "{filename}", filename
             ).replace("{date}", date_str)
 
-        # Print page by page
         source_doc.setPageSize(page_rect.size())
         total_pages = source_doc.pageCount()
         if total_pages < 1:
@@ -947,7 +935,6 @@ class TextEditorToolbar(QFrame):
             if page > 0:
                 printer.newPage()
 
-            # Draw header
             if has_header:
                 painter.setFont(header_font)
                 y = margin_top + header_fm.ascent()
@@ -965,7 +952,6 @@ class TextEditorToolbar(QFrame):
                     painter.drawText(int(margin_left + page_rect.width() - tw),
                                      int(y), text)
 
-            # Draw footer
             if has_footer:
                 painter.setFont(header_font)
                 y = margin_top + page_rect.height() - 4
@@ -983,7 +969,6 @@ class TextEditorToolbar(QFrame):
                     painter.drawText(int(margin_left + page_rect.width() - tw),
                                      int(y), text)
 
-            # Draw document content for this page
             painter.save()
             painter.translate(margin_left, content_top)
             clip_rect = page_rect.adjusted(0, 0, 0, -h_offset - f_offset)

@@ -472,11 +472,9 @@ class DocumentViewer(QWidget):
             "background:#111827;border-radius:14px;color:#cbd5e1;padding:24px;font-size:15px;"
         )
 
-        # PDF Editor
         self.pdf_editor = PdfEditorWidget(self)
         self.pdf_editor.modified_changed.connect(self._on_pdf_editor_modified)
 
-        # Diff Viewer
         self.diff_viewer = DiffViewerWidget(self)
         self.diff_viewer.close_btn.clicked.connect(self._close_diff_viewer)
 
@@ -486,7 +484,6 @@ class DocumentViewer(QWidget):
         self.stack.addWidget(self.pdf_editor)
         self.stack.addWidget(self.diff_viewer)
 
-        # PDF edit/view toggle bar (shown only when viewing a PDF)
         self._pdf_bar = QWidget()
         pdf_bar_layout = QHBoxLayout(self._pdf_bar)
         pdf_bar_layout.setContentsMargins(4, 2, 4, 2)
@@ -849,23 +846,16 @@ class DocumentViewer(QWidget):
             """)
             self.toolbar.contrast_btn.setToolTip("Alto contraste")
 
-    # ------------------------------------------------------------------
-    #  PDF Editor integration
-    # ------------------------------------------------------------------
 
     def _toggle_pdf_edit_mode(self):
-        """Switch between PDF viewer and PDF editor."""
         if self._pdf_editing:
-            # Switch back to view mode
             self._pdf_editing = False
             self._edit_pdf_btn.setText("✏️ Editar PDF")
             self.pdf_editor.close_editor()
-            # Reload the PDF in the viewer
             if self.current_path:
                 self.pdf_document.load(self.current_path)
             self.stack.setCurrentWidget(self.pdf_view)
         else:
-            # Switch to edit mode
             if not self.current_path:
                 return
             if self.pdf_editor.load_file(self.current_path):
@@ -876,12 +866,8 @@ class DocumentViewer(QWidget):
     def _on_pdf_editor_modified(self, modified: bool):
         self._modified = modified
 
-    # ------------------------------------------------------------------
-    #  Diff viewer integration
-    # ------------------------------------------------------------------
 
     def _open_diff_viewer(self):
-        """Open the side-by-side diff viewer, pre-loading the current file."""
         self._prev_widget = self.stack.currentWidget()
         self._prev_toolbar_visible = self.toolbar.isVisible()
         if self.current_path:
@@ -891,7 +877,6 @@ class DocumentViewer(QWidget):
         self.stack.setCurrentWidget(self.diff_viewer)
 
     def _close_diff_viewer(self):
-        """Return to the previous view from the diff viewer."""
         if hasattr(self, "_prev_widget") and self._prev_widget:
             self.stack.setCurrentWidget(self._prev_widget)
             self.toolbar.setVisible(getattr(self, "_prev_toolbar_visible", True))
@@ -901,9 +886,6 @@ class DocumentViewer(QWidget):
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
 
-    # ------------------------------------------------------------------
-    #  PDF Tools integration
-    # ------------------------------------------------------------------
 
     def _merge_pdfs(self):
         dlg = MergePdfDialog(self)
@@ -965,12 +947,10 @@ class DocumentViewer(QWidget):
             )
 
     def _toggle_two_page_view(self):
-        """Toggle between single-page and two-page (book) view for PDF."""
         if self._two_page_btn.isChecked():
             self.pdf_view.setPageMode(QPdfView.PageMode.MultiPage)
             self._two_page_btn.setText("📖 1 Página")
             self._two_page_btn.setToolTip("Volver a vista de una página")
-            # Reduce zoom to fit two pages side by side
             self.current_zoom_index = max(0, self.current_zoom_index - 1)
             self.pdf_view.setZoomFactor(self.zoom_levels[self.current_zoom_index] * 0.6)
         else:

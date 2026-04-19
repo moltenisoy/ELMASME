@@ -1,4 +1,3 @@
-"""Visor de archivos de presentación (PPTX, ODP)."""
 
 from __future__ import annotations
 
@@ -51,10 +50,7 @@ _NS_ODP_DRAW = "urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"
 _NS_ODP_TEXT = "urn:oasis:names:tc:opendocument:xmlns:text:1.0"
 
 
-# ── PPTX parsing ─────────────────────────────────────────────────────
-
 def _parse_pptx(path: str) -> list[dict]:
-    """Return a list of dicts with 'title' and 'body' per slide."""
     slides: list[dict] = []
     try:
         with zipfile.ZipFile(path, "r") as zf:
@@ -70,7 +66,6 @@ def _parse_pptx(path: str) -> list[dict]:
 
 
 def _pptx_slide_order(zf: zipfile.ZipFile) -> list[str]:
-    """Determine slide order from presentation.xml or fall back to sorting."""
     all_slides = sorted(
         n for n in zf.namelist()
         if n.startswith("ppt/slides/slide") and n.endswith(".xml")
@@ -86,7 +81,6 @@ def _pptx_slide_order(zf: zipfile.ZipFile) -> list[str]:
             tree = ET.parse(f)
         root = tree.getroot()
 
-        # Build rId → slide filename mapping from _rels
         rid_map: dict[str, str] = {}
         rels_path = "ppt/_rels/presentation.xml.rels"
         if rels_path in zf.namelist():
@@ -114,7 +108,6 @@ def _pptx_slide_order(zf: zipfile.ZipFile) -> list[str]:
 
 
 def _pptx_extract_slide(root: ET.Element) -> dict:
-    """Extract title and body text from a single PPTX slide XML."""
     title = ""
     body_parts: list[str] = []
 
@@ -150,10 +143,7 @@ def _pptx_extract_slide(root: ET.Element) -> dict:
     return {"title": title, "body": "\n".join(body_parts)}
 
 
-# ── ODP parsing ───────────────────────────────────────────────────────
-
 def _parse_odp(path: str) -> list[dict]:
-    """Return a list of dicts with 'title' and 'body' per slide."""
     slides: list[dict] = []
     try:
         with zipfile.ZipFile(path, "r") as zf:
@@ -172,7 +162,6 @@ def _parse_odp(path: str) -> list[dict]:
 
 
 def _odp_extract_page(page: ET.Element) -> dict:
-    """Extract title and body text from an ODP draw:page element."""
     title = page.get(f"{{{_NS_ODP_DRAW}}}name", "")
     body_parts: list[str] = []
 
@@ -199,10 +188,7 @@ def _odp_extract_page(page: ET.Element) -> dict:
     return {"title": title, "body": "\n".join(body_parts)}
 
 
-# ── Viewer widget ─────────────────────────────────────────────────────
-
 class PresentationViewer(QWidget):
-    """Visor de presentaciones PPTX / ODP con navegación por diapositivas."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -211,10 +197,8 @@ class PresentationViewer(QWidget):
         self._current_index: int = 0
         self._build_ui()
 
-    # ── UI construction ───────────────────────────────────────────────
 
     def _build_ui(self) -> None:
-        # Toolbar
         toolbar = QHBoxLayout()
         toolbar.setContentsMargins(0, 0, 0, 0)
         toolbar.setSpacing(6)
@@ -246,7 +230,6 @@ class PresentationViewer(QWidget):
         self.fullscreen_btn.clicked.connect(self._toggle_fullscreen)
         toolbar.addWidget(self.fullscreen_btn)
 
-        # Text display
         self.text_view = QTextEdit()
         self.text_view.setReadOnly(True)
         self.text_view.setStyleSheet("""
@@ -269,7 +252,6 @@ class PresentationViewer(QWidget):
             }
         """)
 
-        # Main layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
@@ -278,10 +260,8 @@ class PresentationViewer(QWidget):
 
         self._update_buttons()
 
-    # ── Public API ────────────────────────────────────────────────────
 
     def load_file(self, path: str) -> None:
-        """Carga y muestra el contenido de un archivo de presentación."""
         self.current_path = path
         self._slides.clear()
         self._current_index = 0
@@ -313,7 +293,6 @@ class PresentationViewer(QWidget):
         self._current_index = 0
         self._show_slide(0)
 
-    # ── Navigation ────────────────────────────────────────────────────
 
     def _prev_slide(self) -> None:
         if self._current_index > 0:
@@ -326,7 +305,6 @@ class PresentationViewer(QWidget):
             self._show_slide(self._current_index)
 
     def _show_slide(self, index: int) -> None:
-        """Render the slide at *index* in the text view."""
         if not self._slides or index < 0 or index >= len(self._slides):
             return
 
@@ -362,7 +340,6 @@ class PresentationViewer(QWidget):
         self.prev_btn.setEnabled(self._current_index > 0)
         self.next_btn.setEnabled(self._current_index < total - 1)
 
-    # ── Fullscreen presentation ───────────────────────────────────────
 
     def _toggle_fullscreen(self) -> None:
         if self.isFullScreen():
@@ -372,7 +349,6 @@ class PresentationViewer(QWidget):
             self.showFullScreen()
             self.fullscreen_btn.setText("✕ Salir")
 
-    # ── Helpers ───────────────────────────────────────────────────────
 
     def _show_error(self, msg: str) -> None:
         self.text_view.setHtml(
@@ -385,7 +361,6 @@ class PresentationViewer(QWidget):
 
 
 def _escape(text: str) -> str:
-    """Minimal HTML escaping."""
     return (
         text.replace("&", "&amp;")
         .replace("<", "&lt;")

@@ -39,7 +39,6 @@ def _format_duration(seconds: float) -> str:
 
 
 class _ExternalDropListWidget(QListWidget):
-    """QListWidget that accepts external file drops (URLs) and internal reorder."""
 
     external_files_dropped = Signal(list)
 

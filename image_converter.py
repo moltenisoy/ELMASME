@@ -294,7 +294,6 @@ class ImageResizeDialog(QDialog):
 
 
 def crop_image(image: QImage, x: int, y: int, width: int, height: int) -> QImage:
-    """Crop a QImage to the specified rectangle."""
     return image.copy(x, y, width, height)
 
 
@@ -574,7 +573,6 @@ class BatchConvertDialog(QDialog):
 
 
 class EditConvertDialog(QDialog):
-    """Unified dialog for single-image resize/convert and batch processing."""
 
     def __init__(self, parent=None, current_width=0, current_height=0):
         super().__init__(parent)
@@ -618,14 +616,10 @@ class EditConvertDialog(QDialog):
         self._build_single_tab()
         self._build_batch_tab()
 
-    # ------------------------------------------------------------------
-    # Single-image tab
-    # ------------------------------------------------------------------
     def _build_single_tab(self):
         widget = QWidget()
         vl = QVBoxLayout(widget)
 
-        # Resize group
         size_group = QGroupBox("Redimensionar")
         size_layout = QGridLayout(size_group)
 
@@ -656,7 +650,6 @@ class EditConvertDialog(QDialog):
 
         vl.addWidget(size_group)
 
-        # Format conversion group
         format_group = QGroupBox("Convertir formato")
         format_layout = QVBoxLayout(format_group)
 
@@ -672,7 +665,6 @@ class EditConvertDialog(QDialog):
 
         vl.addWidget(format_group)
 
-        # Save options
         save_group = QGroupBox("Guardar como")
         save_layout = QVBoxLayout(save_group)
 
@@ -687,7 +679,6 @@ class EditConvertDialog(QDialog):
 
         vl.addWidget(save_group)
 
-        # Buttons
         btns = QHBoxLayout()
         btns.addStretch()
         apply_btn = QPushButton("Aplicar")
@@ -702,14 +693,10 @@ class EditConvertDialog(QDialog):
 
         self._tabs.addTab(widget, "Imagen actual")
 
-    # ------------------------------------------------------------------
-    # Batch tab
-    # ------------------------------------------------------------------
     def _build_batch_tab(self):
         widget = QWidget()
         vl = QVBoxLayout(widget)
 
-        # File selection
         files_group = QGroupBox("Archivos de entrada")
         files_gl = QVBoxLayout(files_group)
         self._batch_files_label = QLabel("Ningún archivo seleccionado")
@@ -719,7 +706,6 @@ class EditConvertDialog(QDialog):
         files_gl.addWidget(select_btn)
         vl.addWidget(files_group)
 
-        # Format conversion
         conv_group = QGroupBox("Conversión de formato")
         conv_layout = QGridLayout(conv_group)
         conv_layout.addWidget(QLabel("Formato destino:"), 0, 0)
@@ -734,7 +720,6 @@ class EditConvertDialog(QDialog):
         conv_layout.addWidget(self._batch_quality_spin, 1, 1)
         vl.addWidget(conv_group)
 
-        # Batch resize
         resize_group = QGroupBox("Redimensionar por lotes")
         resize_vl = QVBoxLayout(resize_group)
 
@@ -784,12 +769,10 @@ class EditConvertDialog(QDialog):
 
         vl.addWidget(resize_group)
 
-        # Wire enable/disable for resize widgets
         self._batch_resize_check.toggled.connect(self._toggle_batch_resize)
         self._batch_resize_pct_radio.toggled.connect(self._on_batch_resize_mode)
         self._toggle_batch_resize(False)
 
-        # Output directory
         dir_group = QGroupBox("Directorio de salida")
         dir_hl = QHBoxLayout(dir_group)
         self._batch_dir_label = QLabel("Mismo directorio que el original")
@@ -799,11 +782,9 @@ class EditConvertDialog(QDialog):
         dir_hl.addWidget(dir_btn)
         vl.addWidget(dir_group)
 
-        # Progress
         self._batch_progress_label = QLabel("")
         vl.addWidget(self._batch_progress_label)
 
-        # Buttons
         btns = QHBoxLayout()
         btns.addStretch()
         self._batch_convert_btn = QPushButton("Convertir")
@@ -816,9 +797,6 @@ class EditConvertDialog(QDialog):
 
         self._tabs.addTab(widget, "Procesamiento por lotes")
 
-    # ------------------------------------------------------------------
-    # Single-image helpers
-    # ------------------------------------------------------------------
     def _on_width_changed(self):
         if self.maintain_aspect.isChecked():
             new_height = int(self.width_input.value() / self.aspect_ratio)
@@ -854,9 +832,6 @@ class EditConvertDialog(QDialog):
         self.overwrite_check.setChecked(not self.new_file_check.isChecked())
         self.overwrite_check.blockSignals(False)
 
-    # ------------------------------------------------------------------
-    # Batch helpers
-    # ------------------------------------------------------------------
     def _toggle_batch_resize(self, enabled):
         is_pct = self._batch_resize_pct_radio.isChecked()
         self._batch_resize_pct_radio.setEnabled(enabled)
