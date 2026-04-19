@@ -567,7 +567,10 @@ class VideoBatchConverterDialog(QDialog):
             )
         
         if self.open_folder_check.isChecked() and self.output_paths:
-            os.startfile(original_dir)
+            try:
+                os.startfile(original_dir)
+            except OSError:
+                pass
         
         self.accept()
     

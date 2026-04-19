@@ -317,7 +317,8 @@ class AudioConverterDialog(QDialog):
             
             if success:
                 if self.overwrite_radio.isChecked() and self.output_path != self.input_path:
-                    os.remove(self.input_path)
+                    if os.path.exists(self.input_path):
+                        os.remove(self.input_path)
                 
                 QMessageBox.information(
                     self,
@@ -495,7 +496,10 @@ class AudioBatchConverterDialog(QDialog):
             )
         
         if self.open_folder_check.isChecked() and self.output_paths:
-            os.startfile(original_dir)
+            try:
+                os.startfile(original_dir)
+            except OSError:
+                pass
         
         self.accept()
     
