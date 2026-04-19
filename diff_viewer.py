@@ -50,6 +50,7 @@ class _DiffPanel(QFrame):
                 border: 1px solid rgba(59,130,246,0.4);
                 border-radius: 6px; padding: 2px 10px;
                 color: #60a5fa; font-weight: 500;
+                font-size: 26px;
             }
             QPushButton:hover { background: rgba(59,130,246,0.35); }
         """)
@@ -123,6 +124,7 @@ class DiffViewerWidget(QWidget):
                 border: 1px solid rgba(34,197,94,0.4);
                 border-radius: 6px; padding: 4px 14px;
                 color: #4ade80; font-weight: 600;
+                font-size: 26px;
             }
             QPushButton:hover { background: rgba(34,197,94,0.35); }
         """)
@@ -137,6 +139,7 @@ class DiffViewerWidget(QWidget):
                 border: 1px solid rgba(239,68,68,0.4);
                 border-radius: 6px; padding: 4px 14px;
                 color: #f87171; font-weight: 600;
+                font-size: 26px;
             }
             QPushButton:hover { background: rgba(239,68,68,0.35); }
         """)

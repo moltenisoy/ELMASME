@@ -86,17 +86,17 @@ class AudioViewer(QWidget):
 
         self.play_button = QPushButton("▶")
         self.play_button.setFixedSize(36, 28)
-        self.play_button.setStyleSheet("font-size: 18px;")
+        self.play_button.setStyleSheet("font-size: 36px;")
         self.play_button.clicked.connect(self.player.play)
 
         self.pause_button = QPushButton("⏸")
         self.pause_button.setFixedSize(36, 28)
-        self.pause_button.setStyleSheet("font-size: 18px;")
+        self.pause_button.setStyleSheet("font-size: 36px;")
         self.pause_button.clicked.connect(self.player.pause)
 
         self.stop_button = QPushButton("⏹")
         self.stop_button.setFixedSize(36, 28)
-        self.stop_button.setStyleSheet("font-size: 18px;")
+        self.stop_button.setStyleSheet("font-size: 36px;")
         self.stop_button.clicked.connect(self._stop_playback)
 
         vol_label = QLabel("🔊")
@@ -111,7 +111,7 @@ class AudioViewer(QWidget):
 
         self.playlist_toggle_button = QPushButton("📃")
         self.playlist_toggle_button.setFixedSize(36, 28)
-        self.playlist_toggle_button.setStyleSheet("font-size: 16px;")
+        self.playlist_toggle_button.setStyleSheet("font-size: 32px;")
         self.playlist_toggle_button.setToolTip("Mostrar/ocultar lista de reproducción")
         self.playlist_toggle_button.setCheckable(True)
         self.playlist_toggle_button.setChecked(True)

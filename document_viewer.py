@@ -333,6 +333,7 @@ class DocumentViewer(QWidget):
                 padding: 4px 14px;
                 color: #60a5fa;
                 font-weight: 500;
+                font-size: 22px;
             }
             QPushButton:hover {
                 background: rgba(59, 130, 246, 0.35);
@@ -350,7 +351,7 @@ class DocumentViewer(QWidget):
                 padding: 4px 10px;
                 color: #60a5fa;
                 font-weight: 500;
-                font-size: 11px;
+                font-size: 22px;
             }
             QPushButton:hover {
                 background: rgba(59, 130, 246, 0.35);

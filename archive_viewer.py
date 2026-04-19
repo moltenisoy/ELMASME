@@ -31,6 +31,7 @@ _BTN_STYLE = """
         padding: 4px 14px;
         color: #60a5fa;
         font-weight: 500;
+        font-size: 26px;
     }
     QPushButton:hover { background: rgba(59,130,246,0.35); }
 """

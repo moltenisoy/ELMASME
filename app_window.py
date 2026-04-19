@@ -124,7 +124,7 @@ class UniversalViewerWindow(QMainWindow):
 
         self.settings_button = QPushButton()
         self.settings_button.setText("⚙")
-        self.settings_button.setStyleSheet("font-size: 18px;")
+        self.settings_button.setStyleSheet("font-size: 36px;")
         self.settings_button.setFixedSize(40, 24)
         self.settings_button.clicked.connect(self._show_settings_panel)
 
