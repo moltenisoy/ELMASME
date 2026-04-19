@@ -15,7 +15,7 @@ from audio_converter import (
     get_audio_info, AUDIO_EXTENSIONS, convert_audio, is_ffmpeg_available,
     FORMAT_NAMES as AUDIO_FORMAT_NAMES
 )
-from audio_converter_dialogs import AudioConverterDialog, AudioBatchConverterDialog, AudioTrimDialog
+from audio_converter_dialogs import AudioConverterDialog, AudioBatchConverterDialog, AudioTrimDialog, AudioJoinDialog
 from audio_playlist import AudioPlaylistWidget
 from progress_bar import ConversionProgressBar
 
@@ -135,6 +135,7 @@ class AudioViewer(QWidget):
         edition_menu.addAction("Convertir", self._show_converter)
         edition_menu.addAction("Convertir playlist", self._convert_playlist)
         edition_menu.addAction("Recortar", self._show_trimmer)
+        edition_menu.addAction("Unir archivos de audio", self._show_joiner)
         self.edition_button.setMenu(edition_menu)
 
         controls = QHBoxLayout()
@@ -376,4 +377,14 @@ class AudioViewer(QWidget):
         if not self.current_path:
             return
         dialog = AudioTrimDialog(self.current_path, self)
+        dialog.exec()
+
+    def _show_joiner(self):
+        initial = []
+        playlist = self.playlist_widget.get_playlist()
+        if playlist:
+            initial = list(playlist)
+        elif self.current_path:
+            initial = [self.current_path]
+        dialog = AudioJoinDialog(initial_paths=initial, parent=self)
         dialog.exec()

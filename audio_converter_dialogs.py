@@ -588,3 +588,233 @@ class AudioTrimDialog(QDialog):
 
     def get_output_path(self) -> Optional[str]:
         return self.output_path
+
+
+class AudioJoinDialog(QDialog):
+    """Dialog for joining multiple audio files with optional crossfade."""
+
+    _DIALOG_STYLE = """
+        QDialog { background: #1e293b; }
+        QLabel  { color: #e5e7eb; }
+        QPushButton {
+            background: rgba(59,130,246,0.2);
+            border: 1px solid rgba(59,130,246,0.4);
+            border-radius: 6px;
+            padding: 6px 16px;
+            color: #60a5fa;
+            font-weight: 500;
+        }
+        QPushButton:hover { background: rgba(59,130,246,0.35); }
+        QListWidget {
+            background: #0f172a;
+            color: #e5e7eb;
+            border: 1px solid rgba(148,163,184,0.3);
+            border-radius: 4px;
+        }
+        QComboBox {
+            background: #0f172a;
+            color: #e5e7eb;
+            border: 1px solid rgba(148,163,184,0.3);
+            border-radius: 4px;
+            padding: 4px;
+        }
+        QComboBox QAbstractItemView {
+            background: #0f172a; color: #e5e7eb;
+            selection-background-color: rgba(59,130,246,0.3);
+        }
+        QGroupBox {
+            color: #e5e7eb;
+            border: 1px solid rgba(148,163,184,0.3);
+            border-radius: 6px;
+            margin-top: 8px;
+            padding-top: 12px;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 4px;
+        }
+        QSpinBox, QDoubleSpinBox {
+            background: #0f172a;
+            color: #e5e7eb;
+            border: 1px solid rgba(148,163,184,0.3);
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+        QCheckBox { color: #e5e7eb; }
+    """
+
+    def __init__(self, initial_paths: List[str] = None, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Unir archivos de audio")
+        self.setMinimumSize(560, 480)
+        self._build_ui()
+        if initial_paths:
+            for p in initial_paths:
+                self.list_widget.addItem(p)
+
+    def _build_ui(self):
+        from PySide6.QtWidgets import QListWidget, QDoubleSpinBox
+        from audio_converter import AUDIO_EXTENSIONS
+
+        self.setStyleSheet(self._DIALOG_STYLE)
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel("Archivos de audio a unir (en orden):"))
+
+        self.list_widget = QListWidget()
+        self.list_widget.setSelectionMode(QListWidget.ExtendedSelection)
+        layout.addWidget(self.list_widget)
+
+        list_btns = QHBoxLayout()
+        add_btn = QPushButton("➕ Agregar")
+        add_btn.clicked.connect(self._on_add)
+        list_btns.addWidget(add_btn)
+
+        remove_btn = QPushButton("➖ Quitar")
+        remove_btn.clicked.connect(self._on_remove)
+        list_btns.addWidget(remove_btn)
+
+        up_btn = QPushButton("⬆ Subir")
+        up_btn.clicked.connect(self._on_move_up)
+        list_btns.addWidget(up_btn)
+
+        down_btn = QPushButton("⬇ Bajar")
+        down_btn.clicked.connect(self._on_move_down)
+        list_btns.addWidget(down_btn)
+
+        layout.addLayout(list_btns)
+
+        options_group = QGroupBox("Opciones de mezcla")
+        options_layout = QGridLayout(options_group)
+
+        options_layout.addWidget(QLabel("Crossfade (segundos):"), 0, 0)
+        self.crossfade_spin = QDoubleSpinBox()
+        self.crossfade_spin.setRange(0.0, 30.0)
+        self.crossfade_spin.setValue(0.0)
+        self.crossfade_spin.setSingleStep(0.5)
+        self.crossfade_spin.setDecimals(1)
+        self.crossfade_spin.setSuffix(" seg")
+        self.crossfade_spin.setToolTip(
+            "Tiempo de mezcla entre el final de un archivo y el inicio del siguiente.\n"
+            "0 = sin crossfade (concatenación directa)."
+        )
+        options_layout.addWidget(self.crossfade_spin, 0, 1)
+
+        options_layout.addWidget(QLabel("Formato de salida:"), 1, 0)
+        self.format_combo = QComboBox()
+        for ext in sorted(AUDIO_EXTENSIONS):
+            self.format_combo.addItem(FORMAT_NAMES.get(ext, ext), ext)
+        idx = self.format_combo.findData(".mp3")
+        if idx >= 0:
+            self.format_combo.setCurrentIndex(idx)
+        options_layout.addWidget(self.format_combo, 1, 1)
+
+        layout.addWidget(options_group)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+
+        join_btn = QPushButton("Unir archivos")
+        join_btn.clicked.connect(self._on_join)
+        buttons.addWidget(join_btn)
+
+        cancel_btn = QPushButton("Cancelar")
+        cancel_btn.clicked.connect(self.reject)
+        buttons.addWidget(cancel_btn)
+
+        layout.addLayout(buttons)
+
+    def _on_add(self):
+        from audio_converter import AUDIO_EXTENSIONS
+        audio_filter = "Audio (" + " ".join(f"*{ext}" for ext in sorted(AUDIO_EXTENSIONS)) + ")"
+        paths, _ = QFileDialog.getOpenFileNames(
+            self, "Seleccionar archivos de audio", "",
+            f"{audio_filter};;Todos los archivos (*.*)"
+        )
+        for p in paths:
+            self.list_widget.addItem(p)
+
+    def _on_remove(self):
+        for item in reversed(self.list_widget.selectedItems()):
+            row = self.list_widget.row(item)
+            self.list_widget.takeItem(row)
+
+    def _on_move_up(self):
+        row = self.list_widget.currentRow()
+        if row > 0:
+            item = self.list_widget.takeItem(row)
+            self.list_widget.insertItem(row - 1, item)
+            self.list_widget.setCurrentRow(row - 1)
+
+    def _on_move_down(self):
+        row = self.list_widget.currentRow()
+        if row < self.list_widget.count() - 1:
+            item = self.list_widget.takeItem(row)
+            self.list_widget.insertItem(row + 1, item)
+            self.list_widget.setCurrentRow(row + 1)
+
+    def _on_join(self):
+        from audio_converter import join_audio_files, is_ffmpeg_available
+
+        count = self.list_widget.count()
+        if count < 2:
+            QMessageBox.warning(self, "Atención",
+                                "Debe agregar al menos 2 archivos de audio.")
+            return
+
+        if not is_ffmpeg_available():
+            QMessageBox.critical(self, "Error",
+                                 "ffmpeg no está instalado.\n\nPor favor instala ffmpeg.")
+            return
+
+        output_format = self.format_combo.currentData()
+        crossfade = self.crossfade_spin.value()
+
+        save_path, _ = QFileDialog.getSaveFileName(
+            self, "Guardar audio unido", "",
+            f"Audio (*{output_format})"
+        )
+        if not save_path:
+            return
+        if not save_path.lower().endswith(output_format):
+            save_path += output_format
+
+        input_paths = [self.list_widget.item(i).text() for i in range(count)]
+
+        progress = QProgressDialog("Uniendo archivos de audio...", "Cancelar", 0, 100, self)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+
+        try:
+            def update_progress(value):
+                progress.setValue(value)
+                QApplication.processEvents()
+
+            success = join_audio_files(
+                input_paths, save_path, output_format,
+                crossfade_seconds=crossfade,
+                progress_callback=update_progress
+            )
+
+            progress.setValue(100)
+
+            if success:
+                QMessageBox.information(
+                    self, "Éxito",
+                    f"Archivos unidos correctamente.\nGuardado en:\n{save_path}"
+                )
+                self.accept()
+            else:
+                QMessageBox.critical(
+                    self, "Error",
+                    "No se pudieron unir los archivos de audio."
+                )
+
+        except (RuntimeError, ValueError) as e:
+            progress.close()
+            QMessageBox.critical(self, "Error", str(e))
+        except Exception as e:
+            progress.close()
+            QMessageBox.critical(self, "Error",
+                                 f"Error durante la unión:\n{str(e)}")
