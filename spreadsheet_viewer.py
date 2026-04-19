@@ -115,7 +115,10 @@ def _read_csv_text(path: str) -> str:
                 return f.read()
         except (UnicodeDecodeError, UnicodeError):
             continue
-    raise UnicodeDecodeError("utf-8/latin-1", b"", 0, 1, "No se pudo decodificar")
+    raise ValueError(
+        f"No se pudo decodificar el archivo «{os.path.basename(path)}».\n"
+        "Se intentó con utf-8 y latin-1. Verifique la codificación del archivo."
+    )
 
 
 def _detect_delimiter(sample: str) -> str:
@@ -125,7 +128,8 @@ def _detect_delimiter(sample: str) -> str:
         return dialect.delimiter
     except csv.Error:
         counts = {d: sample.count(d) for d in (",", ";", "\t")}
-        return max(counts, key=counts.get)
+        best = max(counts, key=counts.get)
+        return best if counts[best] > 0 else ","
 
 
 def _parse_csv(path: str) -> list[list[str]]:
