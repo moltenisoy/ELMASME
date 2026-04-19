@@ -1,14 +1,15 @@
 
 import os
 from pathlib import Path
-from typing import Dict
-from PySide6.QtCore import Qt, QRect
+from typing import Dict, List
+from PySide6.QtCore import Qt, QRect, QMarginsF
 from PySide6.QtGui import (
-    QAction, QImageReader, QPixmap, QImage, QKeySequence,
+    QAction, QImageReader, QPixmap, QImage, QKeySequence, QPageLayout, QPageSize,
 )
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QToolButton,
-    QDialog, QMessageBox, QFileDialog, QScrollArea, QFrame, QMenu
+    QDialog, QMessageBox, QFileDialog, QScrollArea, QFrame, QMenu,
+    QListWidget, QDialogButtonBox, QComboBox, QCheckBox, QSpinBox,
 )
 from image_converter import (
     IMAGE_EXTENSIONS,
@@ -110,6 +111,12 @@ class ImageViewer(QWidget):
         self.annotate_button.setFixedSize(100, 22)
         self.annotate_button.clicked.connect(self.toggle_annotation_mode)
         
+        self.export_pdf_button = QToolButton()
+        self.export_pdf_button.setText("Exportar a PDF")
+        self.export_pdf_button.setFixedSize(120, 22)
+        self.export_pdf_button.setToolTip("Generar un PDF con imágenes seleccionadas")
+        self.export_pdf_button.clicked.connect(self._export_to_pdf)
+        
         toolbar = QHBoxLayout()
         toolbar.setContentsMargins(0, 0, 0, 0)
         toolbar.setSpacing(6)
@@ -121,6 +128,7 @@ class ImageViewer(QWidget):
         toolbar.addWidget(self.edit_convert_button)
         toolbar.addWidget(self.crop_button)
         toolbar.addWidget(self.annotate_button)
+        toolbar.addWidget(self.export_pdf_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -486,3 +494,259 @@ class ImageViewer(QWidget):
         self._update_scaled()
         if hasattr(self, '_annotation_overlay') and self._annotation_overlay is not None and self._annotation_overlay.isVisible():
             self._annotation_overlay.setGeometry(self.scroll_area.viewport().rect())
+
+    def _export_to_pdf(self):
+        dialog = ExportImagesToPdfDialog(
+            current_image_path=self.current_path,
+            parent=self
+        )
+        dialog.exec()
+
+
+class ExportImagesToPdfDialog(QDialog):
+
+    _DIALOG_STYLE = """
+        QDialog { background: #1e293b; }
+        QLabel  { color: #e5e7eb; }
+        QPushButton {
+            background: rgba(59,130,246,0.2);
+            border: 1px solid rgba(59,130,246,0.4);
+            border-radius: 6px;
+            padding: 6px 16px;
+            color: #60a5fa;
+            font-weight: 500;
+        }
+        QPushButton:hover { background: rgba(59,130,246,0.35); }
+        QListWidget {
+            background: #0f172a;
+            color: #e5e7eb;
+            border: 1px solid rgba(148,163,184,0.3);
+            border-radius: 4px;
+        }
+        QComboBox {
+            background: #0f172a;
+            color: #e5e7eb;
+            border: 1px solid rgba(148,163,184,0.3);
+            border-radius: 4px;
+            padding: 4px;
+        }
+        QComboBox QAbstractItemView {
+            background: #0f172a; color: #e5e7eb;
+            selection-background-color: rgba(59,130,246,0.3);
+        }
+        QCheckBox { color: #e5e7eb; }
+        QSpinBox {
+            background: #0f172a;
+            color: #e5e7eb;
+            border: 1px solid rgba(148,163,184,0.3);
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+    """
+
+    def __init__(self, current_image_path: str = None, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Exportar imágenes a PDF")
+        self.setMinimumSize(560, 480)
+        self._current_image_path = current_image_path
+        self._build_ui()
+        if current_image_path and os.path.isfile(current_image_path):
+            self.list_widget.addItem(current_image_path)
+
+    def _build_ui(self):
+        self.setStyleSheet(self._DIALOG_STYLE)
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel("Imágenes a incluir en el PDF:"))
+
+        self.list_widget = QListWidget()
+        self.list_widget.setSelectionMode(QListWidget.ExtendedSelection)
+        layout.addWidget(self.list_widget)
+
+        list_btns = QHBoxLayout()
+
+        add_btn = QPushButton("➕ Agregar imágenes")
+        add_btn.clicked.connect(self._on_add)
+        list_btns.addWidget(add_btn)
+
+        remove_btn = QPushButton("➖ Quitar selección")
+        remove_btn.clicked.connect(self._on_remove)
+        list_btns.addWidget(remove_btn)
+
+        up_btn = QPushButton("⬆ Subir")
+        up_btn.clicked.connect(self._on_move_up)
+        list_btns.addWidget(up_btn)
+
+        down_btn = QPushButton("⬇ Bajar")
+        down_btn.clicked.connect(self._on_move_down)
+        list_btns.addWidget(down_btn)
+
+        layout.addLayout(list_btns)
+
+        options_layout = QHBoxLayout()
+
+        options_layout.addWidget(QLabel("Tamaño de página:"))
+        self.page_size_combo = QComboBox()
+        self.page_size_combo.addItem("A4", QPageSize.A4)
+        self.page_size_combo.addItem("Letter", QPageSize.Letter)
+        self.page_size_combo.addItem("A3", QPageSize.A3)
+        self.page_size_combo.addItem("A5", QPageSize.A5)
+        options_layout.addWidget(self.page_size_combo)
+
+        options_layout.addSpacing(16)
+        options_layout.addWidget(QLabel("Margen (mm):"))
+        self.margin_spin = QSpinBox()
+        self.margin_spin.setRange(0, 50)
+        self.margin_spin.setValue(10)
+        options_layout.addWidget(self.margin_spin)
+
+        options_layout.addStretch()
+        self.fit_check = QCheckBox("Ajustar imagen a la página")
+        self.fit_check.setChecked(True)
+        options_layout.addWidget(self.fit_check)
+
+        layout.addLayout(options_layout)
+
+        one_per_page_layout = QHBoxLayout()
+        self.one_per_page_check = QCheckBox("Una imagen por página")
+        self.one_per_page_check.setChecked(True)
+        one_per_page_layout.addWidget(self.one_per_page_check)
+        one_per_page_layout.addStretch()
+        layout.addLayout(one_per_page_layout)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self._on_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _on_add(self):
+        img_filter = "Imágenes (" + " ".join(f"*{ext}" for ext in sorted(IMAGE_EXTENSIONS)) + ")"
+        paths, _ = QFileDialog.getOpenFileNames(
+            self, "Seleccionar imágenes", "", f"{img_filter};;Todos los archivos (*.*)"
+        )
+        for p in paths:
+            self.list_widget.addItem(p)
+
+    def _on_remove(self):
+        for item in reversed(self.list_widget.selectedItems()):
+            row = self.list_widget.row(item)
+            self.list_widget.takeItem(row)
+
+    def _on_move_up(self):
+        row = self.list_widget.currentRow()
+        if row > 0:
+            item = self.list_widget.takeItem(row)
+            self.list_widget.insertItem(row - 1, item)
+            self.list_widget.setCurrentRow(row - 1)
+
+    def _on_move_down(self):
+        row = self.list_widget.currentRow()
+        if row < self.list_widget.count() - 1:
+            item = self.list_widget.takeItem(row)
+            self.list_widget.insertItem(row + 1, item)
+            self.list_widget.setCurrentRow(row + 1)
+
+    def _on_accept(self):
+        count = self.list_widget.count()
+        if count == 0:
+            QMessageBox.warning(self, "Atención", "Debe agregar al menos una imagen.")
+            return
+
+        save_path, _ = QFileDialog.getSaveFileName(
+            self, "Guardar PDF", "", "PDF (*.pdf)"
+        )
+        if not save_path:
+            return
+        if not save_path.lower().endswith(".pdf"):
+            save_path += ".pdf"
+
+        image_paths = [self.list_widget.item(i).text() for i in range(count)]
+        page_size_id = self.page_size_combo.currentData()
+        margin_mm = self.margin_spin.value()
+        fit_to_page = self.fit_check.isChecked()
+        one_per_page = self.one_per_page_check.isChecked()
+
+        try:
+            self._generate_pdf(
+                image_paths, save_path, page_size_id, margin_mm,
+                fit_to_page, one_per_page
+            )
+            QMessageBox.information(
+                self, "Éxito", f"PDF generado correctamente:\n{save_path}"
+            )
+            self.accept()
+        except Exception as exc:
+            QMessageBox.critical(
+                self, "Error", f"No se pudo generar el PDF:\n{exc}"
+            )
+
+    @staticmethod
+    def _generate_pdf(
+        image_paths: List[str],
+        output_path: str,
+        page_size_id,
+        margin_mm: int,
+        fit_to_page: bool,
+        one_per_page: bool,
+    ):
+        import fitz
+
+        page_size_map = {
+            QPageSize.A4: fitz.paper_size("a4"),
+            QPageSize.Letter: fitz.paper_size("letter"),
+            QPageSize.A3: fitz.paper_size("a3"),
+            QPageSize.A5: fitz.paper_size("a5"),
+        }
+        pw, ph = page_size_map.get(page_size_id, fitz.paper_size("a4"))
+
+        margin_pt = margin_mm * 72 / 25.4
+
+        doc = fitz.open()
+
+        for img_path in image_paths:
+            if not os.path.isfile(img_path):
+                continue
+
+            page = doc.new_page(width=pw, height=ph)
+
+            usable_w = pw - 2 * margin_pt
+            usable_h = ph - 2 * margin_pt
+
+            if usable_w <= 0 or usable_h <= 0:
+                usable_w = pw
+                usable_h = ph
+                margin_pt = 0
+
+            img_doc = fitz.open(img_path)
+            if img_doc.page_count == 0:
+                img_doc.close()
+                continue
+
+            img_page = img_doc[0]
+            img_rect = img_page.rect
+            img_w = img_rect.width
+            img_h = img_rect.height
+
+            if fit_to_page and (img_w > 0 and img_h > 0):
+                scale_x = usable_w / img_w
+                scale_y = usable_h / img_h
+                scale = min(scale_x, scale_y)
+                final_w = img_w * scale
+                final_h = img_h * scale
+            else:
+                final_w = min(img_w, usable_w)
+                final_h = min(img_h, usable_h)
+
+            x0 = margin_pt + (usable_w - final_w) / 2
+            y0 = margin_pt + (usable_h - final_h) / 2
+
+            rect = fitz.Rect(x0, y0, x0 + final_w, y0 + final_h)
+            page.insert_image(rect, filename=img_path)
+            img_doc.close()
+
+        if len(doc) == 0:
+            doc.close()
+            raise ValueError("No se pudo agregar ninguna imagen al PDF.")
+
+        doc.save(output_path)
+        doc.close()
