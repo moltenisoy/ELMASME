@@ -17,9 +17,9 @@ _ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons")
 
 
 def _get_icon_path() -> str:
-    ico = os.path.join(_ICON_DIR, "elmasme.ico")
-    if os.path.isfile(ico):
-        return ico
+    icon_file = os.path.join(_ICON_DIR, "elmasme.ico")
+    if os.path.isfile(icon_file):
+        return icon_file
     exe = get_executable_path()
     if exe.lower().endswith(".exe"):
         return exe
@@ -107,10 +107,8 @@ def register_file_associations():
     _set_value(root, f"{cls}\\{APP_PROG_ID}", "", app_name)
     _set_value(root, f"{cls}\\{APP_PROG_ID}", "FriendlyTypeName", APP_DESCRIPTION)
 
-    if icon_path:
-        _set_value(root, f"{cls}\\{APP_PROG_ID}\\DefaultIcon", "", f'"{icon_path}",0')
-    else:
-        _set_value(root, f"{cls}\\{APP_PROG_ID}\\DefaultIcon", "", f'"{exe_path}",0')
+    icon_target = f'"{icon_path}",0' if icon_path else f'"{exe_path}",0'
+    _set_value(root, f"{cls}\\{APP_PROG_ID}\\DefaultIcon", "", icon_target)
 
     _set_value(root, f"{cls}\\{APP_PROG_ID}\\shell", "", "open")
     _set_value(root, f"{cls}\\{APP_PROG_ID}\\shell\\open", "", f"Abrir con {app_name}")
