@@ -14,7 +14,10 @@ from image_converter import (
     get_image_info,
     save_image,
     resize_image,
+    crop_image,
     ImageResizeDialog,
+    ImageCropDialog,
+    BatchConvertDialog,
 )
 
 
@@ -156,6 +159,21 @@ class ImageViewer(QWidget):
         self.resize_button.setFixedSize(100, 22)
         self.resize_button.clicked.connect(self.show_resize_dialog)
         
+        self.crop_button = QToolButton()
+        self.crop_button.setText("Recortar")
+        self.crop_button.setFixedSize(100, 22)
+        self.crop_button.clicked.connect(self.show_crop_dialog)
+        
+        self.batch_convert_button = QToolButton()
+        self.batch_convert_button.setText("Conversión por lotes")
+        self.batch_convert_button.setFixedSize(130, 22)
+        self.batch_convert_button.clicked.connect(self.show_batch_convert_dialog)
+        
+        self.annotate_button = QToolButton()
+        self.annotate_button.setText("Anotar")
+        self.annotate_button.setFixedSize(100, 22)
+        self.annotate_button.clicked.connect(self.toggle_annotation_mode)
+        
         toolbar = QHBoxLayout()
         toolbar.setContentsMargins(0, 0, 0, 0)
         toolbar.setSpacing(6)
@@ -165,6 +183,9 @@ class ImageViewer(QWidget):
         toolbar.addStretch(1)
         toolbar.addWidget(self.fullscreen_button)
         toolbar.addWidget(self.resize_button)
+        toolbar.addWidget(self.crop_button)
+        toolbar.addWidget(self.batch_convert_button)
+        toolbar.addWidget(self.annotate_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -387,3 +408,47 @@ class ImageViewer(QWidget):
                     QMessageBox.information(self, "Éxito", "Imagen actualizada correctamente.")
             
             self.load_file(self.current_path)
+    
+    def show_crop_dialog(self):
+        if self._original_image is None or self.current_path is None:
+            return
+        
+        dialog = ImageCropDialog(self, self._original_image)
+        
+        if dialog.exec() == QDialog.Accepted:
+            result = dialog.get_result()
+            cropped = crop_image(
+                self._original_image,
+                result["x"], result["y"],
+                result["width"], result["height"],
+            )
+            if cropped.isNull():
+                QMessageBox.critical(self, "Error", "No se pudo recortar la imagen.")
+                return
+            
+            original_dir = os.path.dirname(self.current_path)
+            original_name = os.path.splitext(os.path.basename(self.current_path))[0]
+            ext = os.path.splitext(self.current_path)[1]
+            new_path = os.path.join(original_dir, f"{original_name}_cropped{ext}")
+            
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Guardar imagen recortada", new_path,
+                f"Images (*{ext})"
+            )
+            if file_path:
+                if save_image(cropped, file_path):
+                    self._original_image = cropped
+                    self._pixmap = QPixmap.fromImage(cropped)
+                    self.current_path = file_path
+                    self.label.reset_pan()
+                    self._update_scaled()
+                    QMessageBox.information(self, "Éxito", f"Imagen recortada guardada en:\n{file_path}")
+                else:
+                    QMessageBox.critical(self, "Error", "No se pudo guardar la imagen recortada.")
+    
+    def show_batch_convert_dialog(self):
+        dialog = BatchConvertDialog(self)
+        dialog.exec()
+    
+    def toggle_annotation_mode(self):
+        self._annotation_mode = not getattr(self, "_annotation_mode", False)
