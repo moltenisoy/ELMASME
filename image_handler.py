@@ -9,6 +9,7 @@ from image_converter import (
     ImageResizeDialog,
     ImageCropDialog,
     BatchConvertDialog,
+    EditConvertDialog,
 )
 from image_viewer import (
     PanLabel,

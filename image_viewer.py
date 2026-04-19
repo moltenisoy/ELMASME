@@ -2,11 +2,14 @@
 import os
 from pathlib import Path
 from typing import Dict, Tuple
-from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QAction, QImageReader, QPixmap, QImage, QKeySequence
+from PySide6.QtCore import Qt, QPoint, QRect
+from PySide6.QtGui import (
+    QAction, QImageReader, QPixmap, QImage, QKeySequence,
+    QPainter, QPen, QColor,
+)
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QToolButton,
-    QDialog, QMessageBox, QFileDialog, QScrollArea, QFrame
+    QDialog, QMessageBox, QFileDialog, QScrollArea, QFrame, QMenu
 )
 from image_converter import (
     IMAGE_EXTENSIONS,
@@ -15,9 +18,7 @@ from image_converter import (
     save_image,
     resize_image,
     crop_image,
-    ImageResizeDialog,
-    ImageCropDialog,
-    BatchConvertDialog,
+    EditConvertDialog,
 )
 from image_annotations import AnnotationOverlay
 
@@ -33,6 +34,12 @@ class PanLabel(QLabel):
         self._max_offset_x = 0
         self._max_offset_y = 0
         self._image_viewer = None
+        # Crop selection state
+        self._crop_mode = False
+        self._selecting = False
+        self._has_selection = False
+        self._sel_start = QPoint()
+        self._sel_end = QPoint()
         self.setCursor(Qt.OpenHandCursor)
     
     def set_pan_limits(self, max_offset_x: int, max_offset_y: int):
@@ -62,8 +69,22 @@ class PanLabel(QLabel):
         self._offset_y += dy
         self._clamp_offset()
     
+    def clear_selection(self):
+        self._has_selection = False
+        self._selecting = False
+        self._sel_start = QPoint()
+        self._sel_end = QPoint()
+        self.update()
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
+            if self._crop_mode:
+                self._selecting = True
+                self._has_selection = False
+                self._sel_start = event.pos()
+                self._sel_end = event.pos()
+                self.update()
+                return
             self._dragging = True
             self._last_pos = event.pos()
             self.setCursor(Qt.ClosedHandCursor)
@@ -71,11 +92,28 @@ class PanLabel(QLabel):
     
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
+            if self._crop_mode and self._selecting:
+                self._selecting = False
+                self._sel_end = event.pos()
+                sel = QRect(self._sel_start, self._sel_end).normalized()
+                if sel.width() >= 5 and sel.height() >= 5:
+                    self._has_selection = True
+                    self.update()
+                    if self._image_viewer:
+                        self._image_viewer._on_crop_selection_complete()
+                else:
+                    self._has_selection = False
+                    self.update()
+                return
             self._dragging = False
             self.setCursor(Qt.OpenHandCursor)
         super().mouseReleaseEvent(event)
     
     def mouseMoveEvent(self, event):
+        if self._crop_mode and self._selecting:
+            self._sel_end = event.pos()
+            self.update()
+            return
         if self._dragging:
             delta = event.pos() - self._last_pos
             self.pan(delta.x(), delta.y())
@@ -83,6 +121,30 @@ class PanLabel(QLabel):
             if self._image_viewer:
                 self._image_viewer.update_pixmap_position()
         super().mouseMoveEvent(event)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if not self._crop_mode:
+            return
+        if not (self._selecting or self._has_selection):
+            return
+        sel = QRect(self._sel_start, self._sel_end).normalized()
+        if sel.width() < 2 or sel.height() < 2:
+            return
+        painter = QPainter(self)
+        # Dark overlay outside selection
+        dark = QColor(0, 0, 0, 120)
+        full = self.rect()
+        painter.fillRect(full.x(), full.y(), full.width(), sel.y() - full.y(), dark)
+        painter.fillRect(full.x(), sel.bottom() + 1, full.width(), full.bottom() - sel.bottom(), dark)
+        painter.fillRect(full.x(), sel.y(), sel.x() - full.x(), sel.height() + 1, dark)
+        painter.fillRect(sel.right() + 1, sel.y(), full.right() - sel.right(), sel.height() + 1, dark)
+        # Selection border
+        pen = QPen(QColor(59, 130, 246), 2, Qt.DashLine)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+        painter.drawRect(sel)
+        painter.end()
 
 
 class ImageViewer(QWidget):
@@ -96,6 +158,7 @@ class ImageViewer(QWidget):
         self._original_image = None
         self._pixmap = QPixmap()
         self._annotation_mode = False
+        self._crop_mode = False
         
         self._build_ui()
     
@@ -156,20 +219,15 @@ class ImageViewer(QWidget):
         self.fullscreen_button.setFixedSize(120, 22)
         self.fullscreen_button.clicked.connect(self.toggle_fullscreen)
         
-        self.resize_button = QToolButton()
-        self.resize_button.setText("Redimensionar")
-        self.resize_button.setFixedSize(100, 22)
-        self.resize_button.clicked.connect(self.show_resize_dialog)
+        self.edit_convert_button = QToolButton()
+        self.edit_convert_button.setText("Edición y Conversión")
+        self.edit_convert_button.setFixedSize(180, 22)
+        self.edit_convert_button.clicked.connect(self.show_edit_convert_dialog)
         
         self.crop_button = QToolButton()
         self.crop_button.setText("Recortar")
         self.crop_button.setFixedSize(100, 22)
-        self.crop_button.clicked.connect(self.show_crop_dialog)
-        
-        self.batch_convert_button = QToolButton()
-        self.batch_convert_button.setText("Conversión por lotes")
-        self.batch_convert_button.setFixedSize(130, 22)
-        self.batch_convert_button.clicked.connect(self.show_batch_convert_dialog)
+        self.crop_button.clicked.connect(self._toggle_crop_mode)
         
         self.annotate_button = QToolButton()
         self.annotate_button.setText("Anotar")
@@ -184,9 +242,8 @@ class ImageViewer(QWidget):
         toolbar.addWidget(self.zoom_in_button)
         toolbar.addStretch(1)
         toolbar.addWidget(self.fullscreen_button)
-        toolbar.addWidget(self.resize_button)
+        toolbar.addWidget(self.edit_convert_button)
         toolbar.addWidget(self.crop_button)
-        toolbar.addWidget(self.batch_convert_button)
         toolbar.addWidget(self.annotate_button)
 
         layout = QVBoxLayout(self)
@@ -201,6 +258,8 @@ class ImageViewer(QWidget):
         self.addAction(copy_action)
     
     def load_file(self, path: str):
+        if self._crop_mode:
+            self._toggle_crop_mode()
         self.current_path = path
         ext = Path(path).suffix.lower()
         if ext in (".heif", ".heic", ".avif"):
@@ -341,19 +400,14 @@ class ImageViewer(QWidget):
         if self.fullscreen_window:
             self.fullscreen_window.close()
     
-    def show_resize_dialog(self):
-        if self._original_image is None or self.current_path is None:
-            return
-        
-        dialog = ImageResizeDialog(
-            self,
-            self._original_image.width(),
-            self._original_image.height()
-        )
-        
+    def show_edit_convert_dialog(self):
+        w = self._original_image.width() if self._original_image else 0
+        h = self._original_image.height() if self._original_image else 0
+        dialog = EditConvertDialog(self, w, h)
         if dialog.exec() == QDialog.Accepted:
-            result = dialog.get_result()
-            self.apply_transform(result)
+            if self._original_image is not None and self.current_path is not None:
+                result = dialog.get_result()
+                self.apply_transform(result)
     
     def apply_transform(self, result: Dict):
         if self._original_image is None:
@@ -407,50 +461,119 @@ class ImageViewer(QWidget):
             
             self.load_file(self.current_path)
     
-    def show_crop_dialog(self):
+    # ------------------------------------------------------------------
+    # Interactive crop mode
+    # ------------------------------------------------------------------
+    def _toggle_crop_mode(self):
         if self._original_image is None or self.current_path is None:
             return
-        
-        dialog = ImageCropDialog(self, self._original_image)
-        
-        if dialog.exec() == QDialog.Accepted:
-            result = dialog.get_result()
-            cropped = crop_image(
-                self._original_image,
-                result["x"], result["y"],
-                result["width"], result["height"],
+        self._crop_mode = not self._crop_mode
+        self.label._crop_mode = self._crop_mode
+
+        if self._crop_mode:
+            # Exit annotation mode if active
+            if self._annotation_mode:
+                self.toggle_annotation_mode()
+            self.label.setCursor(Qt.CrossCursor)
+            self.label.clear_selection()
+            self.crop_button.setStyleSheet(
+                "QToolButton { background: rgba(249,115,22,0.4); border: 1px solid #fb923c; border-radius: 4px; color: #e5e7eb; }"
             )
-            if cropped.isNull():
-                QMessageBox.critical(self, "Error", "No se pudo recortar la imagen.")
-                return
-            
-            original_dir = os.path.dirname(self.current_path)
-            original_name = os.path.splitext(os.path.basename(self.current_path))[0]
-            ext = os.path.splitext(self.current_path)[1]
-            new_path = os.path.join(original_dir, f"{original_name}_cropped{ext}")
-            
-            file_path, _ = QFileDialog.getSaveFileName(
-                self, "Guardar imagen recortada", new_path,
-                f"Images (*{ext})"
-            )
-            if file_path:
-                if save_image(cropped, file_path):
-                    self._original_image = cropped
-                    self._pixmap = QPixmap.fromImage(cropped)
-                    self.current_path = file_path
-                    self.label.reset_pan()
-                    self._update_scaled()
-                    QMessageBox.information(self, "Éxito", f"Imagen recortada guardada en:\n{file_path}")
-                else:
-                    QMessageBox.critical(self, "Error", "No se pudo guardar la imagen recortada.")
-    
-    def show_batch_convert_dialog(self):
-        dialog = BatchConvertDialog(self)
-        dialog.exec()
+        else:
+            self.label.setCursor(Qt.OpenHandCursor)
+            self.label.clear_selection()
+            self.crop_button.setStyleSheet("")
+
+    def _on_crop_selection_complete(self):
+        sel = QRect(self.label._sel_start, self.label._sel_end).normalized()
+        if sel.width() < 5 or sel.height() < 5:
+            return
+
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 4px; }
+            QMenu::item { padding: 6px 16px; }
+            QMenu::item:selected { background: #334155; }
+        """)
+        crop_action = menu.addAction("Recortar imagen actual")
+        save_action = menu.addAction("Guardar selección como nueva imagen")
+
+        action = menu.exec(self.label.mapToGlobal(self.label._sel_end))
+
+        if action == crop_action:
+            self._crop_to_selection(sel)
+        elif action == save_action:
+            self._save_selection_as_new(sel)
+
+        self.label.clear_selection()
+
+    def _image_rect_from_selection(self, sel_rect):
+        """Convert label (scaled) coordinates to original image coordinates."""
+        zoom = self.zoom_levels[self.current_zoom_index]
+        x = max(0, int(sel_rect.x() / zoom))
+        y = max(0, int(sel_rect.y() / zoom))
+        w = max(1, int(sel_rect.width() / zoom))
+        h = max(1, int(sel_rect.height() / zoom))
+        img_w = self._original_image.width()
+        img_h = self._original_image.height()
+        x = min(x, img_w - 1)
+        y = min(y, img_h - 1)
+        w = min(w, img_w - x)
+        h = min(h, img_h - y)
+        return x, y, w, h
+
+    def _crop_to_selection(self, sel_rect):
+        if self._original_image is None:
+            return
+        x, y, w, h = self._image_rect_from_selection(sel_rect)
+        cropped = crop_image(self._original_image, x, y, w, h)
+        if cropped.isNull():
+            QMessageBox.critical(self, "Error", "No se pudo recortar la imagen.")
+            return
+        self._original_image = cropped
+        self._pixmap = QPixmap.fromImage(cropped)
+        self.label.reset_pan()
+        self._update_scaled()
+        if save_image(cropped, self.current_path):
+            QMessageBox.information(self, "Éxito", "Imagen recortada correctamente.")
+        else:
+            QMessageBox.critical(self, "Error", "No se pudo guardar la imagen recortada.")
+        self._toggle_crop_mode()
+
+    def _save_selection_as_new(self, sel_rect):
+        if self._original_image is None:
+            return
+        x, y, w, h = self._image_rect_from_selection(sel_rect)
+        cropped = crop_image(self._original_image, x, y, w, h)
+        if cropped.isNull():
+            QMessageBox.critical(self, "Error", "No se pudo recortar la imagen.")
+            return
+        original_dir = os.path.dirname(self.current_path) if self.current_path else ""
+        filters = ";;".join(
+            f"{FORMAT_NAMES.get(ext, ext)} (*{ext})" for ext in sorted(IMAGE_EXTENSIONS)
+        )
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Guardar selección como nueva imagen",
+            os.path.join(original_dir, "seleccion"),
+            filters,
+        )
+        if file_path:
+            ext = Path(file_path).suffix.lower()
+            fmt = ext.lstrip(".").upper() if ext else None
+            if fmt == "JPEG":
+                fmt = "JPG"
+            if save_image(cropped, file_path, fmt):
+                QMessageBox.information(self, "Éxito", f"Selección guardada en:\n{file_path}")
+            else:
+                QMessageBox.critical(self, "Error", "No se pudo guardar la selección.")
+        self._toggle_crop_mode()
     
     def toggle_annotation_mode(self):
         self._annotation_mode = not self._annotation_mode
         if self._annotation_mode:
+            # Exit crop mode if active
+            if self._crop_mode:
+                self._toggle_crop_mode()
             if not hasattr(self, '_annotation_overlay') or self._annotation_overlay is None:
                 self._annotation_overlay = AnnotationOverlay(self.scroll_area.viewport())
                 self._annotation_overlay.annotations_saved.connect(self._on_annotations_saved)
