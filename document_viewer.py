@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
 from document_pdf import PDF_EXTENSIONS
 from document_editor import TextEditorToolbar, read_text_file, save_text_file, is_editable
 from pdf_editor import PdfEditorWidget
+from diff_viewer import DiffViewerWidget
+from pdf_tools import MergePdfDialog, SplitPdfDialog, merge_pdfs, split_pdf, extract_pdf_text as extract_pdf_text_tool, extract_pdf_images
 
 TEXT_DOCUMENT_EXTENSIONS = {
     ".txt", ".log", ".ini", ".cfg", ".conf", ".config", ".csv", ".tsv", ".xml",
@@ -459,6 +461,7 @@ class DocumentViewer(QWidget):
         self.toolbar.zoom_in_btn.clicked.connect(self.zoom_in)
         self.toolbar.search_btn.clicked.connect(self._toggle_search)
         self.toolbar.contrast_btn.clicked.connect(self._toggle_high_contrast)
+        self.toolbar.compare_btn.clicked.connect(self._open_diff_viewer)
 
         self.text_view.textChanged.connect(self._on_content_changed)
 
@@ -473,10 +476,15 @@ class DocumentViewer(QWidget):
         self.pdf_editor = PdfEditorWidget(self)
         self.pdf_editor.modified_changed.connect(self._on_pdf_editor_modified)
 
+        # Diff Viewer
+        self.diff_viewer = DiffViewerWidget(self)
+        self.diff_viewer.close_btn.clicked.connect(self._close_diff_viewer)
+
         self.stack.addWidget(self.pdf_view)
         self.stack.addWidget(self.text_view)
         self.stack.addWidget(self.message)
         self.stack.addWidget(self.pdf_editor)
+        self.stack.addWidget(self.diff_viewer)
 
         # PDF edit/view toggle bar (shown only when viewing a PDF)
         self._pdf_bar = QWidget()
@@ -503,6 +511,59 @@ class DocumentViewer(QWidget):
         """)
         self._edit_pdf_btn.clicked.connect(self._toggle_pdf_edit_mode)
         pdf_bar_layout.addWidget(self._edit_pdf_btn)
+
+        _pdf_btn_style = """
+            QPushButton {
+                background: rgba(59, 130, 246, 0.2);
+                border: 1px solid rgba(59, 130, 246, 0.4);
+                border-radius: 6px;
+                padding: 4px 10px;
+                color: #60a5fa;
+                font-weight: 500;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background: rgba(59, 130, 246, 0.35);
+                border-color: rgba(59, 130, 246, 0.7);
+            }
+        """
+
+        self._merge_pdf_btn = QPushButton("📎 Fusionar")
+        self._merge_pdf_btn.setToolTip("Fusionar múltiples PDFs en uno")
+        self._merge_pdf_btn.setFixedHeight(30)
+        self._merge_pdf_btn.setStyleSheet(_pdf_btn_style)
+        self._merge_pdf_btn.clicked.connect(self._merge_pdfs)
+        pdf_bar_layout.addWidget(self._merge_pdf_btn)
+
+        self._split_pdf_btn = QPushButton("✂️ Dividir")
+        self._split_pdf_btn.setToolTip("Dividir PDF en páginas individuales")
+        self._split_pdf_btn.setFixedHeight(30)
+        self._split_pdf_btn.setStyleSheet(_pdf_btn_style)
+        self._split_pdf_btn.clicked.connect(self._split_pdf)
+        pdf_bar_layout.addWidget(self._split_pdf_btn)
+
+        self._extract_text_btn = QPushButton("📝 Extraer texto")
+        self._extract_text_btn.setToolTip("Extraer texto del PDF a archivo .txt")
+        self._extract_text_btn.setFixedHeight(30)
+        self._extract_text_btn.setStyleSheet(_pdf_btn_style)
+        self._extract_text_btn.clicked.connect(self._extract_text)
+        pdf_bar_layout.addWidget(self._extract_text_btn)
+
+        self._extract_images_btn = QPushButton("🖼️ Extraer imágenes")
+        self._extract_images_btn.setToolTip("Extraer todas las imágenes del PDF")
+        self._extract_images_btn.setFixedHeight(30)
+        self._extract_images_btn.setStyleSheet(_pdf_btn_style)
+        self._extract_images_btn.clicked.connect(self._extract_images)
+        pdf_bar_layout.addWidget(self._extract_images_btn)
+
+        self._two_page_btn = QPushButton("📖 Libro")
+        self._two_page_btn.setToolTip("Vista de dos páginas (libro abierto)")
+        self._two_page_btn.setFixedHeight(30)
+        self._two_page_btn.setStyleSheet(_pdf_btn_style)
+        self._two_page_btn.setCheckable(True)
+        self._two_page_btn.clicked.connect(self._toggle_two_page_view)
+        pdf_bar_layout.addWidget(self._two_page_btn)
+
         pdf_bar_layout.addStretch()
         self._pdf_bar.setVisible(False)
 
@@ -814,3 +875,105 @@ class DocumentViewer(QWidget):
 
     def _on_pdf_editor_modified(self, modified: bool):
         self._modified = modified
+
+    # ------------------------------------------------------------------
+    #  Diff viewer integration
+    # ------------------------------------------------------------------
+
+    def _open_diff_viewer(self):
+        """Open the side-by-side diff viewer, pre-loading the current file."""
+        self._prev_widget = self.stack.currentWidget()
+        self._prev_toolbar_visible = self.toolbar.isVisible()
+        if self.current_path:
+            self.diff_viewer.load_left_file(self.current_path)
+        self.toolbar.setVisible(False)
+        self._pdf_bar.setVisible(False)
+        self.stack.setCurrentWidget(self.diff_viewer)
+
+    def _close_diff_viewer(self):
+        """Return to the previous view from the diff viewer."""
+        if hasattr(self, "_prev_widget") and self._prev_widget:
+            self.stack.setCurrentWidget(self._prev_widget)
+            self.toolbar.setVisible(getattr(self, "_prev_toolbar_visible", True))
+            if self.is_pdf:
+                self._pdf_bar.setVisible(True)
+        else:
+            self.stack.setCurrentWidget(self.text_view)
+            self.toolbar.setVisible(True)
+
+    # ------------------------------------------------------------------
+    #  PDF Tools integration
+    # ------------------------------------------------------------------
+
+    def _merge_pdfs(self):
+        dlg = MergePdfDialog(self)
+        dlg.exec()
+
+    def _split_pdf(self):
+        if not self.current_path:
+            return
+        output_dir = QFileDialog.getExistingDirectory(
+            self, "Seleccionar carpeta de destino", os.path.dirname(self.current_path)
+        )
+        if not output_dir:
+            return
+        results = split_pdf(self.current_path, output_dir)
+        from PySide6.QtWidgets import QMessageBox
+        if results:
+            QMessageBox.information(
+                self, "Dividir PDF",
+                f"Se crearon {len(results)} archivos en:\n{output_dir}"
+            )
+        else:
+            QMessageBox.warning(self, "Error", "No se pudo dividir el PDF.")
+
+    def _extract_text(self):
+        if not self.current_path:
+            return
+        default_path = os.path.splitext(self.current_path)[0] + ".txt"
+        output_path, _ = QFileDialog.getSaveFileName(
+            self, "Guardar texto extraído", default_path, "Texto (*.txt)"
+        )
+        if not output_path:
+            return
+        success = extract_pdf_text_tool(self.current_path, output_path)
+        from PySide6.QtWidgets import QMessageBox
+        if success:
+            QMessageBox.information(self, "Extraer texto", f"Texto guardado en:\n{output_path}")
+        else:
+            QMessageBox.warning(self, "Error", "No se pudo extraer el texto del PDF.")
+
+    def _extract_images(self):
+        if not self.current_path:
+            return
+        output_dir = QFileDialog.getExistingDirectory(
+            self, "Seleccionar carpeta de destino", os.path.dirname(self.current_path)
+        )
+        if not output_dir:
+            return
+        results = extract_pdf_images(self.current_path, output_dir)
+        from PySide6.QtWidgets import QMessageBox
+        if results:
+            QMessageBox.information(
+                self, "Extraer imágenes",
+                f"Se extrajeron {len(results)} imágenes en:\n{output_dir}"
+            )
+        else:
+            QMessageBox.information(
+                self, "Extraer imágenes",
+                "No se encontraron imágenes en el PDF o no se pudieron extraer."
+            )
+
+    def _toggle_two_page_view(self):
+        """Toggle between single-page and two-page (book) view for PDF."""
+        if self._two_page_btn.isChecked():
+            self.pdf_view.setPageMode(QPdfView.PageMode.MultiPage)
+            self._two_page_btn.setText("📖 1 Página")
+            self._two_page_btn.setToolTip("Volver a vista de una página")
+            # Reduce zoom to fit two pages side by side
+            self.current_zoom_index = max(0, self.current_zoom_index - 1)
+            self.pdf_view.setZoomFactor(self.zoom_levels[self.current_zoom_index] * 0.6)
+        else:
+            self._two_page_btn.setText("📖 Libro")
+            self._two_page_btn.setToolTip("Vista de dos páginas (libro abierto)")
+            self.pdf_view.setZoomFactor(self.zoom_levels[self.current_zoom_index])

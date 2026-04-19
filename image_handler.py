@@ -5,7 +5,10 @@ from image_converter import (
     get_image_info,
     save_image,
     resize_image,
+    crop_image,
     ImageResizeDialog,
+    ImageCropDialog,
+    BatchConvertDialog,
 )
 from image_viewer import (
     PanLabel,

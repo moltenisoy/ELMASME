@@ -8,6 +8,10 @@ from image_handler import ImageViewer
 from audio_handler import AudioViewer
 from video_handler import VideoViewer
 from document_handler import DocumentViewer
+from archive_viewer import ArchiveViewer
+from spreadsheet_viewer import SpreadsheetViewer
+from presentation_viewer import PresentationViewer
+from ebook_viewer import EbookViewer
 
 
 class ViewerHost(QWidget):
@@ -19,6 +23,10 @@ class ViewerHost(QWidget):
         self.audio_viewer = AudioViewer()
         self.video_viewer = VideoViewer()
         self.document_viewer = DocumentViewer()
+        self.archive_viewer = ArchiveViewer()
+        self.spreadsheet_viewer = SpreadsheetViewer()
+        self.presentation_viewer = PresentationViewer()
+        self.ebook_viewer = EbookViewer()
 
         self.message = QLabel()
         self.message.setAlignment(Qt.AlignCenter)
@@ -32,6 +40,10 @@ class ViewerHost(QWidget):
         self.stack.addWidget(self.audio_viewer)
         self.stack.addWidget(self.video_viewer)
         self.stack.addWidget(self.document_viewer)
+        self.stack.addWidget(self.archive_viewer)
+        self.stack.addWidget(self.spreadsheet_viewer)
+        self.stack.addWidget(self.presentation_viewer)
+        self.stack.addWidget(self.ebook_viewer)
         self.stack.addWidget(self.message)
 
         layout = QVBoxLayout(self)
@@ -65,6 +77,26 @@ class ViewerHost(QWidget):
         if kind in ("pdf", "text"):
             self.document_viewer.load_file(path)
             self.stack.setCurrentWidget(self.document_viewer)
+            return
+
+        if kind == "archive":
+            self.archive_viewer.load_file(path)
+            self.stack.setCurrentWidget(self.archive_viewer)
+            return
+
+        if kind == "spreadsheet":
+            self.spreadsheet_viewer.load_file(path)
+            self.stack.setCurrentWidget(self.spreadsheet_viewer)
+            return
+
+        if kind == "presentation":
+            self.presentation_viewer.load_file(path)
+            self.stack.setCurrentWidget(self.presentation_viewer)
+            return
+
+        if kind == "ebook":
+            self.ebook_viewer.load_file(path)
+            self.stack.setCurrentWidget(self.ebook_viewer)
             return
 
         self.message.setText("Formato de archivo no compatible.")
