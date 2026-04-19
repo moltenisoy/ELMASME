@@ -3,16 +3,13 @@ import subprocess
 import threading
 from pathlib import Path
 from PySide6.QtCore import Qt, QUrl, QEvent, QObject, QTimer, QSize, QRect
-from PySide6.QtGui import QColor, QImage, QPixmap, QPainter, QTransform
+from PySide6.QtGui import QColor, QImage, QPixmap, QPainter
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QVideoFrame, QVideoSink
-from PySide6.QtMultimediaWidgets import QGraphicsVideoItem, QVideoWidget
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider,
     QToolButton, QSizePolicy, QMessageBox, QComboBox, QDialog,
     QDialogButtonBox, QApplication, QMenu, QSplitter, QFileDialog,
-    QGraphicsView, QGraphicsScene,
-    QGraphicsColorizeEffect, QInputDialog, QListWidget,
-    QListWidgetItem, QAbstractItemView, QScrollArea
+    QGraphicsColorizeEffect, QInputDialog,
 )
 
 from video_converter import (
