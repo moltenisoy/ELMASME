@@ -1,15 +1,11 @@
 import json
 import os
-import sys
 from pathlib import Path
 
 
 def _get_settings_dir() -> str:
     """Return the directory where settings are stored."""
-    if sys.platform == "win32":
-        base = os.environ.get("APPDATA", os.path.expanduser("~"))
-    else:
-        base = os.environ.get("XDG_CONFIG_HOME", os.path.join(os.path.expanduser("~"), ".config"))
+    base = os.environ.get("APPDATA", os.path.expanduser("~"))
     settings_dir = os.path.join(base, "ELMASME")
     os.makedirs(settings_dir, exist_ok=True)
     return settings_dir

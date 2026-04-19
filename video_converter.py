@@ -2,7 +2,6 @@
 import json
 import os
 import subprocess
-import sys
 from pathlib import Path
 from typing import Optional, List, Dict, Callable
 from PySide6.QtCore import Qt
@@ -569,12 +568,7 @@ class VideoBatchConverterDialog(QDialog):
         
         if self.open_folder_check.isChecked() and self.output_paths:
             try:
-                if sys.platform == "win32":
-                    os.startfile(original_dir)
-                elif sys.platform == "darwin":
-                    subprocess.Popen(["open", original_dir])
-                else:
-                    subprocess.Popen(["xdg-open", original_dir])
+                os.startfile(original_dir)
             except OSError:
                 pass
         

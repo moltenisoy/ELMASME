@@ -12,20 +12,12 @@ from file_navigation import FileNavigator
 from formats import display_type, supported_extensions
 from settings import load_settings, save_settings
 from themes import THEME_NAMES, get_theme
-import sys as _sys
-
-if _sys.platform == "win32":
-    from windows_integration import (
-        register_file_associations,
-        unregister_file_associations,
-        open_windows_default_apps_settings,
-        supported_extensions_text,
-    )
-else:
-    def register_file_associations(): pass
-    def unregister_file_associations(): pass
-    def open_windows_default_apps_settings(): pass
-    def supported_extensions_text() -> str: return ""
+from windows_integration import (
+    register_file_associations,
+    unregister_file_associations,
+    open_windows_default_apps_settings,
+    supported_extensions_text,
+)
 
 
 class _LeftElidedLabel(QLabel):
@@ -196,11 +188,6 @@ class UniversalViewerWindow(QMainWindow):
         abrir_default_btn = QPushButton("Abrir apps predeterminadas de Windows")
         abrir_default_btn.clicked.connect(open_windows_default_apps_settings)
         dlg_layout.addWidget(abrir_default_btn)
-
-        if _sys.platform != "win32":
-            registrar_btn.setEnabled(False)
-            desregistrar_btn.setEnabled(False)
-            abrir_default_btn.setEnabled(False)
 
         dlg_layout.addSpacing(10)
 

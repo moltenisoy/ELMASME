@@ -2,7 +2,6 @@
 import json
 import os
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Optional, List, Dict, Callable
@@ -318,7 +317,8 @@ class AudioConverterDialog(QDialog):
             
             if success:
                 if self.overwrite_radio.isChecked() and self.output_path != self.input_path:
-                    os.remove(self.input_path)
+                    if os.path.exists(self.input_path):
+                        os.remove(self.input_path)
                 
                 QMessageBox.information(
                     self,
@@ -497,12 +497,7 @@ class AudioBatchConverterDialog(QDialog):
         
         if self.open_folder_check.isChecked() and self.output_paths:
             try:
-                if sys.platform == "win32":
-                    os.startfile(original_dir)
-                elif sys.platform == "darwin":
-                    subprocess.Popen(["open", original_dir])
-                else:
-                    subprocess.Popen(["xdg-open", original_dir])
+                os.startfile(original_dir)
             except OSError:
                 pass
         
