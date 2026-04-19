@@ -78,12 +78,12 @@ def _draw_arrowhead(painter: QPainter, start: QPointF, end: QPointF, size: float
     if length < 1e-3:
         return
     ux, uy = dx / length, dy / length
-    px, py = -uy, ux
+    perp_x, perp_y = -uy, ux
 
-    p1 = QPointF(end.x() - ux * size + px * size * 0.4,
-                 end.y() - uy * size + py * size * 0.4)
-    p2 = QPointF(end.x() - ux * size - px * size * 0.4,
-                 end.y() - uy * size - py * size * 0.4)
+    p1 = QPointF(end.x() - ux * size + perp_x * size * 0.4,
+                 end.y() - uy * size + perp_y * size * 0.4)
+    p2 = QPointF(end.x() - ux * size - perp_x * size * 0.4,
+                 end.y() - uy * size - perp_y * size * 0.4)
 
     head = QPolygonF([end, p1, p2])
     painter.save()

@@ -582,7 +582,8 @@ class PdfEditorWidget(QWidget):
 
             item = QGraphicsPixmapItem(pixmap)
             item.setPos(0, y_offset)
-            item.setData(0, page_num)
+            PAGE_INDEX_ROLE = 0
+            item.setData(PAGE_INDEX_ROLE, page_num)
             item.setZValue(-1)
             self.scene.addItem(item)
             self._page_items.append(item)

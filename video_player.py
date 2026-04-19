@@ -803,7 +803,8 @@ class VideoViewer(QWidget):
 
         self._pip_player = QMediaPlayer(self._pip_window)
         self._pip_audio = QAudioOutput(self._pip_window)
-        self._pip_audio.setVolume(0)
+        PIP_MUTED_VOLUME = 0
+        self._pip_audio.setVolume(PIP_MUTED_VOLUME)
         self._pip_player.setAudioOutput(self._pip_audio)
         self._pip_player.setVideoOutput(self._pip_window.video_widget)
         self._pip_player.setSource(QUrl.fromLocalFile(self.current_path))
