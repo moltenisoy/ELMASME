@@ -1,7 +1,7 @@
 
 import os
 import difflib
-from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QTextCharFormat, QFont, QTextCursor, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
