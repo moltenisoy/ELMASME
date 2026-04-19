@@ -15,6 +15,7 @@ _SETTINGS_FILE = os.path.join(_get_settings_dir(), "settings.json")
 _DEFAULTS = {
     "theme_index": 0,
     "no_multi_playback": False,
+    "show_welcome": True,
 }
 
 
