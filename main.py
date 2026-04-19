@@ -15,8 +15,8 @@ def resolve_start_path() -> str | None:
 
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName("UniversalViewer")
-    app.setOrganizationName("UniversalViewer")
+    app.setApplicationName("ELMASME")
+    app.setOrganizationName("ELMASME")
     
     start_path = resolve_start_path()
     
