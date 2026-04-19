@@ -4,8 +4,9 @@ from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFileDialog, QMessageBox, QToolButton, QFrame, QMenu,
-    QTabWidget, QDialog, QCheckBox, QTextEdit
+    QTabWidget, QDialog,
 )
+from app_dialogs import SettingsDialog, OpenChoiceDialog, UnsavedChangesDialog, WelcomeDialog
 
 from content_viewers import ViewerHost
 from file_navigation import FileNavigator
@@ -166,64 +167,21 @@ class UniversalViewerWindow(QMainWindow):
         menu.exec(self.archivo_button.mapToGlobal(self.archivo_button.rect().topLeft()))
 
     def _show_settings_panel(self):
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Ajustes")
-        dialog.setFixedSize(450, 340)
-
-        dlg_layout = QVBoxLayout(dialog)
-        dlg_layout.setSpacing(12)
-
-        integracion_label = QLabel("Integración")
-        integracion_label.setStyleSheet("font-weight:bold;font-size:14px;")
-        dlg_layout.addWidget(integracion_label)
-
-        registrar_btn = QPushButton("Registrar asociaciones")
-        registrar_btn.clicked.connect(self.register_associations)
-        dlg_layout.addWidget(registrar_btn)
-
-        desregistrar_btn = QPushButton("Desregistrar asociaciones")
-        desregistrar_btn.clicked.connect(self.unregister_associations)
-        dlg_layout.addWidget(desregistrar_btn)
-
-        abrir_default_btn = QPushButton("Abrir apps predeterminadas de Windows")
-        abrir_default_btn.clicked.connect(open_windows_default_apps_settings)
-        dlg_layout.addWidget(abrir_default_btn)
-
-        dlg_layout.addSpacing(10)
-
-        reproduccion_label = QLabel("Reproducción")
-        reproduccion_label.setStyleSheet("font-weight:bold;font-size:14px;")
-        dlg_layout.addWidget(reproduccion_label)
-
-        self._no_multi_checkbox = QCheckBox("No permitir reproducción de múltiples archivos simultáneos")
-        self._no_multi_checkbox.setChecked(self._no_multi_playback)
-        self._no_multi_checkbox.toggled.connect(self._on_no_multi_playback_changed)
-        dlg_layout.addWidget(self._no_multi_checkbox)
-
-        dlg_layout.addSpacing(10)
-
-        tema_label = QLabel("Tema")
-        tema_label.setStyleSheet("font-weight:bold;font-size:14px;")
-        dlg_layout.addWidget(tema_label)
-
-        tema_layout = QHBoxLayout()
-        for i, name in enumerate(THEME_NAMES):
-            btn = QPushButton(name)
-            btn.clicked.connect(lambda checked, idx=i: self._switch_theme(idx))
-            tema_layout.addWidget(btn)
-        dlg_layout.addLayout(tema_layout)
-
-        dlg_layout.addStretch()
-
-        cerrar_btn = QPushButton("Cerrar")
-        cerrar_btn.clicked.connect(dialog.accept)
-        dlg_layout.addWidget(cerrar_btn, alignment=Qt.AlignRight)
-
+        dialog = SettingsDialog(
+            self,
+            THEME_NAMES,
+            self._current_theme_index,
+            self._no_multi_playback,
+            self.register_associations,
+            self.unregister_associations,
+            open_windows_default_apps_settings,
+            self._on_no_multi_playback_changed,
+            self._switch_theme,
+        )
         dialog.move(
             self.x() + (self.width() - dialog.width()) // 2,
             self.y() + (self.height() - dialog.height()) // 2
         )
-
         dialog.exec()
 
     def _on_no_multi_playback_changed(self, checked):
@@ -243,49 +201,13 @@ class UniversalViewerWindow(QMainWindow):
         })
 
     def _show_welcome_dialog(self):
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Bienvenido a ELMASME")
-        dialog.setFixedSize(300, 300)
-        dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowStaysOnTopHint)
-
-        dlg_layout = QVBoxLayout(dialog)
-        dlg_layout.setContentsMargins(16, 16, 16, 16)
-        dlg_layout.setSpacing(10)
-
-        title_label = QLabel("¡Bienvenido a ELMASME!")
-        title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
-        dlg_layout.addWidget(title_label)
-
-        text_area = QTextEdit()
-        text_area.setReadOnly(True)
-        text_area.setPlainText(
-            "ELMASME es un visor universal de archivos.\n\n"
-            "Soporta imágenes, audio, video, documentos, "
-            "PDF, hojas de cálculo, presentaciones, "
-            "archivos comprimidos y libros electrónicos.\n\n"
-            "Usa el menú Archivo para abrir archivos o "
-            "arrastra y suelta archivos en la ventana.\n\n"
-            "Configura las asociaciones de archivos desde "
-            "el botón ⚙ de ajustes."
-        )
-        dlg_layout.addWidget(text_area, 1)
-
-        no_show_checkbox = QCheckBox("No mostrar más al iniciar")
-        dlg_layout.addWidget(no_show_checkbox)
-
-        close_btn = QPushButton("Cerrar")
-        close_btn.clicked.connect(dialog.accept)
-        dlg_layout.addWidget(close_btn, alignment=Qt.AlignCenter)
-
+        dialog = WelcomeDialog(self)
         dialog.move(
             self.x() + (self.width() - dialog.width()) // 2,
             self.y() + (self.height() - dialog.height()) // 2
         )
-
         dialog.exec()
-
-        if no_show_checkbox.isChecked():
+        if dialog.no_show_checked():
             self._show_welcome = False
             self._save_current_settings()
 
@@ -424,101 +346,32 @@ class UniversalViewerWindow(QMainWindow):
             self.file_path_label.setFullText("Sin archivo")
 
     def _show_open_choice_dialog(self):
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Abrir archivo")
-        dialog.setFixedSize(400, 130)
-
-        dlg_layout = QVBoxLayout(dialog)
-        dlg_layout.addWidget(QLabel("¿Cómo desea abrir el archivo?"))
-
-        btn_layout = QHBoxLayout()
-
-        new_tab_btn = QPushButton("Abrir en otra pestaña")
-        close_current_btn = QPushButton("Cerrar el actual")
-        cancel_btn = QPushButton("Cancelar")
-
-        result = {"choice": None}
-
-        def on_new_tab():
-            result["choice"] = "new_tab"
-            dialog.accept()
-
-        def on_close_current():
-            result["choice"] = "close_current"
-            dialog.accept()
-
-        new_tab_btn.clicked.connect(on_new_tab)
-        close_current_btn.clicked.connect(on_close_current)
-        cancel_btn.clicked.connect(dialog.reject)
-
-        btn_layout.addWidget(new_tab_btn)
-        btn_layout.addWidget(close_current_btn)
-        btn_layout.addWidget(cancel_btn)
-        dlg_layout.addLayout(btn_layout)
-
+        dialog = OpenChoiceDialog(self)
         dialog.move(
             self.x() + (self.width() - dialog.width()) // 2,
             self.y() + (self.height() - dialog.height()) // 2
         )
-
         if dialog.exec() == QDialog.Accepted:
-            return result["choice"]
+            return dialog.get_choice()
         return None
 
     def _prompt_unsaved_changes(self, viewer):
         if not viewer.has_unsaved_changes():
             return False
 
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Cambios no guardados")
-        dialog.setFixedSize(520, 130)
-
-        dlg_layout = QVBoxLayout(dialog)
-        dlg_layout.addWidget(QLabel("Hay cambios no guardados. ¿Qué desea hacer?"))
-
-        btn_layout = QHBoxLayout()
-
-        save_btn = QPushButton("Guardar")
-        save_as_btn = QPushButton("Guardar como")
-        discard_btn = QPushButton("Cerrar sin guardar")
-        cancel_btn = QPushButton("Cancelar")
-
-        result = {"choice": None}
-
-        def on_save():
-            result["choice"] = "save"
-            dialog.accept()
-
-        def on_save_as():
-            result["choice"] = "save_as"
-            dialog.accept()
-
-        def on_discard():
-            result["choice"] = "discard"
-            dialog.accept()
-
-        save_btn.clicked.connect(on_save)
-        save_as_btn.clicked.connect(on_save_as)
-        discard_btn.clicked.connect(on_discard)
-        cancel_btn.clicked.connect(dialog.reject)
-
-        btn_layout.addWidget(save_btn)
-        btn_layout.addWidget(save_as_btn)
-        btn_layout.addWidget(discard_btn)
-        btn_layout.addWidget(cancel_btn)
-        dlg_layout.addLayout(btn_layout)
-
+        dialog = UnsavedChangesDialog(self)
         dialog.move(
             self.x() + (self.width() - dialog.width()) // 2,
             self.y() + (self.height() - dialog.height()) // 2
         )
 
         if dialog.exec() == QDialog.Accepted:
-            if result["choice"] == "save":
+            choice = dialog.get_choice()
+            if choice == "save":
                 viewer.save_document()
-            elif result["choice"] == "save_as":
+            elif choice == "save_as":
                 viewer.save_document_as()
-            elif result["choice"] == "discard":
+            elif choice == "discard":
                 viewer.discard_changes()
             return False
 

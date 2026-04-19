@@ -12,10 +12,10 @@ from PySide6.QtWidgets import (
 )
 
 from audio_converter import (
-    get_audio_info, AudioConverterDialog, AudioBatchConverterDialog,
-    AudioTrimDialog, AUDIO_EXTENSIONS, convert_audio, is_ffmpeg_available,
+    get_audio_info, AUDIO_EXTENSIONS, convert_audio, is_ffmpeg_available,
     FORMAT_NAMES as AUDIO_FORMAT_NAMES
 )
+from audio_converter_dialogs import AudioConverterDialog, AudioBatchConverterDialog, AudioTrimDialog
 from audio_playlist import AudioPlaylistWidget
 from progress_bar import ConversionProgressBar
 

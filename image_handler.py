@@ -6,12 +6,14 @@ from image_converter import (
     save_image,
     resize_image,
     crop_image,
+)
+from image_dialogs import (
     ImageResizeDialog,
     ImageCropDialog,
     BatchConvertDialog,
     EditConvertDialog,
 )
+from image_pan import PanLabel
 from image_viewer import (
-    PanLabel,
     ImageViewer,
 )
