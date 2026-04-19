@@ -4,7 +4,7 @@ from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFileDialog, QMessageBox, QToolButton, QFrame, QMenu,
-    QTabWidget, QDialog, QCheckBox
+    QTabWidget, QDialog, QCheckBox, QTextEdit
 )
 
 from content_viewers import ViewerHost
@@ -57,8 +57,9 @@ class UniversalViewerWindow(QMainWindow):
         saved = load_settings()
         self._current_theme_index = saved.get("theme_index", 0)
         self._no_multi_playback = saved.get("no_multi_playback", False)
+        self._show_welcome = saved.get("show_welcome", True)
 
-        self.setWindowTitle("Universal Viewer")
+        self.setWindowTitle("ELMASME")
         self.resize(1280, 800)
         self._build_ui()
         self._center_window()
@@ -67,6 +68,9 @@ class UniversalViewerWindow(QMainWindow):
             self._open_in_new_tab(start_path)
         else:
             self._create_empty_tab()
+
+        if self._show_welcome:
+            self._show_welcome_dialog()
 
     def _build_ui(self):
         self._apply_theme(THEME_NAMES[self._current_theme_index])
@@ -127,16 +131,12 @@ class UniversalViewerWindow(QMainWindow):
         self.file_path_label.setObjectName("FilePathLabel")
         self.file_path_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
 
-        self.file_name_label = QLabel("Sin archivo")
-        self.file_name_label.setObjectName("FileNameLabel")
-
         info_container = QWidget()
         info_layout = QHBoxLayout(info_container)
         info_layout.setContentsMargins(0, 0, 0, 0)
         info_layout.setSpacing(0)
         info_layout.addStretch(1)
-        info_layout.addWidget(self.file_path_label, 0)
-        info_layout.addWidget(self.file_name_label, 0)
+        info_layout.addWidget(self.file_path_label, 1)
         info_layout.addStretch(1)
 
         self.next_button = QToolButton()
@@ -239,7 +239,55 @@ class UniversalViewerWindow(QMainWindow):
         save_settings({
             "theme_index": self._current_theme_index,
             "no_multi_playback": self._no_multi_playback,
+            "show_welcome": self._show_welcome,
         })
+
+    def _show_welcome_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Bienvenido a ELMASME")
+        dialog.setFixedSize(300, 300)
+        dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowStaysOnTopHint)
+
+        dlg_layout = QVBoxLayout(dialog)
+        dlg_layout.setContentsMargins(16, 16, 16, 16)
+        dlg_layout.setSpacing(10)
+
+        title_label = QLabel("¡Bienvenido a ELMASME!")
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        dlg_layout.addWidget(title_label)
+
+        text_area = QTextEdit()
+        text_area.setReadOnly(True)
+        text_area.setPlainText(
+            "ELMASME es un visor universal de archivos.\n\n"
+            "Soporta imágenes, audio, video, documentos, "
+            "PDF, hojas de cálculo, presentaciones, "
+            "archivos comprimidos y libros electrónicos.\n\n"
+            "Usa el menú Archivo para abrir archivos o "
+            "arrastra y suelta archivos en la ventana.\n\n"
+            "Configura las asociaciones de archivos desde "
+            "el botón ⚙ de ajustes."
+        )
+        dlg_layout.addWidget(text_area, 1)
+
+        no_show_checkbox = QCheckBox("No mostrar más al iniciar")
+        dlg_layout.addWidget(no_show_checkbox)
+
+        close_btn = QPushButton("Cerrar")
+        close_btn.clicked.connect(dialog.accept)
+        dlg_layout.addWidget(close_btn, alignment=Qt.AlignCenter)
+
+        dialog.move(
+            self.x() + (self.width() - dialog.width()) // 2,
+            self.y() + (self.height() - dialog.height()) // 2
+        )
+
+        dialog.exec()
+
+        if no_show_checkbox.isChecked():
+            self._show_welcome = False
+            self._save_current_settings()
 
     def _setup_shortcuts(self):
         left_action = QAction(self)
@@ -355,8 +403,7 @@ class UniversalViewerWindow(QMainWindow):
             self.next_button.setEnabled(False)
             self.prev_button.setText("◀ Anterior 0/0")
             self.next_button.setText("0/0 Siguiente ▶")
-            self.file_name_label.setText("Sin archivo")
-            self.file_path_label.setFullText("")
+            self.file_path_label.setFullText("Sin archivo")
             return
 
         nav = data['navigator']
@@ -372,14 +419,9 @@ class UniversalViewerWindow(QMainWindow):
         self.next_button.setText(f"{counter_text} Siguiente ▶")
 
         if path:
-            dir_part = os.path.dirname(path)
-            if dir_part and not dir_part.endswith(os.sep):
-                dir_part += os.sep
-            self.file_path_label.setFullText(dir_part)
-            self.file_name_label.setText(os.path.basename(path))
+            self.file_path_label.setFullText(path)
         else:
-            self.file_path_label.setFullText("")
-            self.file_name_label.setText("Sin archivo")
+            self.file_path_label.setFullText("Sin archivo")
 
     def _show_open_choice_dialog(self):
         dialog = QDialog(self)
