@@ -129,6 +129,32 @@ class _MovableLinkItem(QGraphicsRectItem):
         self.setToolTip(value)
 
 
+class _MovableHighlightItem(QGraphicsRectItem):
+    """Rectángulo semitransparente de resaltado sobre una página PDF."""
+
+    def __init__(self, rect: QRectF, page_index: int, color: QColor = None, parent=None):
+        super().__init__(rect, parent)
+        self.page_index = page_index
+        self._color = color or QColor(255, 255, 0, 80)
+        self.setFlags(
+            QGraphicsItem.ItemIsMovable
+            | QGraphicsItem.ItemIsSelectable
+            | QGraphicsItem.ItemSendsGeometryChanges
+        )
+        self.setPen(QPen(Qt.NoPen))
+        self.setBrush(QBrush(self._color))
+        self.setCursor(QCursor(Qt.SizeAllCursor))
+
+    @property
+    def highlight_color(self) -> QColor:
+        return self._color
+
+    @highlight_color.setter
+    def highlight_color(self, value: QColor):
+        self._color = value
+        self.setBrush(QBrush(value))
+
+
 # ---------------------------------------------------------------------------
 #  Insert-text dialog
 # ---------------------------------------------------------------------------
@@ -252,6 +278,7 @@ class PdfEditorToolbar(QFrame):
     add_text_requested = Signal()
     add_image_requested = Signal()
     add_link_requested = Signal()
+    add_highlight_requested = Signal()
     delete_selected_requested = Signal()
     edit_selected_requested = Signal()
     save_requested = Signal()
@@ -320,6 +347,13 @@ class PdfEditorToolbar(QFrame):
         self.link_btn.setFixedHeight(36)
         self.link_btn.clicked.connect(self.add_link_requested)
         row1.addWidget(self.link_btn)
+
+        self.highlight_btn = QToolButton()
+        self.highlight_btn.setText("🖍️ Resaltar")
+        self.highlight_btn.setToolTip("Resaltar área en el PDF")
+        self.highlight_btn.setFixedHeight(36)
+        self.highlight_btn.clicked.connect(self.add_highlight_requested)
+        row1.addWidget(self.highlight_btn)
 
         sep1 = QFrame()
         sep1.setFrameShape(QFrame.VLine)
@@ -498,6 +532,7 @@ class PdfEditorWidget(QWidget):
         self.toolbar.add_text_requested.connect(self._add_text)
         self.toolbar.add_image_requested.connect(self._add_image)
         self.toolbar.add_link_requested.connect(self._add_link)
+        self.toolbar.add_highlight_requested.connect(self._add_highlight)
         self.toolbar.edit_selected_requested.connect(self._edit_selected)
         self.toolbar.delete_selected_requested.connect(self._delete_selected)
         self.toolbar.undo_requested.connect(self._undo)
@@ -739,6 +774,35 @@ class PdfEditorWidget(QWidget):
                 except Exception:
                     pass
 
+            elif isinstance(item, _MovableHighlightItem):
+                scene_rect = item.mapToScene(item.rect()).boundingRect()
+                x = (scene_rect.x() - page_origin.x()) * scale
+                y = (scene_rect.y() - page_origin.y()) * scale
+                w = scene_rect.width() * scale
+                h = scene_rect.height() * scale
+                pdf_rect = fitz.Rect(x, y, x + w, y + h)
+                try:
+                    annot = page.add_highlight_annot(pdf_rect)
+                    if annot:
+                        c = item.highlight_color
+                        annot.set_colors(stroke=(c.redF(), c.greenF(), c.blueF()))
+                        annot.set_opacity(c.alphaF())
+                        annot.update()
+                except Exception:
+                    # Fallback: draw a colored rectangle
+                    try:
+                        c = item.highlight_color
+                        shape = page.new_shape()
+                        shape.draw_rect(pdf_rect)
+                        shape.finish(
+                            color=None,
+                            fill=(c.redF(), c.greenF(), c.blueF()),
+                            fill_opacity=c.alphaF(),
+                        )
+                        shape.commit()
+                    except Exception:
+                        pass
+
     def _clear_overlays(self):
         for item in self._overlay_items:
             if item.scene():
@@ -835,6 +899,30 @@ class PdfEditorWidget(QWidget):
 
         rect = QRectF(0, 0, 200, 30)
         item = _MovableLinkItem(url, rect, self._current_page)
+        item.setPos(cx, cy)
+        self.scene.addItem(item)
+        self._overlay_items.append(item)
+        self._push_undo("add", item)
+        self._set_modified(True)
+
+    def _add_highlight(self):
+        """Add a highlight rectangle annotation on the current page."""
+        if not self._doc:
+            return
+        color = QColorDialog.getColor(
+            QColor(255, 255, 0, 80), self, "Color de resaltado"
+        )
+        if not color.isValid():
+            return
+        color.setAlpha(80)
+
+        page_rect = self._page_rect(self._current_page)
+        center = self.view.mapToScene(self.view.viewport().rect().center())
+        cx = max(page_rect.x() + 20, min(center.x(), page_rect.right() - 250)) if not page_rect.isNull() else center.x()
+        cy = max(page_rect.y() + 20, min(center.y(), page_rect.bottom() - 40)) if not page_rect.isNull() else center.y()
+
+        rect = QRectF(0, 0, 200, 25)
+        item = _MovableHighlightItem(rect, self._current_page, color)
         item.setPos(cx, cy)
         self.scene.addItem(item)
         self._overlay_items.append(item)

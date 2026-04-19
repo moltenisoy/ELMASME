@@ -6,12 +6,20 @@ from video_handler import VIDEO_EXTENSIONS
 from image_handler import IMAGE_EXTENSIONS
 from document_handler import PDF_EXTENSIONS, TEXT_DOCUMENT_EXTENSIONS, DOCX_EXTENSIONS, DOCUMENT_EXTENSIONS
 from document_viewer import EPUB_EXTENSIONS, RTF_EXTENSIONS, ODT_EXTENSIONS, ODS_EXTENSIONS
+from archive_viewer import ARCHIVE_EXTENSIONS
+from spreadsheet_viewer import SPREADSHEET_EXTENSIONS
+from presentation_viewer import PRESENTATION_EXTENSIONS
+from ebook_viewer import EBOOK_EXTENSIONS
 
 ALL_SUPPORTED_EXTENSIONS = (
     IMAGE_EXTENSIONS
     | AUDIO_EXTENSIONS
     | VIDEO_EXTENSIONS
     | DOCUMENT_EXTENSIONS
+    | ARCHIVE_EXTENSIONS
+    | SPREADSHEET_EXTENSIONS
+    | PRESENTATION_EXTENSIONS
+    | EBOOK_EXTENSIONS
 )
 
 ASSOCIATION_EXTENSIONS = sorted(ALL_SUPPORTED_EXTENSIONS)
@@ -22,6 +30,10 @@ TYPE_LABELS = {
     "video": "Video",
     "pdf": "PDF",
     "text": "Documento",
+    "archive": "Archivo comprimido",
+    "spreadsheet": "Hoja de cálculo",
+    "presentation": "Presentación",
+    "ebook": "Libro electrónico",
     "unsupported": "No compatible",
 }
 
@@ -41,6 +53,14 @@ def get_content_type(path: str) -> str:
         return "video"
     if ext in PDF_EXTENSIONS:
         return "pdf"
+    if ext in ARCHIVE_EXTENSIONS:
+        return "archive"
+    if ext in SPREADSHEET_EXTENSIONS:
+        return "spreadsheet"
+    if ext in PRESENTATION_EXTENSIONS:
+        return "presentation"
+    if ext in EBOOK_EXTENSIONS:
+        return "ebook"
     if ext in TEXT_DOCUMENT_EXTENSIONS or ext in DOCX_EXTENSIONS or ext in EPUB_EXTENSIONS or ext in RTF_EXTENSIONS or ext in ODT_EXTENSIONS or ext in ODS_EXTENSIONS:
         return "text"
     
@@ -68,6 +88,14 @@ def get_file_category(path: str) -> str:
         return "document"
     if content_type == "image":
         return "image"
+    if content_type == "archive":
+        return "archive"
+    if content_type == "spreadsheet":
+        return "spreadsheet"
+    if content_type == "presentation":
+        return "presentation"
+    if content_type == "ebook":
+        return "ebook"
     
     return "unsupported"
 
