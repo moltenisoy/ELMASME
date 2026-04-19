@@ -216,7 +216,7 @@ class EbookViewer(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.current_path: str = ""
+        self.current_path: str | None = None
         self._chapters: list[tuple[str, str]] = []
         self._current_index: int = 0
         self._font_size: int = _DEFAULT_FONT_SIZE
