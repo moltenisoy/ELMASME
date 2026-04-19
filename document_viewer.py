@@ -18,7 +18,12 @@ from document_extractors import (
 )
 from pdf_editor import PdfEditorWidget
 from diff_viewer import DiffViewerWidget
-from pdf_tools import MergePdfDialog, SplitPdfDialog, merge_pdfs, split_pdf, extract_pdf_text as extract_pdf_text_tool, extract_pdf_images
+from pdf_tools import (
+    MergePdfDialog, SplitPdfDialog, merge_pdfs, split_pdf,
+    extract_pdf_text as extract_pdf_text_tool, extract_pdf_images,
+    PdfFormFillerDialog, PdfPasswordDialog, PdfReorderDialog,
+    PdfWatermarkDialog, PdfExportImagesDialog,
+)
 
 TEXT_DOCUMENT_EXTENSIONS = {
     ".txt", ".log", ".ini", ".cfg", ".conf", ".config", ".csv", ".tsv", ".xml",
@@ -394,6 +399,41 @@ class DocumentViewer(QWidget):
         self._two_page_btn.setCheckable(True)
         self._two_page_btn.clicked.connect(self._toggle_two_page_view)
         pdf_bar_layout.addWidget(self._two_page_btn)
+
+        self._form_fill_btn = QPushButton("📝 Formulario")
+        self._form_fill_btn.setToolTip("Rellenar campos de formulario del PDF")
+        self._form_fill_btn.setFixedHeight(30)
+        self._form_fill_btn.setStyleSheet(_pdf_btn_style)
+        self._form_fill_btn.clicked.connect(self._fill_form)
+        pdf_bar_layout.addWidget(self._form_fill_btn)
+
+        self._password_btn = QPushButton("🔒 Contraseña")
+        self._password_btn.setToolTip("Cifrar/descifrar PDF con contraseña")
+        self._password_btn.setFixedHeight(30)
+        self._password_btn.setStyleSheet(_pdf_btn_style)
+        self._password_btn.clicked.connect(self._password_protect)
+        pdf_bar_layout.addWidget(self._password_btn)
+
+        self._reorder_btn = QPushButton("🔀 Reordenar")
+        self._reorder_btn.setToolTip("Reorganizar páginas del PDF")
+        self._reorder_btn.setFixedHeight(30)
+        self._reorder_btn.setStyleSheet(_pdf_btn_style)
+        self._reorder_btn.clicked.connect(self._reorder_pages)
+        pdf_bar_layout.addWidget(self._reorder_btn)
+
+        self._watermark_btn = QPushButton("💧 Marca de agua")
+        self._watermark_btn.setToolTip("Insertar marca de agua en el PDF")
+        self._watermark_btn.setFixedHeight(30)
+        self._watermark_btn.setStyleSheet(_pdf_btn_style)
+        self._watermark_btn.clicked.connect(self._add_watermark)
+        pdf_bar_layout.addWidget(self._watermark_btn)
+
+        self._export_pages_btn = QPushButton("📸 Páginas a imágenes")
+        self._export_pages_btn.setToolTip("Exportar páginas como imágenes PNG/JPEG")
+        self._export_pages_btn.setFixedHeight(30)
+        self._export_pages_btn.setStyleSheet(_pdf_btn_style)
+        self._export_pages_btn.clicked.connect(self._export_pages_as_images)
+        pdf_bar_layout.addWidget(self._export_pages_btn)
 
         pdf_bar_layout.addStretch()
         self._pdf_bar.setVisible(False)
@@ -791,3 +831,33 @@ class DocumentViewer(QWidget):
             self._two_page_btn.setText("📖 Libro")
             self._two_page_btn.setToolTip("Vista de dos páginas (libro abierto)")
             self.pdf_view.setZoomFactor(self.zoom_levels[self.current_zoom_index])
+
+    def _fill_form(self):
+        if not self.current_path:
+            return
+        dialog = PdfFormFillerDialog(self.current_path, self)
+        dialog.exec()
+
+    def _password_protect(self):
+        if not self.current_path:
+            return
+        dialog = PdfPasswordDialog(self.current_path, self)
+        dialog.exec()
+
+    def _reorder_pages(self):
+        if not self.current_path:
+            return
+        dialog = PdfReorderDialog(self.current_path, self)
+        dialog.exec()
+
+    def _add_watermark(self):
+        if not self.current_path:
+            return
+        dialog = PdfWatermarkDialog(self.current_path, self)
+        dialog.exec()
+
+    def _export_pages_as_images(self):
+        if not self.current_path:
+            return
+        dialog = PdfExportImagesDialog(self.current_path, self)
+        dialog.exec()
