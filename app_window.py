@@ -21,31 +21,31 @@ from windows_integration import (
 )
 
 
-class _LeftElidedLabel(QLabel):
+class _FilePathLabel(QLabel):
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._full_text = ""
+        self.setTextFormat(Qt.RichText)
 
     def setFullText(self, text):
         self._full_text = text
-        self._update_elided()
+        self._update_display()
 
-    def _update_elided(self):
+    def _update_display(self):
         if not self._full_text:
             super().setText("")
             return
-        fm = self.fontMetrics()
-        w = self.width()
-        if w > 0:
-            elided = fm.elidedText(self._full_text, Qt.ElideLeft, w)
+        directory = os.path.dirname(self._full_text)
+        filename = os.path.basename(self._full_text)
+        if directory:
+            html = (
+                f'<span>{directory}{os.sep}</span>'
+                f'<span style="color: #60a5fa; font-weight: 600;">{filename}</span>'
+            )
         else:
-            elided = self._full_text
-        super().setText(elided)
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._update_elided()
+            html = f'<span style="color: #60a5fa; font-weight: 600;">{filename}</span>'
+        super().setText(html)
 
 
 class UniversalViewerWindow(QMainWindow):
@@ -128,7 +128,7 @@ class UniversalViewerWindow(QMainWindow):
         self.settings_button.setFixedSize(40, 24)
         self.settings_button.clicked.connect(self._show_settings_panel)
 
-        self.file_path_label = _LeftElidedLabel()
+        self.file_path_label = _FilePathLabel()
         self.file_path_label.setObjectName("FilePathLabel")
         self.file_path_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
 
