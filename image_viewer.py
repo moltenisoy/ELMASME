@@ -94,6 +94,7 @@ class ImageViewer(QWidget):
         self.current_path = None
         self._original_image = None
         self._pixmap = QPixmap()
+        self._annotation_mode = False
         
         self._build_ui()
     
@@ -451,4 +452,11 @@ class ImageViewer(QWidget):
         dialog.exec()
     
     def toggle_annotation_mode(self):
-        self._annotation_mode = not getattr(self, "_annotation_mode", False)
+        self._annotation_mode = not self._annotation_mode
+        if self._annotation_mode:
+            QMessageBox.information(
+                self, "Anotar",
+                "Modo de anotación activado (funcionalidad pendiente de implementar)."
+            )
+        else:
+            QMessageBox.information(self, "Anotar", "Modo de anotación desactivado.")

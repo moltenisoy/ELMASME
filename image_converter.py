@@ -528,7 +528,6 @@ class BatchConvertDialog(QDialog):
         self._output_dir: Optional[str] = None
 
     def _select_files(self):
-        from PySide6.QtWidgets import QFileDialog
         exts = " ".join(f"*{e}" for e in sorted(IMAGE_EXTENSIONS))
         files, _ = QFileDialog.getOpenFileNames(
             self, "Seleccionar imágenes", "", f"Imágenes ({exts})"
@@ -538,7 +537,6 @@ class BatchConvertDialog(QDialog):
             self._files_label.setText(f"{len(files)} archivo(s) seleccionado(s)")
 
     def _select_dir(self):
-        from PySide6.QtWidgets import QFileDialog
         d = QFileDialog.getExistingDirectory(self, "Directorio de salida")
         if d:
             self._output_dir = d
