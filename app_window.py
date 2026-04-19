@@ -569,7 +569,7 @@ class UniversalViewerWindow(QMainWindow):
         if not viewer:
             return
         current_widget = viewer.stack.currentWidget()
-        if current_widget is viewer.video_viewer and viewer.video_viewer.video_widget.hasFocus():
+        if viewer._video_viewer is not None and current_widget is viewer._video_viewer and viewer._video_viewer.video_widget.hasFocus():
             return
         self.go_previous()
 
@@ -578,14 +578,14 @@ class UniversalViewerWindow(QMainWindow):
         if not viewer:
             return
         current_widget = viewer.stack.currentWidget()
-        if current_widget is viewer.video_viewer and viewer.video_viewer.video_widget.hasFocus():
+        if viewer._video_viewer is not None and current_widget is viewer._video_viewer and viewer._video_viewer.video_widget.hasFocus():
             return
         self.go_next()
 
     def handle_escape_key(self):
         data, viewer = self._current_tab_data()
-        if viewer and viewer.video_viewer.is_fullscreen:
-            viewer.video_viewer.exit_fullscreen()
+        if viewer and viewer._video_viewer is not None and viewer._video_viewer.is_fullscreen:
+            viewer._video_viewer.exit_fullscreen()
 
     def closeEvent(self, event):
         for i in range(self.tab_widget.count()):
