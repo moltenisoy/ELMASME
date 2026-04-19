@@ -1,8 +1,8 @@
 
 import os
 import difflib
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QTextCharFormat, QFont, QTextCursor
+from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtGui import QColor, QTextCharFormat, QFont, QTextCursor, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
     QFileDialog, QSplitter, QFrame,
@@ -21,6 +21,7 @@ class _DiffPanel(QFrame):
 
     def __init__(self, title="", parent=None):
         super().__init__(parent)
+        self.setAcceptDrops(True)
         self.setStyleSheet("""
             QFrame {
                 background: #0f172a;
@@ -60,6 +61,7 @@ class _DiffPanel(QFrame):
 
         self.text_edit = QTextEdit()
         self.text_edit.setReadOnly(True)
+        self.text_edit.setAcceptDrops(False)
         self.text_edit.setFont(QFont("Consolas", 10))
         self.text_edit.setStyleSheet("""
             QTextEdit {
@@ -95,6 +97,29 @@ class _DiffPanel(QFrame):
     @property
     def lines(self):
         return self._lines
+
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event: QDropEvent):
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            if urls:
+                path = urls[0].toLocalFile()
+                if path and os.path.isfile(path):
+                    self.load_file(path)
+                    event.acceptProposedAction()
+                    return
+        super().dropEvent(event)
 
 
 class DiffViewerWidget(QWidget):
