@@ -1,4 +1,3 @@
-"""Visor de archivos de libros electrónicos (EPUB, MOBI)."""
 
 from __future__ import annotations
 
@@ -75,7 +74,6 @@ _DEFAULT_FONT_SIZE = 12
 
 _RE_TAGS = re.compile(r"<[^>]+>")
 
-# ── EPUB parsing helpers ──────────────────────────────────────────────
 
 _NS_CONTAINER = "urn:oasis:names:tc:opendocument:xmlns:container"
 _NS_OPF = "http://www.idpf.org/2007/opf"
@@ -83,7 +81,6 @@ _NS_DC = "http://purl.org/dc/elements/1.1/"
 
 
 def _strip_html(text: str) -> str:
-    """Remove HTML/XML tags and normalise whitespace."""
     text = _RE_TAGS.sub("", text)
     text = html.unescape(text)
     lines = [ln.strip() for ln in text.splitlines()]
@@ -91,11 +88,9 @@ def _strip_html(text: str) -> str:
 
 
 def _parse_epub(path: str) -> list[tuple[str, str]]:
-    """Parse an EPUB file and return a list of (title, content) tuples."""
     chapters: list[tuple[str, str]] = []
 
     with zipfile.ZipFile(path, "r") as zf:
-        # 1. Find the root OPF file via container.xml
         try:
             container_xml = zf.read("META-INF/container.xml")
         except KeyError:
@@ -113,11 +108,9 @@ def _parse_epub(path: str) -> list[tuple[str, str]]:
 
         opf_dir = str(PurePosixPath(opf_path).parent)
 
-        # 2. Parse the OPF file
         opf_xml = zf.read(opf_path)
         opf_tree = ET.fromstring(opf_xml)
 
-        # Build manifest id→href mapping
         manifest: dict[str, str] = {}
         for item in opf_tree.findall(f".//{{{_NS_OPF}}}item"):
             item_id = item.get("id", "")
@@ -126,7 +119,6 @@ def _parse_epub(path: str) -> list[tuple[str, str]]:
             if item_id and item_href:
                 manifest[item_id] = (item_href, item_media)
 
-        # 3. Read spine order
         spine_ids: list[str] = []
         for itemref in opf_tree.findall(f".//{{{_NS_OPF}}}itemref"):
             idref = itemref.get("idref", "")
@@ -136,17 +128,14 @@ def _parse_epub(path: str) -> list[tuple[str, str]]:
         if not spine_ids:
             raise ValueError("No se encontraron elementos en el <spine> del OPF.")
 
-        # 4. Extract text from each spine item
         for idx, idref in enumerate(spine_ids, 1):
             if idref not in manifest:
                 continue
             href, media_type = manifest[idref]
 
-            # Only process HTML/XHTML content
             if "html" not in media_type and "xml" not in media_type:
                 continue
 
-            # Resolve relative path within the ZIP
             if opf_dir and opf_dir != ".":
                 full_path = f"{opf_dir}/{href}"
             else:
@@ -161,7 +150,6 @@ def _parse_epub(path: str) -> list[tuple[str, str]]:
             if not text.strip():
                 continue
 
-            # Try to extract a title from the first line or <title> tag
             title_match = re.search(r"<title[^>]*>([^<]+)</title>", raw, re.IGNORECASE)
             if title_match:
                 title = html.unescape(title_match.group(1)).strip()
@@ -175,26 +163,21 @@ def _parse_epub(path: str) -> list[tuple[str, str]]:
 
 
 def _load_mobi(path: str) -> list[tuple[str, str]]:
-    """Attempt basic text extraction from a MOBI file."""
     try:
         raw = Path(path).read_bytes()
     except OSError as exc:
         raise ValueError(f"No se pudo leer el archivo MOBI: {exc}") from exc
 
-    # MOBI files start with a PalmDOC header. Try to extract readable text.
     try:
         text = raw.decode("utf-8", errors="replace")
     except Exception:
         text = raw.decode("latin-1", errors="replace")
 
-    # Strip any HTML-like tags that may be embedded
     text = _strip_html(text)
 
-    # Filter to only printable lines
     lines = []
     for line in text.splitlines():
         cleaned = line.strip()
-        # Skip lines with excessive non-printable characters
         if cleaned and sum(c.isprintable() for c in cleaned) / max(len(cleaned), 1) > 0.7:
             lines.append(cleaned)
 
@@ -208,11 +191,7 @@ def _load_mobi(path: str) -> list[tuple[str, str]]:
     return [("Contenido MOBI", content)]
 
 
-# ── Viewer widget ─────────────────────────────────────────────────────
-
-
 class EbookViewer(QWidget):
-    """Visor de libros electrónicos con navegación por capítulos."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -222,14 +201,12 @@ class EbookViewer(QWidget):
         self._font_size: int = _DEFAULT_FONT_SIZE
         self._build_ui()
 
-    # ── UI construction ───────────────────────────────────────────────
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
 
-        # Toolbar
         toolbar = QHBoxLayout()
         toolbar.setContentsMargins(0, 0, 0, 0)
         toolbar.setSpacing(6)
@@ -256,7 +233,6 @@ class EbookViewer(QWidget):
 
         toolbar.addStretch(1)
 
-        # Font size controls
         self.font_down_btn = QPushButton("A−")
         self.font_down_btn.setFixedHeight(28)
         self.font_down_btn.setFixedWidth(36)
@@ -282,7 +258,6 @@ class EbookViewer(QWidget):
 
         layout.addLayout(toolbar)
 
-        # Text view
         self.text_view = QTextEdit()
         self.text_view.setReadOnly(True)
         self.text_view.setStyleSheet(_TEXT_STYLE)
@@ -290,10 +265,8 @@ class EbookViewer(QWidget):
 
         self._update_buttons()
 
-    # ── Public API ────────────────────────────────────────────────────
 
     def load_file(self, path: str) -> None:
-        """Carga y muestra el contenido de un libro electrónico."""
         self.current_path = path
         self._chapters.clear()
         self._current_index = 0
@@ -327,7 +300,6 @@ class EbookViewer(QWidget):
             self._show_error("No se encontró contenido legible en el archivo.")
             return
 
-        # Populate the chapter combo box
         self.chapter_combo.blockSignals(True)
         for title, _ in self._chapters:
             self.chapter_combo.addItem(title)
@@ -335,7 +307,6 @@ class EbookViewer(QWidget):
 
         self._show_chapter(0)
 
-    # ── Navigation ────────────────────────────────────────────────────
 
     def _prev_chapter(self) -> None:
         if self._current_index > 0:
@@ -386,7 +357,6 @@ class EbookViewer(QWidget):
         self.font_down_btn.setEnabled(self._font_size > _MIN_FONT_SIZE)
         self.font_up_btn.setEnabled(self._font_size < _MAX_FONT_SIZE)
 
-    # ── Font size ─────────────────────────────────────────────────────
 
     def _font_decrease(self) -> None:
         if self._font_size > _MIN_FONT_SIZE:
@@ -403,7 +373,6 @@ class EbookViewer(QWidget):
         if self._chapters:
             self._show_chapter(self._current_index)
 
-    # ── Error handling ────────────────────────────────────────────────
 
     def _show_error(self, msg: str) -> None:
         self.text_view.setHtml(

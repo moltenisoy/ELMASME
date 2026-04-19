@@ -4,7 +4,6 @@ from pathlib import Path
 
 
 def _get_settings_dir() -> str:
-    """Return the directory where settings are stored."""
     base = os.environ.get("APPDATA", os.path.expanduser("~"))
     settings_dir = os.path.join(base, "ELMASME")
     os.makedirs(settings_dir, exist_ok=True)
@@ -20,7 +19,6 @@ _DEFAULTS = {
 
 
 def load_settings() -> dict:
-    """Load settings from disk, returning defaults for missing keys."""
     settings = dict(_DEFAULTS)
     try:
         if os.path.isfile(_SETTINGS_FILE):
@@ -36,7 +34,6 @@ def load_settings() -> dict:
 
 
 def save_settings(settings: dict) -> None:
-    """Persist settings to disk."""
     try:
         with open(_SETTINGS_FILE, "w", encoding="utf-8") as f:
             json.dump(settings, f, indent=2, ensure_ascii=False)

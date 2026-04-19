@@ -27,7 +27,6 @@ from audio_converter import (
 from video_playlist import VideoPlaylistWidget
 from progress_bar import ConversionProgressBar
 
-# -- Constants for PiP synchronization and brightness adjustments -----------
 PIP_SYNC_INTERVAL_MS = 1000
 PIP_SYNC_THRESHOLD_MS = 2000
 MIN_OPACITY = 0.2
@@ -111,7 +110,6 @@ class ClickableVideoWidget(QVideoWidget):
 
 
 class RotatableVideoView(QGraphicsView):
-    """QGraphicsView that hosts a QGraphicsVideoItem and supports rotation/flip."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -204,7 +202,6 @@ class RotatableVideoView(QGraphicsView):
 
 
 class BookmarkListWidget(QWidget):
-    """Widget for managing video time bookmarks."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -267,7 +264,6 @@ class BookmarkListWidget(QWidget):
 
 
 class PiPWindow(QWidget):
-    """Floating picture-in-picture window for video."""
 
     def __init__(self, parent=None):
         super().__init__(None)
@@ -297,7 +293,6 @@ class PiPWindow(QWidget):
 
 
 class VideoAdjustPanel(QWidget):
-    """Panel with sliders for brightness, contrast and saturation."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -377,7 +372,6 @@ class VideoViewer(QWidget):
         self.video_view = RotatableVideoView()
         self.player.setVideoOutput(self.video_view.video_item)
 
-        # Keep video_widget reference for compatibility with app_window.py
         self.video_widget = self.video_view
 
         self._frame_sink = QVideoSink(self)
@@ -425,7 +419,6 @@ class VideoViewer(QWidget):
         self.volume_slider.valueChanged.connect(self._on_volume_changed)
         self.audio_output.setVolume(0.5)
 
-        # Speed control
         self._speed_button = QToolButton()
         self._speed_button.setText("1x")
         self._speed_button.setToolTip("Velocidad de reproducción")
@@ -461,7 +454,6 @@ class VideoViewer(QWidget):
         self.fullscreen_button.setText("Pantalla completa")
         self.fullscreen_button.clicked.connect(self._toggle_fullscreen)
 
-        # Tools menu (screenshot, extract audio, PiP, bookmarks, adjustments, rotation)
         self._tools_button = QToolButton()
         self._tools_button.setText("Herramientas ▼")
         self._tools_button.setPopupMode(QToolButton.InstantPopup)
@@ -502,7 +494,6 @@ class VideoViewer(QWidget):
         edition_menu.addAction("Recortar", self._show_trimmer)
         self.edition_button.setMenu(edition_menu)
 
-        # Seek bar row
         seek_row = QHBoxLayout()
         seek_row.setContentsMargins(0, 0, 0, 0)
         seek_row.addWidget(self.position_slider)
@@ -525,18 +516,15 @@ class VideoViewer(QWidget):
         controls.addWidget(self._tools_button)
         controls.addWidget(self.edition_button)
 
-        # Bookmarks panel (hidden by default)
         self._bookmarks_widget = BookmarkListWidget()
         self._bookmarks_widget.set_add_callback(self._add_bookmark)
         self._bookmarks_widget.set_jump_callback(self._jump_to_bookmark)
         self._bookmarks_widget.setVisible(False)
 
-        # Adjustments panel (hidden by default)
         self._adjust_panel = VideoAdjustPanel()
         self._adjust_panel.set_change_callback(self._on_adjust_changed)
         self._adjust_panel.setVisible(False)
 
-        # Side panel contains bookmarks and adjustments
         self._side_panel = QWidget()
         side_layout = QVBoxLayout(self._side_panel)
         side_layout.setContentsMargins(0, 0, 0, 0)
@@ -547,7 +535,6 @@ class VideoViewer(QWidget):
         self._side_panel.setFixedWidth(260)
         self._side_panel.setVisible(False)
 
-        # Video area = video_view + side_panel
         video_area = QHBoxLayout()
         video_area.setContentsMargins(0, 0, 0, 0)
         video_area.setSpacing(0)
@@ -584,7 +571,6 @@ class VideoViewer(QWidget):
         self.video_view.set_click_callback(self._on_video_clicked)
         self.video_view.set_double_click_callback(self._toggle_fullscreen)
 
-    # -- Side panel toggles -------------------------------------------------
 
     def _update_side_panel_visibility(self):
         visible = self._bookmarks_widget.isVisible() or self._adjust_panel.isVisible()
@@ -606,7 +592,6 @@ class VideoViewer(QWidget):
         )
         self._update_side_panel_visibility()
 
-    # -- Playlist -----------------------------------------------------------
 
     def _toggle_playlist_visibility(self):
         visible = self.playlist_toggle_button.isChecked()
@@ -615,14 +600,12 @@ class VideoViewer(QWidget):
             "Ocultar lista de reproducción" if visible else "Mostrar lista de reproducción"
         )
 
-    # -- Load / Stop --------------------------------------------------------
 
     def load_file(self, path: str):
         self.current_path = path
         self.player.stop()
         self.player.setSource(QUrl.fromLocalFile(path))
 
-        # Connect secondary sink for frame capture
         sink = self.video_view.video_sink()
         if sink:
             try:
@@ -643,7 +626,6 @@ class VideoViewer(QWidget):
     def _on_video_clicked(self):
         self.video_view.setFocus()
 
-    # -- Position / Duration ------------------------------------------------
 
     @staticmethod
     def _format_time(ms):
@@ -678,13 +660,11 @@ class VideoViewer(QWidget):
         volume = value / 100.0
         self.audio_output.setVolume(volume)
 
-    # -- Playback speed -----------------------------------------------------
 
     def _set_speed(self, speed, label):
         self.player.setPlaybackRate(speed)
         self._speed_button.setText(label)
 
-    # -- Frame capture (screenshot) -----------------------------------------
 
     def _on_frame_received(self, frame: QVideoFrame):
         self._last_frame = frame
@@ -696,12 +676,10 @@ class VideoViewer(QWidget):
 
         image = None
 
-        # Try to capture from last received frame
         if self._last_frame and self._last_frame.isValid():
             image = self._last_frame.toImage()
 
         if image is None or image.isNull():
-            # Fallback: grab the video view widget
             pixmap = self.video_view.grab()
             if not pixmap.isNull():
                 image = pixmap.toImage()
@@ -724,7 +702,6 @@ class VideoViewer(QWidget):
             QMessageBox.information(self, "Captura guardada",
                                     f"Fotograma guardado en:\n{save_path}")
 
-    # -- Audio extraction ---------------------------------------------------
 
     def _extract_audio(self):
         if not self.current_path:
@@ -764,11 +741,9 @@ class VideoViewer(QWidget):
             cmd.extend(codec_args[1:])
         cmd.append(save_path)
 
-        # Run extraction in a background thread to avoid freezing the UI
         self._extract_audio_cmd(cmd, save_path)
 
     def _extract_audio_cmd(self, cmd, save_path):
-        """Run ffmpeg audio extraction in a background thread."""
         progress = QMessageBox(self)
         progress.setWindowTitle("Extrayendo audio...")
         progress.setText("Extrayendo audio del video, por favor espere...")
@@ -782,7 +757,6 @@ class VideoViewer(QWidget):
                 success = result.returncode == 0 and os.path.exists(save_path)
             except (subprocess.TimeoutExpired, Exception):
                 success = False
-            # Schedule UI update on main thread
             QTimer.singleShot(0, lambda: self._on_extract_done(success, save_path, progress))
 
         thread = threading.Thread(target=_run, daemon=True)
@@ -797,7 +771,6 @@ class VideoViewer(QWidget):
             QMessageBox.warning(self, "Error",
                                 "No se pudo extraer el audio del video.")
 
-    # -- Bookmarks ----------------------------------------------------------
 
     def _add_bookmark(self):
         if not self.current_path:
@@ -814,7 +787,6 @@ class VideoViewer(QWidget):
     def _jump_to_bookmark(self, position_ms):
         self.player.setPosition(position_ms)
 
-    # -- Picture-in-Picture -------------------------------------------------
 
     def _toggle_pip(self):
         if self._pip_active:
@@ -829,15 +801,13 @@ class VideoViewer(QWidget):
         self._pip_window = PiPWindow(self)
         self._pip_window.set_close_callback(self._exit_pip)
 
-        # Create a secondary player for PiP
         self._pip_player = QMediaPlayer(self._pip_window)
         self._pip_audio = QAudioOutput(self._pip_window)
-        self._pip_audio.setVolume(0)  # muted in PiP
+        self._pip_audio.setVolume(0)
         self._pip_player.setAudioOutput(self._pip_audio)
         self._pip_player.setVideoOutput(self._pip_window.video_widget)
         self._pip_player.setSource(QUrl.fromLocalFile(self.current_path))
 
-        # Sync position
         pos = self.player.position()
         self._pip_player.setPosition(pos)
         self._pip_player.play()
@@ -846,7 +816,6 @@ class VideoViewer(QWidget):
         self._pip_active = True
         self._pip_action.setText("🪟 Cerrar Picture-in-Picture")
 
-        # Sync timer
         self._pip_sync_timer = QTimer(self)
         self._pip_sync_timer.setInterval(PIP_SYNC_INTERVAL_MS)
         self._pip_sync_timer.timeout.connect(self._sync_pip_position)
@@ -860,7 +829,6 @@ class VideoViewer(QWidget):
         if abs(main_pos - pip_pos) > PIP_SYNC_THRESHOLD_MS:
             self._pip_player.setPosition(main_pos)
 
-        # Sync play/pause state
         if self.player.playbackState() == QMediaPlayer.PlayingState:
             if self._pip_player.playbackState() != QMediaPlayer.PlayingState:
                 self._pip_player.play()
@@ -879,14 +847,12 @@ class VideoViewer(QWidget):
         self._pip_active = False
         self._pip_action.setText("🪟 Picture-in-Picture")
 
-    # -- Brightness / Contrast / Saturation ---------------------------------
 
     def _on_adjust_changed(self, brightness, contrast, saturation):
         self._brightness = brightness
         self._contrast = contrast
         self._saturation = saturation
 
-        # Apply CSS filter effect to the video view
         style = "background: black; border: none;"
         self.video_view.setStyleSheet(style)
 
@@ -894,22 +860,17 @@ class VideoViewer(QWidget):
         if brightness != 0 or contrast != 0 or saturation != 0:
             effect = QGraphicsColorizeEffect()
             if saturation < 0:
-                # Desaturation: map to gray colorize
                 effect.setStrength(abs(saturation) / 100.0)
                 effect.setColor(QColor(128, 128, 128))
             elif saturation > 0:
-                # Boost saturation: subtle warm tint to simulate vibrancy
                 effect.setStrength(saturation / 200.0)
                 effect.setColor(QColor(255, 200, 150))
             else:
                 effect.setStrength(0)
 
-            # Apply contrast via a secondary brightness shift
-            # Positive contrast darkens shadows / brightens highlights
             contrast_shift = contrast / 300.0
             item.setGraphicsEffect(effect)
 
-            # Brightness via item opacity
             opacity = max(MIN_OPACITY, min(MAX_OPACITY,
                           1.0 + brightness / BRIGHTNESS_SCALE + contrast_shift))
             item.setOpacity(opacity)
@@ -917,7 +878,6 @@ class VideoViewer(QWidget):
             item.setGraphicsEffect(None)
             item.setOpacity(1.0)
 
-    # -- Fullscreen ---------------------------------------------------------
 
     def _toggle_fullscreen(self):
         if not self.is_fullscreen:
@@ -948,7 +908,6 @@ class VideoViewer(QWidget):
             return
 
         self.video_view.setParent(self._top_widget)
-        # Re-insert video_view at position 0 in the video_area layout
         video_area_layout = self._top_layout.itemAt(0).layout()
         if video_area_layout:
             video_area_layout.insertWidget(0, self.video_view, 1)
@@ -975,7 +934,6 @@ class VideoViewer(QWidget):
         if self.is_fullscreen:
             self._exit_fullscreen()
 
-    # -- Converter / Trimmer -----------------------------------------------
 
     def _show_converter(self):
         if not self.current_path:

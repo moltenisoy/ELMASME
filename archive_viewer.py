@@ -1,4 +1,3 @@
-"""Visor de archivos comprimidos (ZIP, RAR, 7z, TAR, GZ, BZ2, XZ)."""
 
 import os
 import zipfile
@@ -57,7 +56,6 @@ _TREE_STYLE = """
 
 
 def _format_size(size: int) -> str:
-    """Devuelve el tamaño en formato legible."""
     if size < 0:
         return ""
     for unit in ("B", "KB", "MB", "GB"):
@@ -68,7 +66,6 @@ def _format_size(size: int) -> str:
 
 
 def _guess_archive_type(path: str) -> str:
-    """Determina el tipo de archivo según su extensión."""
     lower = path.lower()
     if lower.endswith(".tar.gz") or lower.endswith(".tgz"):
         return "tar"
@@ -87,17 +84,14 @@ def _guess_archive_type(path: str) -> str:
 
 
 class ArchiveViewer(QWidget):
-    """Visor de contenido de archivos comprimidos."""
 
     def __init__(self) -> None:
         super().__init__()
         self.current_path: str | None = None
         self._build_ui()
 
-    # ── UI ────────────────────────────────────────────────────────────
 
     def _build_ui(self) -> None:
-        # Toolbar
         toolbar = QHBoxLayout()
         toolbar.setContentsMargins(0, 0, 0, 0)
         toolbar.setSpacing(6)
@@ -119,7 +113,6 @@ class ArchiveViewer(QWidget):
         toolbar.addStretch(1)
         toolbar.addWidget(self.path_label)
 
-        # Tree
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels(["Nombre", "Tamaño", "Modificado", "Tipo"])
         self.tree.setRootIsDecorated(True)
@@ -139,10 +132,8 @@ class ArchiveViewer(QWidget):
         layout.addLayout(toolbar)
         layout.addWidget(self.tree, 1)
 
-    # ── Carga ─────────────────────────────────────────────────────────
 
     def load_file(self, path: str) -> None:
-        """Carga y muestra el contenido de un archivo comprimido."""
         self.current_path = path
         self.tree.clear()
         self.path_label.setText(os.path.basename(path))
@@ -161,7 +152,6 @@ class ArchiveViewer(QWidget):
         except Exception as exc:
             self._show_error(f"Error al leer el archivo:\n{exc}")
 
-    # ── ZIP ───────────────────────────────────────────────────────────
 
     def _load_zip(self, path: str) -> None:
         try:
@@ -182,7 +172,6 @@ class ArchiveViewer(QWidget):
         except Exception as exc:
             self._show_error(f"Error al leer ZIP:\n{exc}")
 
-    # ── TAR / GZ / BZ2 / XZ ──────────────────────────────────────────
 
     def _load_tar(self, path: str) -> None:
         try:
@@ -205,7 +194,6 @@ class ArchiveViewer(QWidget):
         except Exception as exc:
             self._show_error(f"Error al leer TAR:\n{exc}")
 
-    # ── Entradas ──────────────────────────────────────────────────────
 
     def _add_entry(
         self, name: str, size: int, modified: str, is_dir: bool
@@ -213,7 +201,6 @@ class ArchiveViewer(QWidget):
         parts = name.split("/")
         parent: QTreeWidget | QTreeWidgetItem = self.tree
 
-        # Crear/buscar nodos intermedios
         for i, part in enumerate(parts[:-1]):
             found = None
             container = (
@@ -245,7 +232,6 @@ class ArchiveViewer(QWidget):
                     container.addChild(found)
             parent = found
 
-        # Nodo hoja
         leaf_name = parts[-1] if parts else name
         if not leaf_name:
             return
@@ -262,7 +248,6 @@ class ArchiveViewer(QWidget):
         else:
             parent.addChild(item)
 
-    # ── Extracción ────────────────────────────────────────────────────
 
     def _choose_output_dir(self) -> str | None:
         directory = QFileDialog.getExistingDirectory(
@@ -360,7 +345,6 @@ class ArchiveViewer(QWidget):
                 self, "Error", f"Error al extraer:\n{exc}"
             )
 
-    # ── Mensajes ──────────────────────────────────────────────────────
 
     def _show_unsupported(self, fmt: str) -> None:
         libs = {"rar": "rarfile", "7z": "py7zr"}

@@ -1,4 +1,3 @@
-"""Visor de hojas de cálculo (XLSX, XLS, ODS, CSV)."""
 
 import csv
 import io
@@ -90,14 +89,12 @@ _CHECKBOX_STYLE = """
     }
 """
 
-# ── ODS XML namespaces ────────────────────────────────────────────────
 _ODS_NS = {
     "office": "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
     "table": "urn:oasis:names:tc:opendocument:xmlns:table:1.0",
     "text": "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
 }
 
-# ── XLSX XML namespaces ───────────────────────────────────────────────
 _XLSX_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 _XLSX_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 _XLSX_OFFICEREL_NS = (
@@ -105,10 +102,7 @@ _XLSX_OFFICEREL_NS = (
 )
 
 
-# ── CSV helpers ───────────────────────────────────────────────────────
-
 def _read_csv_text(path: str) -> str:
-    """Lee un CSV probando utf-8 y luego latin-1."""
     for enc in ("utf-8", "latin-1"):
         try:
             with open(path, encoding=enc, newline="") as f:
@@ -122,7 +116,6 @@ def _read_csv_text(path: str) -> str:
 
 
 def _detect_delimiter(sample: str) -> str:
-    """Detecta el delimitador más probable entre coma, punto y coma, y tabulador."""
     try:
         dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
         return dialect.delimiter
@@ -133,17 +126,13 @@ def _detect_delimiter(sample: str) -> str:
 
 
 def _parse_csv(path: str) -> list[list[str]]:
-    """Analiza un archivo CSV y devuelve una lista de filas."""
     text = _read_csv_text(path)
     delimiter = _detect_delimiter(text[:4096])
     reader = csv.reader(io.StringIO(text), delimiter=delimiter)
     return [row for row in reader]
 
 
-# ── XLSX helpers (openpyxl → XML fallback) ────────────────────────────
-
 def _parse_xlsx_openpyxl(path: str) -> dict[str, list[list[str]]]:
-    """Lee un XLSX usando openpyxl. Lanza ImportError si no está instalado."""
     import openpyxl
 
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
@@ -159,11 +148,9 @@ def _parse_xlsx_openpyxl(path: str) -> dict[str, list[list[str]]]:
 
 
 def _parse_xlsx_xml(path: str) -> dict[str, list[list[str]]]:
-    """Lee un XLSX parseando directamente el XML dentro del ZIP."""
     sheets: dict[str, list[list[str]]] = {}
 
     with zipfile.ZipFile(path, "r") as zf:
-        # Leer shared strings
         shared: list[str] = []
         if "xl/sharedStrings.xml" in zf.namelist():
             ss_tree = ET.parse(zf.open("xl/sharedStrings.xml"))
@@ -173,13 +160,11 @@ def _parse_xlsx_xml(path: str) -> dict[str, list[list[str]]]:
                     parts.append(t_elem.text or "")
                 shared.append("".join(parts))
 
-        # Obtener nombres de hojas desde workbook.xml
         wb_tree = ET.parse(zf.open("xl/workbook.xml"))
         sheet_names: list[str] = []
         for s in wb_tree.iter(f"{{{_XLSX_NS}}}sheet"):
             sheet_names.append(s.get("name", "Hoja"))
 
-        # Mapear rId → archivo de hoja desde xl/_rels/workbook.xml.rels
         rid_map: dict[str, str] = {}
         rels_path = "xl/_rels/workbook.xml.rels"
         if rels_path in zf.namelist():
@@ -187,7 +172,6 @@ def _parse_xlsx_xml(path: str) -> dict[str, list[list[str]]]:
             for rel in rels_tree.iter(f"{{{_XLSX_REL_NS}}}Relationship"):
                 rid_map[rel.get("Id", "")] = rel.get("Target", "")
 
-        # Leer cada hoja
         for idx, s_elem in enumerate(wb_tree.iter(f"{{{_XLSX_NS}}}sheet")):
             r_id = s_elem.get(
                 f"{{{_XLSX_OFFICEREL_NS}}}id", ""
@@ -219,17 +203,13 @@ def _parse_xlsx_xml(path: str) -> dict[str, list[list[str]]]:
 
 
 def _parse_xlsx(path: str) -> dict[str, list[list[str]]]:
-    """Intenta leer XLSX con openpyxl; si no, usa XML directo."""
     try:
         return _parse_xlsx_openpyxl(path)
     except ImportError:
         return _parse_xlsx_xml(path)
 
 
-# ── ODS helper ────────────────────────────────────────────────────────
-
 def _parse_ods(path: str) -> dict[str, list[list[str]]]:
-    """Lee un archivo ODS parseando content.xml dentro del ZIP."""
     sheets: dict[str, list[list[str]]] = {}
 
     with zipfile.ZipFile(path, "r") as zf:
@@ -254,10 +234,8 @@ def _parse_ods(path: str) -> dict[str, list[list[str]]]:
                 cells.extend([cell_text] * repeat)
             rows.append(cells)
 
-        # Eliminar filas vacías al final
         while rows and all(c == "" for c in rows[-1]):
             rows.pop()
-        # Recortar celdas vacías al final de cada fila
         if rows:
             max_col = max(
                 (
@@ -273,10 +251,7 @@ def _parse_ods(path: str) -> dict[str, list[list[str]]]:
     return sheets
 
 
-# ── Visor principal ───────────────────────────────────────────────────
-
 class SpreadsheetViewer(QWidget):
-    """Visor de hojas de cálculo en formato tabla."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -285,10 +260,8 @@ class SpreadsheetViewer(QWidget):
         self._header_row = True
         self._build_ui()
 
-    # ── UI ────────────────────────────────────────────────────────────
 
     def _build_ui(self) -> None:
-        # Toolbar
         toolbar = QHBoxLayout()
         toolbar.setContentsMargins(0, 0, 0, 0)
         toolbar.setSpacing(6)
@@ -315,7 +288,6 @@ class SpreadsheetViewer(QWidget):
         self.info_label.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
         toolbar.addWidget(self.info_label)
 
-        # Tabla
         self.table = QTableWidget()
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectItems)
@@ -324,17 +296,14 @@ class SpreadsheetViewer(QWidget):
         self.table.verticalHeader().setVisible(True)
         self.table.horizontalHeader().setStretchLastSection(True)
 
-        # Layout principal
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
         layout.addLayout(toolbar)
         layout.addWidget(self.table, 1)
 
-    # ── Carga ─────────────────────────────────────────────────────────
 
     def load_file(self, path: str) -> None:
-        """Carga y muestra el contenido de un archivo de hoja de cálculo."""
         self.current_path = path
         self._sheets.clear()
         self.table.clear()
@@ -366,7 +335,6 @@ class SpreadsheetViewer(QWidget):
             self._show_error("No se encontraron hojas en el archivo.")
             return
 
-        # Actualizar selector de hojas
         self.sheet_combo.blockSignals(True)
         self.sheet_combo.clear()
         for name in self._sheets:
@@ -378,7 +346,6 @@ class SpreadsheetViewer(QWidget):
         self._display_sheet(list(self._sheets.keys())[0])
 
     def _load_xlsx(self, path: str) -> dict[str, list[list[str]]]:
-        """Carga XLSX/XLS intentando openpyxl primero, luego XML."""
         try:
             return _parse_xlsx(path)
         except Exception as exc:
@@ -392,10 +359,8 @@ class SpreadsheetViewer(QWidget):
                     f"Error original: {exc}"
                 ) from exc
 
-    # ── Visualización ─────────────────────────────────────────────────
 
     def _display_sheet(self, name: str) -> None:
-        """Muestra los datos de una hoja en la tabla."""
         rows = self._sheets.get(name, [])
         self.table.clear()
 
@@ -405,14 +370,12 @@ class SpreadsheetViewer(QWidget):
             self.info_label.setText("0 filas × 0 columnas")
             return
 
-        # Determinar dimensiones
         num_cols = max(len(r) for r in rows)
         self._header_row = self.header_check.isChecked()
 
         if self._header_row and len(rows) > 0:
             headers = rows[0]
             data_rows = rows[1:]
-            # Rellenar encabezados si hay menos que columnas
             while len(headers) < num_cols:
                 headers.append("")
             self.table.setColumnCount(num_cols)
@@ -432,7 +395,6 @@ class SpreadsheetViewer(QWidget):
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(r_idx, c_idx, item)
 
-        # Ajustar columnas
         header = self.table.horizontalHeader()
         if num_cols <= 20:
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -444,7 +406,6 @@ class SpreadsheetViewer(QWidget):
             f"{len(data_rows)} filas × {num_cols} columnas"
         )
 
-    # ── Eventos ───────────────────────────────────────────────────────
 
     def _on_sheet_changed(self, index: int) -> None:
         if index < 0:
@@ -460,10 +421,8 @@ class SpreadsheetViewer(QWidget):
             if name in self._sheets:
                 self._display_sheet(name)
 
-    # ── Errores ───────────────────────────────────────────────────────
 
     def _show_error(self, msg: str) -> None:
-        """Muestra un error en la tabla y como diálogo."""
         self.table.clear()
         self.table.setRowCount(1)
         self.table.setColumnCount(1)
@@ -476,7 +435,6 @@ class SpreadsheetViewer(QWidget):
 
 
 def _col_letter(index: int) -> str:
-    """Convierte un índice de columna (0-based) en letras tipo Excel (A, B, … Z, AA, …)."""
     result = ""
     i = index
     while True:

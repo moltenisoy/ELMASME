@@ -1,4 +1,3 @@
-"""Side-by-side diff viewer for comparing two text documents."""
 
 import os
 import difflib
@@ -11,7 +10,6 @@ from PySide6.QtWidgets import (
 
 
 def _read_file_lines(path: str):
-    """Read a file and return its lines."""
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             return f.readlines()
@@ -20,7 +18,6 @@ def _read_file_lines(path: str):
 
 
 class _DiffPanel(QFrame):
-    """One side of the diff viewer showing a document with highlighted diffs."""
 
     def __init__(self, title="", parent=None):
         super().__init__(parent)
@@ -100,7 +97,6 @@ class _DiffPanel(QFrame):
 
 
 class DiffViewerWidget(QWidget):
-    """Widget that shows a side-by-side diff of two text files."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -111,7 +107,6 @@ class DiffViewerWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
 
-        # Top bar
         top_bar = QHBoxLayout()
         top_bar.setSpacing(8)
 
@@ -149,14 +144,12 @@ class DiffViewerWidget(QWidget):
 
         layout.addLayout(top_bar)
 
-        # Stats bar
         self.stats_label = QLabel("")
         self.stats_label.setStyleSheet(
             "color: #94a3b8; font-size: 11px; padding: 2px 4px;"
         )
         layout.addWidget(self.stats_label)
 
-        # Panels
         self.splitter = QSplitter(Qt.Horizontal)
         self.left_panel = _DiffPanel("Documento A")
         self.right_panel = _DiffPanel("Documento B")
@@ -169,7 +162,6 @@ class DiffViewerWidget(QWidget):
         self.left_panel.open_btn.clicked.connect(self._open_left)
         self.right_panel.open_btn.clicked.connect(self._open_right)
 
-        # Sync scrolling
         self.left_panel.text_edit.verticalScrollBar().valueChanged.connect(
             self._sync_scroll_right
         )
@@ -203,11 +195,9 @@ class DiffViewerWidget(QWidget):
             self.right_panel.load_file(path)
 
     def load_left_file(self, path):
-        """Programmatically load a file into the left panel."""
         self.left_panel.load_file(path)
 
     def _run_diff(self):
-        """Compute and display differences between the two loaded documents."""
         left_lines = self.left_panel.lines
         right_lines = self.right_panel.lines
 
@@ -222,7 +212,6 @@ class DiffViewerWidget(QWidget):
         removed = 0
         changed = 0
 
-        # Build highlighted content for left and right
         left_formatted = []
         right_formatted = []
 
@@ -238,7 +227,6 @@ class DiffViewerWidget(QWidget):
                     left_formatted.append(("remove", line))
                 for line in right_lines[j1:j2]:
                     right_formatted.append(("add", line))
-                # Pad shorter side
                 diff = (i2 - i1) - (j2 - j1)
                 if diff > 0:
                     for _ in range(diff):
@@ -269,7 +257,6 @@ class DiffViewerWidget(QWidget):
 
     @staticmethod
     def _apply_highlighting(text_edit, formatted_lines):
-        """Apply color highlighting to a QTextEdit based on diff tags."""
         text_edit.clear()
         cursor = text_edit.textCursor()
 

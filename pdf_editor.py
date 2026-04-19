@@ -1,16 +1,10 @@
-"""
-pdf_editor.py – Editor visual de PDF con soporte para texto, imágenes e hipervínculos.
-
-Usa PyMuPDF (fitz) como backend para leer/modificar/guardar archivos PDF y
-QGraphicsScene/QGraphicsView de Qt como interfaz gráfica de edición.
-"""
 
 import os
 import tempfile
 from pathlib import Path
 from typing import Optional, List, Dict
 
-import fitz  # PyMuPDF
+import fitz
 
 from PySide6.QtCore import Qt, QRectF, QPointF, Signal, QSizeF
 from PySide6.QtGui import (
@@ -27,12 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 
-# ---------------------------------------------------------------------------
-#  Movable / Editable Graphics Items
-# ---------------------------------------------------------------------------
-
 class _MovableTextItem(QGraphicsRectItem):
-    """Cuadro de texto editable y movible sobre una página PDF."""
 
     def __init__(self, text: str, font: QFont, color: QColor,
                  rect: QRectF, page_index: int, parent=None):
@@ -50,7 +39,6 @@ class _MovableTextItem(QGraphicsRectItem):
         self.setBrush(QBrush(QColor(255, 255, 255, 40)))
         self.setCursor(QCursor(Qt.SizeAllCursor))
 
-    # — getters / setters ——————————————————————
     @property
     def text(self) -> str:
         return self._text
@@ -78,7 +66,6 @@ class _MovableTextItem(QGraphicsRectItem):
         self._color = QColor(value)
         self.update()
 
-    # — painting ———————————————————————————————
     def paint(self, painter: QPainter, option, widget=None):
         super().paint(painter, option, widget)
         painter.setFont(self._font)
@@ -88,7 +75,6 @@ class _MovableTextItem(QGraphicsRectItem):
 
 
 class _MovableImageItem(QGraphicsPixmapItem):
-    """Imagen movible sobre una página PDF."""
 
     def __init__(self, pixmap: QPixmap, page_index: int, parent=None):
         super().__init__(pixmap, parent)
@@ -103,7 +89,6 @@ class _MovableImageItem(QGraphicsPixmapItem):
 
 
 class _MovableLinkItem(QGraphicsRectItem):
-    """Rectángulo representando un hipervínculo sobre una página PDF."""
 
     def __init__(self, url: str, rect: QRectF, page_index: int, parent=None):
         super().__init__(rect, parent)
@@ -130,7 +115,6 @@ class _MovableLinkItem(QGraphicsRectItem):
 
 
 class _MovableHighlightItem(QGraphicsRectItem):
-    """Rectángulo semitransparente de resaltado sobre una página PDF."""
 
     def __init__(self, rect: QRectF, page_index: int, color: QColor = None, parent=None):
         super().__init__(rect, parent)
@@ -155,12 +139,7 @@ class _MovableHighlightItem(QGraphicsRectItem):
         self.setBrush(QBrush(value))
 
 
-# ---------------------------------------------------------------------------
-#  Insert-text dialog
-# ---------------------------------------------------------------------------
-
 class _InsertTextDialog(QDialog):
-    """Diálogo para insertar/editar texto con fuente, tamaño y color."""
 
     def __init__(self, parent=None, initial_text: str = "",
                  initial_font: QFont = None, initial_color: QColor = None):
@@ -173,7 +152,6 @@ class _InsertTextDialog(QDialog):
     def _build_ui(self, initial_text, initial_font):
         layout = QVBoxLayout(self)
 
-        # Font row
         font_row = QHBoxLayout()
         font_row.addWidget(QLabel("Fuente:"))
         self.font_combo = QFontComboBox()
@@ -213,14 +191,12 @@ class _InsertTextDialog(QDialog):
         font_row.addWidget(self.color_btn)
         layout.addLayout(font_row)
 
-        # Text area
         from PySide6.QtWidgets import QTextEdit
         self.text_edit = QTextEdit()
         self.text_edit.setPlainText(initial_text)
         self.text_edit.setMinimumHeight(120)
         layout.addWidget(self.text_edit)
 
-        # Buttons
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
@@ -245,10 +221,6 @@ class _InsertTextDialog(QDialog):
         return self.text_edit.toPlainText(), font, self._color
 
 
-# ---------------------------------------------------------------------------
-#  Insert-link dialog
-# ---------------------------------------------------------------------------
-
 class _InsertLinkDialog(QDialog):
     def __init__(self, parent=None, initial_url: str = "https://"):
         super().__init__(parent)
@@ -267,14 +239,8 @@ class _InsertLinkDialog(QDialog):
         return self.url_edit.text().strip()
 
 
-# ---------------------------------------------------------------------------
-#  PDF Editor Toolbar
-# ---------------------------------------------------------------------------
-
 class PdfEditorToolbar(QFrame):
-    """Barra de herramientas para el editor de PDF."""
 
-    # Signals
     add_text_requested = Signal()
     add_image_requested = Signal()
     add_link_requested = Signal()
@@ -323,7 +289,6 @@ class PdfEditorToolbar(QFrame):
         main_layout.setContentsMargins(6, 2, 6, 4)
         main_layout.setSpacing(4)
 
-        # Row 1 – Insert tools
         row1 = QHBoxLayout()
         row1.setSpacing(6)
 
@@ -388,7 +353,6 @@ class PdfEditorToolbar(QFrame):
         sep2.setFixedWidth(2)
         row1.addWidget(sep2)
 
-        # Page navigation
         self.prev_page_btn = QToolButton()
         self.prev_page_btn.setText("◀")
         self.prev_page_btn.setToolTip("Página anterior")
@@ -413,7 +377,6 @@ class PdfEditorToolbar(QFrame):
         sep3.setFixedWidth(2)
         row1.addWidget(sep3)
 
-        # Zoom
         self.zoom_out_btn = QToolButton()
         self.zoom_out_btn.setText("Zoom −")
         self.zoom_out_btn.setFixedHeight(36)
@@ -432,7 +395,6 @@ class PdfEditorToolbar(QFrame):
 
         row1.addStretch()
 
-        # Save
         self.save_btn = QPushButton("💾 Guardar PDF")
         self.save_btn.setToolTip("Guardar cambios en el PDF")
         self.save_btn.setFixedHeight(36)
@@ -472,23 +434,12 @@ class PdfEditorToolbar(QFrame):
         self.zoom_label.setText(f"{percent}%")
 
 
-# ---------------------------------------------------------------------------
-#  PDF Editor Widget (main canvas)
-# ---------------------------------------------------------------------------
-
-_RENDER_DPI = 150  # DPI for rendering PDF pages to images
-_PAGE_GAP = 20     # pixels between pages in the scene
-_DEFAULT_FONT_SIZE = 12  # fallback font size in points
+_RENDER_DPI = 150
+_PAGE_GAP = 20
+_DEFAULT_FONT_SIZE = 12
 
 
 class PdfEditorWidget(QWidget):
-    """
-    Widget completo de edición de PDF.
-
-    Renderiza las páginas del PDF como imágenes de fondo en un QGraphicsScene
-    y permite superponer cuadros de texto, imágenes e hipervínculos que luego
-    se graban de nuevo al PDF mediante PyMuPDF.
-    """
 
     modified_changed = Signal(bool)
 
@@ -528,7 +479,6 @@ class PdfEditorWidget(QWidget):
         """)
         layout.addWidget(self.view, 1)
 
-        # Connect toolbar signals
         self.toolbar.add_text_requested.connect(self._add_text)
         self.toolbar.add_image_requested.connect(self._add_image)
         self.toolbar.add_link_requested.connect(self._add_link)
@@ -543,18 +493,13 @@ class PdfEditorWidget(QWidget):
         self.toolbar.page_prev_requested.connect(self._page_prev)
         self.toolbar.page_next_requested.connect(self._page_next)
 
-        # Keyboard shortcuts
         del_action = QAction(self)
         del_action.setShortcut(QKeySequence.Delete)
         del_action.triggered.connect(self._delete_selected)
         self.addAction(del_action)
 
-    # ------------------------------------------------------------------
-    #  File operations
-    # ------------------------------------------------------------------
 
     def load_file(self, path: str) -> bool:
-        """Open a PDF for editing. Returns True on success."""
         try:
             doc = fitz.open(path)
         except Exception as exc:
@@ -572,20 +517,16 @@ class PdfEditorWidget(QWidget):
         return True
 
     def save(self):
-        """Save changes back to the original file."""
         if not self._doc or not self._path:
             return
         self._apply_overlays_to_doc()
         try:
-            # encryption=0 avoids encryption issues with incremental saves
             self._doc.save(self._path, incremental=True, encryption=0)
             self._set_modified(False)
-            # Re-render to reflect saved state
             self._clear_overlays()
             self._render_all_pages()
             QMessageBox.information(self, "Guardado", "PDF guardado correctamente.")
         except Exception:
-            # Incremental save may fail on encrypted or malformed PDFs
             QMessageBox.warning(
                 self, "Aviso",
                 "No se pudo guardar de forma incremental.\n"
@@ -594,7 +535,6 @@ class PdfEditorWidget(QWidget):
             self.save_as()
 
     def save_as(self):
-        """Save to a new file."""
         if not self._doc:
             return
         file_path, _ = QFileDialog.getSaveFileName(
@@ -621,12 +561,8 @@ class PdfEditorWidget(QWidget):
     def close_editor(self):
         self._close_doc()
 
-    # ------------------------------------------------------------------
-    #  Rendering
-    # ------------------------------------------------------------------
 
     def _render_all_pages(self):
-        """Render every page of the current document into the scene."""
         self.scene.clear()
         self._page_items.clear()
         self._overlay_items.clear()
@@ -646,7 +582,7 @@ class PdfEditorWidget(QWidget):
 
             item = QGraphicsPixmapItem(pixmap)
             item.setPos(0, y_offset)
-            item.setData(0, page_num)  # store page index
+            item.setData(0, page_num)
             item.setZValue(-1)
             self.scene.addItem(item)
             self._page_items.append(item)
@@ -662,18 +598,13 @@ class PdfEditorWidget(QWidget):
             self.view.centerOn(item)
 
     def _page_rect(self, page_index: int) -> QRectF:
-        """Return the scene rect for a given page background item."""
         if 0 <= page_index < len(self._page_items):
             item = self._page_items[page_index]
             return QRectF(item.pos(), QSizeF(item.pixmap().size()))
         return QRectF()
 
-    # ------------------------------------------------------------------
-    #  Overlay → PDF merging
-    # ------------------------------------------------------------------
 
     def _apply_overlays_to_doc(self):
-        """Stamp all overlay items into the underlying fitz document."""
         if not self._doc:
             return
 
@@ -703,10 +634,6 @@ class PdfEditorWidget(QWidget):
                     item.color.blueF(),
                 )
                 try:
-                    # PyMuPDF only supports its built-in fonts (helv, cour, etc.)
-                    # for reliable cross-platform rendering, so the user's chosen
-                    # font family is used visually in the editor overlay but saved
-                    # with the Helvetica built-in for maximum PDF compatibility.
                     fontname = "helv"
                     page.insert_textbox(
                         pdf_rect,
@@ -717,7 +644,6 @@ class PdfEditorWidget(QWidget):
                         align=fitz.TEXT_ALIGN_LEFT,
                     )
                 except Exception:
-                    # Fallback: insert as simple text at top-left of rect
                     try:
                         page.insert_text(
                             fitz.Point(x, y + fontsize),
@@ -745,7 +671,6 @@ class PdfEditorWidget(QWidget):
                     except Exception:
                         pass
                 else:
-                    # Convert pixmap to PNG bytes and insert
                     try:
                         from PySide6.QtCore import QBuffer, QIODevice
                         buf = QBuffer()
@@ -789,7 +714,6 @@ class PdfEditorWidget(QWidget):
                         annot.set_opacity(c.alphaF())
                         annot.update()
                 except Exception:
-                    # Fallback: draw a colored rectangle
                     try:
                         c = item.highlight_color
                         shape = page.new_shape()
@@ -809,9 +733,6 @@ class PdfEditorWidget(QWidget):
                 self.scene.removeItem(item)
         self._overlay_items.clear()
 
-    # ------------------------------------------------------------------
-    #  Insert actions
-    # ------------------------------------------------------------------
 
     def _add_text(self):
         if not self._doc:
@@ -827,9 +748,7 @@ class PdfEditorWidget(QWidget):
         if page_rect.isNull():
             return
 
-        # Place the text box at center of visible area
         center = self.view.mapToScene(self.view.viewport().rect().center())
-        # Clamp to page area
         cx = max(page_rect.x() + 20, min(center.x(), page_rect.right() - 200))
         cy = max(page_rect.y() + 20, min(center.y(), page_rect.bottom() - 80))
 
@@ -856,7 +775,6 @@ class PdfEditorWidget(QWidget):
             QMessageBox.warning(self, "Error", "No se pudo cargar la imagen.")
             return
 
-        # Scale down if too large
         page_rect = self._page_rect(self._current_page)
         max_w = page_rect.width() * 0.6 if not page_rect.isNull() else 400
         max_h = page_rect.height() * 0.4 if not page_rect.isNull() else 300
@@ -906,7 +824,6 @@ class PdfEditorWidget(QWidget):
         self._set_modified(True)
 
     def _add_highlight(self):
-        """Add a highlight rectangle annotation on the current page."""
         if not self._doc:
             return
         color = QColorDialog.getColor(
@@ -929,9 +846,6 @@ class PdfEditorWidget(QWidget):
         self._push_undo("add", item)
         self._set_modified(True)
 
-    # ------------------------------------------------------------------
-    #  Edit / Delete
-    # ------------------------------------------------------------------
 
     def _edit_selected(self):
         items = self.scene.selectedItems()
@@ -961,7 +875,6 @@ class PdfEditorWidget(QWidget):
                 self._set_modified(True)
 
         elif isinstance(item, _MovableImageItem):
-            # Replace image
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Reemplazar imagen", "",
                 "Imágenes (*.png *.jpg *.jpeg *.bmp *.gif *.webp *.svg);;Todos (*.*)"
@@ -990,9 +903,6 @@ class PdfEditorWidget(QWidget):
                 self.scene.removeItem(item)
                 self._set_modified(True)
 
-    # ------------------------------------------------------------------
-    #  Undo
-    # ------------------------------------------------------------------
 
     def _push_undo(self, action_type: str, item):
         self._undo_stack.append((action_type, item))
@@ -1002,20 +912,15 @@ class PdfEditorWidget(QWidget):
             return
         action_type, item = self._undo_stack.pop()
         if action_type == "add":
-            # Undo an add → remove
             if item in self._overlay_items:
                 self._overlay_items.remove(item)
             if item.scene():
                 self.scene.removeItem(item)
         elif action_type == "delete":
-            # Undo a delete → re-add
             self.scene.addItem(item)
             self._overlay_items.append(item)
         self._set_modified(bool(self._overlay_items))
 
-    # ------------------------------------------------------------------
-    #  Navigation / Zoom
-    # ------------------------------------------------------------------
 
     def _page_prev(self):
         if self._current_page > 0:
@@ -1040,25 +945,20 @@ class PdfEditorWidget(QWidget):
             self._rerender()
 
     def _rerender(self):
-        # Preserve overlay items and re-render background
-        # We need to re-render pages at new zoom and reposition overlays
         if not self._doc:
             return
         old_page_origins = {}
         for idx, pi in enumerate(self._page_items):
             old_page_origins[idx] = pi.pos()
 
-        # Save overlay state
         overlay_state = []
         for item in self._overlay_items:
             overlay_state.append((item, item.pos()))
             if item.scene():
                 self.scene.removeItem(item)
 
-        # Re-render pages
         self._render_all_pages()
 
-        # Compute new page origins and rescale overlay positions
         new_page_origins = {}
         for idx, pi in enumerate(self._page_items):
             new_page_origins[idx] = pi.pos()
@@ -1067,7 +967,6 @@ class PdfEditorWidget(QWidget):
             pi = getattr(item, "page_index", 0)
             old_origin = old_page_origins.get(pi, QPointF(0, 0))
             new_origin = new_page_origins.get(pi, QPointF(0, 0))
-            # Translate: keep relative position within page
             delta = new_origin - old_origin
             item.setPos(old_pos + delta)
             self.scene.addItem(item)
@@ -1082,9 +981,6 @@ class PdfEditorWidget(QWidget):
         zoom_pct = int(self._zoom_levels[self._zoom_index] * 100)
         self.toolbar.update_zoom_label(zoom_pct)
 
-    # ------------------------------------------------------------------
-    #  Helpers
-    # ------------------------------------------------------------------
 
     def _set_modified(self, val: bool):
         if self._modified != val:
