@@ -676,18 +676,14 @@ class EditConvertDialog(QDialog):
         save_group = QGroupBox("Guardar como")
         save_layout = QVBoxLayout(save_group)
 
-        self.new_file_radio = QCheckBox("Crear nuevo archivo")
-        self.new_file_radio.setChecked(True)
-        save_layout.addWidget(self.new_file_radio)
+        self.new_file_check = QCheckBox("Crear nuevo archivo")
+        self.new_file_check.setChecked(True)
+        save_layout.addWidget(self.new_file_check)
 
-        self.overwrite_radio = QCheckBox("Sobrescribir archivo original")
-        self.overwrite_radio.toggled.connect(
-            lambda: self.new_file_radio.setChecked(not self.overwrite_radio.isChecked())
-        )
-        self.new_file_radio.toggled.connect(
-            lambda: self.overwrite_radio.setChecked(not self.new_file_radio.isChecked())
-        )
-        save_layout.addWidget(self.overwrite_radio)
+        self.overwrite_check = QCheckBox("Sobrescribir archivo original")
+        self.overwrite_check.toggled.connect(self._sync_save_checks_from_overwrite)
+        self.new_file_check.toggled.connect(self._sync_save_checks_from_new)
+        save_layout.addWidget(self.overwrite_check)
 
         vl.addWidget(save_group)
 
@@ -844,9 +840,19 @@ class EditConvertDialog(QDialog):
             "maintain_aspect": self.maintain_aspect.isChecked(),
             "convert": self.convert_check.isChecked(),
             "format": self.format_combo.currentData(),
-            "new_file": self.new_file_radio.isChecked(),
+            "new_file": self.new_file_check.isChecked(),
             "interpolation": self.interpolation_combo.currentData(),
         }
+
+    def _sync_save_checks_from_overwrite(self):
+        self.new_file_check.blockSignals(True)
+        self.new_file_check.setChecked(not self.overwrite_check.isChecked())
+        self.new_file_check.blockSignals(False)
+
+    def _sync_save_checks_from_new(self):
+        self.overwrite_check.blockSignals(True)
+        self.overwrite_check.setChecked(not self.new_file_check.isChecked())
+        self.overwrite_check.blockSignals(False)
 
     # ------------------------------------------------------------------
     # Batch helpers

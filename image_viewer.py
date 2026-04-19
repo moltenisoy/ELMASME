@@ -260,6 +260,8 @@ class ImageViewer(QWidget):
     def load_file(self, path: str):
         if self._crop_mode:
             self._toggle_crop_mode()
+        if self._annotation_mode:
+            self.toggle_annotation_mode()
         self.current_path = path
         ext = Path(path).suffix.lower()
         if ext in (".heif", ".heic", ".avif"):
