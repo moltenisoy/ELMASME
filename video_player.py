@@ -150,6 +150,9 @@ class VideoViewer(QWidget):
         self._fs_window = None
         self._pip_window = None
         self._pip_active = False
+        self._pip_player = None
+        self._pip_audio = None
+        self._pip_sync_timer = None
 
         self._brightness = 0
         self._contrast = 0
@@ -780,7 +783,8 @@ class VideoViewer(QWidget):
             return
 
         self.video_view.setParent(self._top_widget)
-        video_area_layout = self._top_layout.itemAt(0).layout()
+        item = self._top_layout.itemAt(0)
+        video_area_layout = item.layout() if item else None
         if video_area_layout:
             video_area_layout.insertWidget(0, self.video_view, 1)
         self.video_view.show()

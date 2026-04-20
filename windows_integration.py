@@ -117,7 +117,7 @@ def register_file_associations():
 
     _set_value(
         root,
-        f"Software\\RegisteredApplications",
+        "Software\\RegisteredApplications",
         app_name,
         f"Software\\Classes\\{APP_PROG_ID}\\Capabilities",
     )

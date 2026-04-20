@@ -514,6 +514,9 @@ class PdfFormFillerDialog(QDialog):
                 "No se pudo guardar el formulario."
             )
 
+    def get_output_path(self) -> str:
+        return self._output_path
+
 
 def encrypt_pdf(input_path: str, output_path: str, user_password: str,
                 owner_password: str = None) -> bool:

@@ -80,6 +80,7 @@ class _MovableImageItem(QGraphicsPixmapItem):
         super().__init__(pixmap, parent)
         self.page_index = page_index
         self._source_path: Optional[str] = None
+        self._signature_image = None
         self.setFlags(
             QGraphicsItem.ItemIsMovable
             | QGraphicsItem.ItemIsSelectable
@@ -582,6 +583,7 @@ class PdfEditorWidget(QWidget):
         mat = fitz.Matrix(zoom * _RENDER_DPI / 72, zoom * _RENDER_DPI / 72)
         y_offset = 0.0
 
+        PAGE_INDEX_ROLE = 0
         for page_num in range(len(self._doc)):
             page = self._doc[page_num]
             pix = page.get_pixmap(matrix=mat, alpha=False)
@@ -591,7 +593,6 @@ class PdfEditorWidget(QWidget):
 
             item = QGraphicsPixmapItem(pixmap)
             item.setPos(0, y_offset)
-            PAGE_INDEX_ROLE = 0
             item.setData(PAGE_INDEX_ROLE, page_num)
             item.setZValue(-1)
             self.scene.addItem(item)
