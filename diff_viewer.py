@@ -2,7 +2,7 @@
 import os
 import difflib
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QTextCharFormat, QFont, QTextCursor
+from PySide6.QtGui import QColor, QTextCharFormat, QFont, QTextCursor, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
     QFileDialog, QSplitter, QFrame,
@@ -21,6 +21,7 @@ class _DiffPanel(QFrame):
 
     def __init__(self, title="", parent=None):
         super().__init__(parent)
+        self.setAcceptDrops(True)
         self.setStyleSheet("""
             QFrame {
                 background: #0f172a;
@@ -50,6 +51,7 @@ class _DiffPanel(QFrame):
                 border: 1px solid rgba(59,130,246,0.4);
                 border-radius: 6px; padding: 2px 10px;
                 color: #60a5fa; font-weight: 500;
+                font-size: 26px;
             }
             QPushButton:hover { background: rgba(59,130,246,0.35); }
         """)
@@ -59,6 +61,7 @@ class _DiffPanel(QFrame):
 
         self.text_edit = QTextEdit()
         self.text_edit.setReadOnly(True)
+        self.text_edit.setAcceptDrops(False)
         self.text_edit.setFont(QFont("Consolas", 10))
         self.text_edit.setStyleSheet("""
             QTextEdit {
@@ -95,6 +98,29 @@ class _DiffPanel(QFrame):
     def lines(self):
         return self._lines
 
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event: QDropEvent):
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            if urls:
+                path = urls[0].toLocalFile()
+                if path and os.path.isfile(path):
+                    self.load_file(path)
+                    event.acceptProposedAction()
+                    return
+        super().dropEvent(event)
+
 
 class DiffViewerWidget(QWidget):
 
@@ -123,6 +149,7 @@ class DiffViewerWidget(QWidget):
                 border: 1px solid rgba(34,197,94,0.4);
                 border-radius: 6px; padding: 4px 14px;
                 color: #4ade80; font-weight: 600;
+                font-size: 26px;
             }
             QPushButton:hover { background: rgba(34,197,94,0.35); }
         """)
@@ -137,6 +164,7 @@ class DiffViewerWidget(QWidget):
                 border: 1px solid rgba(239,68,68,0.4);
                 border-radius: 6px; padding: 4px 14px;
                 color: #f87171; font-weight: 600;
+                font-size: 26px;
             }
             QPushButton:hover { background: rgba(239,68,68,0.35); }
         """)
@@ -149,6 +177,81 @@ class DiffViewerWidget(QWidget):
             "color: #94a3b8; font-size: 11px; padding: 2px 4px;"
         )
         layout.addWidget(self.stats_label)
+
+        filter_bar = QHBoxLayout()
+        filter_bar.setSpacing(4)
+
+        filter_label = QLabel("Filtro:")
+        filter_label.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        filter_bar.addWidget(filter_label)
+
+        _filter_active = """
+            QPushButton {
+                background: rgba(96,165,250,0.35);
+                border: 1px solid rgba(96,165,250,0.7);
+                border-radius: 6px; padding: 3px 10px;
+                color: #e5e7eb; font-weight: 600; font-size: 11px;
+            }
+        """
+        _filter_inactive = """
+            QPushButton {
+                background: rgba(148,163,184,0.12);
+                border: 1px solid rgba(148,163,184,0.25);
+                border-radius: 6px; padding: 3px 10px;
+                color: #94a3b8; font-weight: 500; font-size: 11px;
+            }
+            QPushButton:hover {
+                background: rgba(148,163,184,0.22);
+                border-color: rgba(148,163,184,0.45);
+            }
+        """
+        self._filter_active_style = _filter_active
+        self._filter_inactive_style = _filter_inactive
+
+        self._filter_all_btn = QPushButton("Todas las diferencias")
+        self._filter_all_btn.setFixedHeight(24)
+        self._filter_all_btn.setStyleSheet(_filter_active)
+        self._filter_all_btn.clicked.connect(lambda: self._set_filter("all"))
+        filter_bar.addWidget(self._filter_all_btn)
+
+        self._filter_changed_btn = QPushButton("Líneas modificadas")
+        self._filter_changed_btn.setFixedHeight(24)
+        self._filter_changed_btn.setStyleSheet(_filter_inactive)
+        self._filter_changed_btn.clicked.connect(lambda: self._set_filter("changed"))
+        filter_bar.addWidget(self._filter_changed_btn)
+
+        self._filter_only_left_btn = QPushButton("Solo en A")
+        self._filter_only_left_btn.setFixedHeight(24)
+        self._filter_only_left_btn.setStyleSheet(_filter_inactive)
+        self._filter_only_left_btn.clicked.connect(lambda: self._set_filter("only_left"))
+        filter_bar.addWidget(self._filter_only_left_btn)
+
+        self._filter_only_right_btn = QPushButton("Solo en B")
+        self._filter_only_right_btn.setFixedHeight(24)
+        self._filter_only_right_btn.setStyleSheet(_filter_inactive)
+        self._filter_only_right_btn.clicked.connect(lambda: self._set_filter("only_right"))
+        filter_bar.addWidget(self._filter_only_right_btn)
+
+        self._filter_equal_btn = QPushButton("Líneas iguales")
+        self._filter_equal_btn.setFixedHeight(24)
+        self._filter_equal_btn.setStyleSheet(_filter_inactive)
+        self._filter_equal_btn.clicked.connect(lambda: self._set_filter("equal"))
+        filter_bar.addWidget(self._filter_equal_btn)
+
+        filter_bar.addStretch()
+
+        self._filter_buttons = {
+            "all": self._filter_all_btn,
+            "changed": self._filter_changed_btn,
+            "only_left": self._filter_only_left_btn,
+            "only_right": self._filter_only_right_btn,
+            "equal": self._filter_equal_btn,
+        }
+        self._active_filter = "all"
+        self._last_left_formatted = []
+        self._last_right_formatted = []
+
+        layout.addLayout(filter_bar)
 
         self.splitter = QSplitter(Qt.Horizontal)
         self.left_panel = _DiffPanel("Documento A")
@@ -247,13 +350,54 @@ class DiffViewerWidget(QWidget):
                 for line in right_lines[j1:j2]:
                     right_formatted.append(("add", line))
 
-        self._apply_highlighting(self.left_panel.text_edit, left_formatted)
-        self._apply_highlighting(self.right_panel.text_edit, right_formatted)
+        self._last_left_formatted = left_formatted
+        self._last_right_formatted = right_formatted
+
+        self._apply_filter()
 
         self.stats_label.setText(
             f"Diferencias: {added} líneas añadidas, {removed} líneas eliminadas, "
             f"{changed} líneas modificadas"
         )
+
+    def _set_filter(self, filter_name):
+        if filter_name == self._active_filter:
+            return
+        self._active_filter = filter_name
+        for name, btn in self._filter_buttons.items():
+            if name == filter_name:
+                btn.setStyleSheet(self._filter_active_style)
+            else:
+                btn.setStyleSheet(self._filter_inactive_style)
+        if self._last_left_formatted or self._last_right_formatted:
+            self._apply_filter()
+
+    def _apply_filter(self):
+        left = self._last_left_formatted
+        right = self._last_right_formatted
+        f = self._active_filter
+
+        if f == "all":
+            filtered_left = left
+            filtered_right = right
+        elif f == "changed":
+            filtered_left = [(t, l) for t, l in left if t in ("remove", "pad")]
+            filtered_right = [(t, l) for t, l in right if t in ("add", "pad")]
+        elif f == "only_left":
+            filtered_left = [(t, l) for t, l in left if t == "remove"]
+            filtered_right = []
+        elif f == "only_right":
+            filtered_left = []
+            filtered_right = [(t, l) for t, l in right if t == "add"]
+        elif f == "equal":
+            filtered_left = [(t, l) for t, l in left if t == "equal"]
+            filtered_right = [(t, l) for t, l in right if t == "equal"]
+        else:
+            filtered_left = left
+            filtered_right = right
+
+        self._apply_highlighting(self.left_panel.text_edit, filtered_left)
+        self._apply_highlighting(self.right_panel.text_edit, filtered_right)
 
     @staticmethod
     def _apply_highlighting(text_edit, formatted_lines):

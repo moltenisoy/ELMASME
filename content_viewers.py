@@ -4,29 +4,26 @@ from PySide6.QtWidgets import (
 )
 
 from formats import get_content_type
-from image_handler import ImageViewer
-from audio_handler import AudioViewer
-from video_handler import VideoViewer
-from document_handler import DocumentViewer
-from archive_viewer import ArchiveViewer
-from spreadsheet_viewer import SpreadsheetViewer
-from presentation_viewer import PresentationViewer
-from ebook_viewer import EbookViewer
 
 
 class ViewerHost(QWidget):
+    """Viewer container with lazy loading of viewer widgets.
+
+    Viewer modules are imported and instantiated only on first use,
+    reducing startup time by avoiding heavy imports until needed.
+    """
 
     def __init__(self):
         super().__init__()
 
-        self.image_viewer = ImageViewer()
-        self.audio_viewer = AudioViewer()
-        self.video_viewer = VideoViewer()
-        self.document_viewer = DocumentViewer()
-        self.archive_viewer = ArchiveViewer()
-        self.spreadsheet_viewer = SpreadsheetViewer()
-        self.presentation_viewer = PresentationViewer()
-        self.ebook_viewer = EbookViewer()
+        self._image_viewer = None
+        self._audio_viewer = None
+        self._video_viewer = None
+        self._document_viewer = None
+        self._archive_viewer = None
+        self._spreadsheet_viewer = None
+        self._presentation_viewer = None
+        self._ebook_viewer = None
 
         self.message = QLabel()
         self.message.setAlignment(Qt.AlignCenter)
@@ -36,25 +33,83 @@ class ViewerHost(QWidget):
         )
 
         self.stack = QStackedWidget()
-        self.stack.addWidget(self.image_viewer)
-        self.stack.addWidget(self.audio_viewer)
-        self.stack.addWidget(self.video_viewer)
-        self.stack.addWidget(self.document_viewer)
-        self.stack.addWidget(self.archive_viewer)
-        self.stack.addWidget(self.spreadsheet_viewer)
-        self.stack.addWidget(self.presentation_viewer)
-        self.stack.addWidget(self.ebook_viewer)
         self.stack.addWidget(self.message)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.stack)
 
+    @property
+    def image_viewer(self):
+        if self._image_viewer is None:
+            from image_handler import ImageViewer
+            self._image_viewer = ImageViewer()
+            self.stack.addWidget(self._image_viewer)
+        return self._image_viewer
+
+    @property
+    def audio_viewer(self):
+        if self._audio_viewer is None:
+            from audio_handler import AudioViewer
+            self._audio_viewer = AudioViewer()
+            self.stack.addWidget(self._audio_viewer)
+        return self._audio_viewer
+
+    @property
+    def video_viewer(self):
+        if self._video_viewer is None:
+            from video_handler import VideoViewer
+            self._video_viewer = VideoViewer()
+            self.stack.addWidget(self._video_viewer)
+        return self._video_viewer
+
+    @property
+    def document_viewer(self):
+        if self._document_viewer is None:
+            from document_handler import DocumentViewer
+            self._document_viewer = DocumentViewer()
+            self.stack.addWidget(self._document_viewer)
+        return self._document_viewer
+
+    @property
+    def archive_viewer(self):
+        if self._archive_viewer is None:
+            from archive_viewer import ArchiveViewer
+            self._archive_viewer = ArchiveViewer()
+            self.stack.addWidget(self._archive_viewer)
+        return self._archive_viewer
+
+    @property
+    def spreadsheet_viewer(self):
+        if self._spreadsheet_viewer is None:
+            from spreadsheet_viewer import SpreadsheetViewer
+            self._spreadsheet_viewer = SpreadsheetViewer()
+            self.stack.addWidget(self._spreadsheet_viewer)
+        return self._spreadsheet_viewer
+
+    @property
+    def presentation_viewer(self):
+        if self._presentation_viewer is None:
+            from presentation_viewer import PresentationViewer
+            self._presentation_viewer = PresentationViewer()
+            self.stack.addWidget(self._presentation_viewer)
+        return self._presentation_viewer
+
+    @property
+    def ebook_viewer(self):
+        if self._ebook_viewer is None:
+            from ebook_viewer import EbookViewer
+            self._ebook_viewer = EbookViewer()
+            self.stack.addWidget(self._ebook_viewer)
+        return self._ebook_viewer
+
     def stop_media(self):
-        self.audio_viewer.stop()
-        self.video_viewer.stop()
-        if self.video_viewer.is_fullscreen:
-            self.video_viewer.exit_fullscreen()
+        if self._audio_viewer is not None:
+            self._audio_viewer.stop()
+        if self._video_viewer is not None:
+            self._video_viewer.stop()
+            if self._video_viewer.is_fullscreen:
+                self._video_viewer.exit_fullscreen()
 
     def load_file(self, path: str):
         kind = get_content_type(path)
@@ -108,6 +163,8 @@ class ViewerHost(QWidget):
         self.stack.setCurrentWidget(self.message)
 
     def has_unsaved_changes(self):
+        if self._document_viewer is None:
+            return False
         return self.document_viewer.is_modified()
 
     def save_document(self):

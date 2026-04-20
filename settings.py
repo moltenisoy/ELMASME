@@ -16,11 +16,18 @@ _DEFAULTS = {
     "theme_index": 0,
     "no_multi_playback": False,
     "show_welcome": True,
+    "shortcuts": {
+        "navigate_left": "Left",
+        "navigate_right": "Right",
+        "escape": "Escape",
+        "open_file": "Ctrl+O",
+    },
 }
 
 
 def load_settings() -> dict:
     settings = dict(_DEFAULTS)
+    settings["shortcuts"] = dict(_DEFAULTS["shortcuts"])
     try:
         if os.path.isfile(_SETTINGS_FILE):
             with open(_SETTINGS_FILE, "r", encoding="utf-8") as f:
@@ -28,7 +35,12 @@ def load_settings() -> dict:
             if isinstance(data, dict):
                 for key in _DEFAULTS:
                     if key in data:
-                        settings[key] = data[key]
+                        if key == "shortcuts" and isinstance(data[key], dict):
+                            for sk, sv in data[key].items():
+                                if sk in _DEFAULTS["shortcuts"]:
+                                    settings["shortcuts"][sk] = sv
+                        else:
+                            settings[key] = data[key]
     except (json.JSONDecodeError, OSError, ValueError):
         pass
     return settings

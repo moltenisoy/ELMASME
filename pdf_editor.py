@@ -80,6 +80,7 @@ class _MovableImageItem(QGraphicsPixmapItem):
         super().__init__(pixmap, parent)
         self.page_index = page_index
         self._source_path: Optional[str] = None
+        self._signature_image = None
         self.setFlags(
             QGraphicsItem.ItemIsMovable
             | QGraphicsItem.ItemIsSelectable
@@ -245,6 +246,7 @@ class PdfEditorToolbar(QFrame):
     add_image_requested = Signal()
     add_link_requested = Signal()
     add_highlight_requested = Signal()
+    add_signature_requested = Signal()
     delete_selected_requested = Signal()
     edit_selected_requested = Signal()
     save_requested = Signal()
@@ -319,6 +321,13 @@ class PdfEditorToolbar(QFrame):
         self.highlight_btn.setFixedHeight(36)
         self.highlight_btn.clicked.connect(self.add_highlight_requested)
         row1.addWidget(self.highlight_btn)
+
+        self.signature_btn = QToolButton()
+        self.signature_btn.setText("✍️ Firma")
+        self.signature_btn.setToolTip("Insertar firma manuscrita o imagen de firma")
+        self.signature_btn.setFixedHeight(36)
+        self.signature_btn.clicked.connect(self.add_signature_requested)
+        row1.addWidget(self.signature_btn)
 
         sep1 = QFrame()
         sep1.setFrameShape(QFrame.VLine)
@@ -483,6 +492,7 @@ class PdfEditorWidget(QWidget):
         self.toolbar.add_image_requested.connect(self._add_image)
         self.toolbar.add_link_requested.connect(self._add_link)
         self.toolbar.add_highlight_requested.connect(self._add_highlight)
+        self.toolbar.add_signature_requested.connect(self._add_signature)
         self.toolbar.edit_selected_requested.connect(self._edit_selected)
         self.toolbar.delete_selected_requested.connect(self._delete_selected)
         self.toolbar.undo_requested.connect(self._undo)
@@ -573,6 +583,7 @@ class PdfEditorWidget(QWidget):
         mat = fitz.Matrix(zoom * _RENDER_DPI / 72, zoom * _RENDER_DPI / 72)
         y_offset = 0.0
 
+        PAGE_INDEX_ROLE = 0
         for page_num in range(len(self._doc)):
             page = self._doc[page_num]
             pix = page.get_pixmap(matrix=mat, alpha=False)
@@ -582,7 +593,6 @@ class PdfEditorWidget(QWidget):
 
             item = QGraphicsPixmapItem(pixmap)
             item.setPos(0, y_offset)
-            PAGE_INDEX_ROLE = 0
             item.setData(PAGE_INDEX_ROLE, page_num)
             item.setZValue(-1)
             self.scene.addItem(item)
@@ -998,3 +1008,198 @@ class PdfEditorWidget(QWidget):
             self._doc = None
         self._path = None
         self._modified = False
+
+    def _add_signature(self):
+        if not self._doc:
+            return
+
+        dialog = SignatureDrawDialog(self)
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        sig_image = dialog.get_signature_image()
+        if sig_image is None or sig_image.isNull():
+            return
+
+        pixmap = QPixmap.fromImage(sig_image)
+        page_rect = self._page_rect(self._current_page)
+        max_w = page_rect.width() * 0.4 if not page_rect.isNull() else 300
+        max_h = page_rect.height() * 0.2 if not page_rect.isNull() else 100
+        if pixmap.width() > max_w or pixmap.height() > max_h:
+            pixmap = pixmap.scaled(
+                int(max_w), int(max_h),
+                Qt.KeepAspectRatio, Qt.SmoothTransformation
+            )
+
+        center = self.view.mapToScene(self.view.viewport().rect().center())
+        cx = center.x() - pixmap.width() / 2
+        cy = center.y() - pixmap.height() / 2
+        if not page_rect.isNull():
+            cx = max(page_rect.x() + 10, min(cx, page_rect.right() - pixmap.width() - 10))
+            cy = max(page_rect.y() + 10, min(cy, page_rect.bottom() - pixmap.height() - 10))
+
+        item = _MovableImageItem(pixmap, self._current_page)
+        item._source_path = None
+        item._signature_image = sig_image
+        item.setPos(cx, cy)
+        self.scene.addItem(item)
+        self._overlay_items.append(item)
+        self._push_undo("add", item)
+        self._set_modified(True)
+
+
+class _SignatureCanvas(QLabel):
+    """Canvas widget for drawing a freehand signature."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._image = QImage(600, 200, QImage.Format_ARGB32)
+        self._image.fill(QColor(255, 255, 255, 255))
+        self._drawing = False
+        self._last_point = None
+        self._pen_color = QColor(0, 0, 0)
+        self._pen_width = 3
+        self.setPixmap(QPixmap.fromImage(self._image))
+        self.setFixedSize(600, 200)
+        self.setCursor(QCursor(Qt.CrossCursor))
+        self.setStyleSheet("border: 2px solid #475569; border-radius: 4px;")
+
+    def set_pen_color(self, color):
+        self._pen_color = color
+
+    def set_pen_width(self, width):
+        self._pen_width = width
+
+    def clear_canvas(self):
+        self._image.fill(QColor(255, 255, 255, 255))
+        self.setPixmap(QPixmap.fromImage(self._image))
+
+    def get_signature_image(self):
+        return self._image.copy()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drawing = True
+            self._last_point = event.position().toPoint()
+
+    def mouseMoveEvent(self, event):
+        if self._drawing and self._last_point is not None:
+            painter = QPainter(self._image)
+            painter.setRenderHint(QPainter.Antialiasing)
+            pen = QPen(self._pen_color, self._pen_width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+            painter.setPen(pen)
+            current = event.position().toPoint()
+            painter.drawLine(self._last_point, current)
+            painter.end()
+            self._last_point = current
+            self.setPixmap(QPixmap.fromImage(self._image))
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drawing = False
+            self._last_point = None
+
+
+class SignatureDrawDialog(QDialog):
+    """Dialog for drawing a signature or loading a signature image."""
+
+    _DIALOG_STYLE = """
+        QDialog { background: #1e293b; }
+        QLabel  { color: #e5e7eb; }
+        QPushButton {
+            background: rgba(59,130,246,0.2);
+            border: 1px solid rgba(59,130,246,0.4);
+            border-radius: 6px;
+            padding: 6px 16px;
+            color: #60a5fa;
+            font-weight: 500;
+        }
+        QPushButton:hover { background: rgba(59,130,246,0.35); }
+        QSpinBox {
+            background: #0f172a;
+            color: #e5e7eb;
+            border: 1px solid rgba(148,163,184,0.3);
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Firma digital")
+        self.setMinimumSize(660, 380)
+        self._signature_image = None
+        self._build_ui()
+
+    def _build_ui(self):
+        self.setStyleSheet(self._DIALOG_STYLE)
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel("Dibuje su firma en el recuadro:"))
+
+        self._canvas = _SignatureCanvas()
+        layout.addWidget(self._canvas, 0, Qt.AlignCenter)
+
+        options = QHBoxLayout()
+
+        options.addWidget(QLabel("Grosor:"))
+        self._width_spin = QSpinBox()
+        self._width_spin.setRange(1, 10)
+        self._width_spin.setValue(3)
+        self._width_spin.valueChanged.connect(self._canvas.set_pen_width)
+        options.addWidget(self._width_spin)
+
+        color_btn = QPushButton("Color de tinta")
+        color_btn.clicked.connect(self._choose_color)
+        options.addWidget(color_btn)
+
+        clear_btn = QPushButton("🗑️ Limpiar")
+        clear_btn.clicked.connect(self._canvas.clear_canvas)
+        options.addWidget(clear_btn)
+
+        options.addStretch()
+
+        load_btn = QPushButton("📂 Cargar imagen de firma")
+        load_btn.clicked.connect(self._load_image)
+        options.addWidget(load_btn)
+
+        layout.addLayout(options)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+
+        accept_btn = QPushButton("✔ Insertar firma")
+        accept_btn.clicked.connect(self._on_accept)
+        buttons.addWidget(accept_btn)
+
+        cancel_btn = QPushButton("Cancelar")
+        cancel_btn.clicked.connect(self.reject)
+        buttons.addWidget(cancel_btn)
+
+        layout.addLayout(buttons)
+
+    def _choose_color(self):
+        color = QColorDialog.getColor(QColor(0, 0, 0), self, "Color de la firma")
+        if color.isValid():
+            self._canvas.set_pen_color(color)
+
+    def _load_image(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Cargar imagen de firma", "",
+            "Imágenes (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;Todos (*.*)"
+        )
+        if not path:
+            return
+        img = QImage(path)
+        if img.isNull():
+            QMessageBox.warning(self, "Error", "No se pudo cargar la imagen.")
+            return
+        self._signature_image = img
+        self.accept()
+
+    def _on_accept(self):
+        self._signature_image = self._canvas.get_signature_image()
+        self.accept()
+
+    def get_signature_image(self):
+        return self._signature_image

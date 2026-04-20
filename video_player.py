@@ -1,9 +1,10 @@
 import os
+import re
 import subprocess
 import threading
 from pathlib import Path
 from PySide6.QtCore import Qt, QUrl, QEvent, QObject, QTimer, QSize, QRect
-from PySide6.QtGui import QColor, QImage, QPixmap, QPainter
+from PySide6.QtGui import QColor, QImage, QPixmap, QPainter, QFont
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QVideoFrame, QVideoSink
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider,
@@ -35,6 +36,96 @@ MAX_OPACITY = 2.0
 BRIGHTNESS_SCALE = 200.0
 
 
+def _parse_srt_time(time_str: str) -> int:
+    """Parse SRT time format HH:MM:SS,mmm to milliseconds."""
+    time_str = time_str.strip().replace(",", ".")
+    parts = time_str.split(":")
+    if len(parts) == 3:
+        h, m, s = parts
+        return int(int(h) * 3600000 + int(m) * 60000 + float(s) * 1000)
+    return 0
+
+
+def _parse_vtt_time(time_str: str) -> int:
+    """Parse VTT time format HH:MM:SS.mmm or MM:SS.mmm to milliseconds."""
+    time_str = time_str.strip()
+    parts = time_str.split(":")
+    if len(parts) == 3:
+        h, m, s = parts
+        return int(int(h) * 3600000 + int(m) * 60000 + float(s) * 1000)
+    elif len(parts) == 2:
+        m, s = parts
+        return int(int(m) * 60000 + float(s) * 1000)
+    return 0
+
+
+def parse_subtitle_file(path: str):
+    """Parse .srt or .vtt subtitle file. Returns list of (start_ms, end_ms, text)."""
+    ext = Path(path).suffix.lower()
+    subtitles = []
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            content = f.read()
+    except (OSError, UnicodeDecodeError):
+        try:
+            with open(path, "r", encoding="latin-1") as f:
+                content = f.read()
+        except Exception:
+            return subtitles
+
+    if ext == ".srt":
+        blocks = re.split(r"\n\s*\n", content.strip())
+        for block in blocks:
+            lines = block.strip().split("\n")
+            if len(lines) < 2:
+                continue
+            time_line = None
+            text_lines = []
+            for i, line in enumerate(lines):
+                if "-->" in line:
+                    time_line = line
+                    text_lines = lines[i + 1:]
+                    break
+            if time_line is None:
+                continue
+            parts = time_line.split("-->")
+            if len(parts) != 2:
+                continue
+            start = _parse_srt_time(parts[0])
+            end = _parse_srt_time(parts[1])
+            text = "\n".join(text_lines).strip()
+            text = re.sub(r"<[^>]+>", "", text)
+            if text:
+                subtitles.append((start, end, text))
+
+    elif ext == ".vtt":
+        lines_list = content.split("\n")
+        i = 0
+        while i < len(lines_list):
+            if lines_list[i].strip().startswith("WEBVTT"):
+                i += 1
+                continue
+            if "-->" in lines_list[i]:
+                time_line = lines_list[i].strip()
+                parts = time_line.split("-->")
+                if len(parts) == 2:
+                    start = _parse_vtt_time(parts[0])
+                    end = _parse_vtt_time(parts[1].split()[0])
+                    text_lines = []
+                    i += 1
+                    while i < len(lines_list) and lines_list[i].strip():
+                        text_lines.append(lines_list[i].strip())
+                        i += 1
+                    text = "\n".join(text_lines)
+                    text = re.sub(r"<[^>]+>", "", text)
+                    if text:
+                        subtitles.append((start, end, text))
+            i += 1
+
+    subtitles.sort(key=lambda x: x[0])
+    return subtitles
+
+
 class VideoViewer(QWidget):
 
     def __init__(self):
@@ -59,10 +150,17 @@ class VideoViewer(QWidget):
         self._fs_window = None
         self._pip_window = None
         self._pip_active = False
+        self._pip_player = None
+        self._pip_audio = None
+        self._pip_sync_timer = None
 
         self._brightness = 0
         self._contrast = 0
         self._saturation = 0
+
+        self._subtitles = []
+        self._subtitle_active = False
+        self._subtitle_path = None
 
         self._build_ui()
         self._connect_signals()
@@ -70,17 +168,17 @@ class VideoViewer(QWidget):
     def _build_ui(self):
         self.play_button = QPushButton("▶")
         self.play_button.setFixedSize(36, 28)
-        self.play_button.setStyleSheet("font-size: 18px;")
+        self.play_button.setStyleSheet("font-size: 36px;")
         self.play_button.clicked.connect(self.player.play)
 
         self.pause_button = QPushButton("⏸")
         self.pause_button.setFixedSize(36, 28)
-        self.pause_button.setStyleSheet("font-size: 18px;")
+        self.pause_button.setStyleSheet("font-size: 36px;")
         self.pause_button.clicked.connect(self.player.pause)
 
         self.stop_button = QPushButton("⏹")
         self.stop_button.setFixedSize(36, 28)
-        self.stop_button.setStyleSheet("font-size: 18px;")
+        self.stop_button.setStyleSheet("font-size: 36px;")
         self.stop_button.clicked.connect(self._stop_playback)
 
         vol_label = QLabel("🔊")
@@ -107,7 +205,7 @@ class VideoViewer(QWidget):
 
         self.playlist_toggle_button = QPushButton("📃")
         self.playlist_toggle_button.setFixedSize(36, 28)
-        self.playlist_toggle_button.setStyleSheet("font-size: 16px;")
+        self.playlist_toggle_button.setStyleSheet("font-size: 32px;")
         self.playlist_toggle_button.setToolTip("Mostrar/ocultar lista de reproducción")
         self.playlist_toggle_button.setCheckable(True)
         self.playlist_toggle_button.setChecked(True)
@@ -145,6 +243,17 @@ class VideoViewer(QWidget):
         self._adjust_toggle_action = tools_menu.addAction(
             "🎨 Ajustes de imagen", self._toggle_adjustments
         )
+        tools_menu.addSeparator()
+
+        subtitle_submenu = tools_menu.addMenu("💬 Subtítulos")
+        subtitle_submenu.addAction("Cargar subtítulos (.srt/.vtt)", self._load_subtitles)
+        self._subtitle_toggle_action = subtitle_submenu.addAction(
+            "Mostrar subtítulos", self._toggle_subtitles
+        )
+        self._subtitle_toggle_action.setCheckable(True)
+        self._subtitle_toggle_action.setChecked(False)
+        self._subtitle_toggle_action.setEnabled(False)
+        subtitle_submenu.addAction("Quitar subtítulos", self._remove_subtitles)
         tools_menu.addSeparator()
 
         rotate_submenu = tools_menu.addMenu("🔄 Rotación / Volteo")
@@ -208,6 +317,22 @@ class VideoViewer(QWidget):
         side_layout.addStretch()
         self._side_panel.setFixedWidth(260)
         self._side_panel.setVisible(False)
+
+        self._subtitle_label = QLabel(self.video_view)
+        self._subtitle_label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+        self._subtitle_label.setWordWrap(True)
+        self._subtitle_label.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                background: rgba(0, 0, 0, 160);
+                border-radius: 4px;
+                padding: 6px 12px;
+                font-size: 16px;
+                font-weight: 500;
+            }
+        """)
+        self._subtitle_label.setVisible(False)
+        self._subtitle_label.raise_()
 
         video_area = QHBoxLayout()
         video_area.setContentsMargins(0, 0, 0, 0)
@@ -315,6 +440,8 @@ class VideoViewer(QWidget):
         self._time_label.setText(
             f"{self._format_time(position)} / {self._format_time(dur)}"
         )
+        if self._subtitle_active:
+            self._update_subtitle_display()
 
     def _on_duration_changed(self, duration):
         self.position_slider.setRange(0, duration)
@@ -444,6 +571,79 @@ class VideoViewer(QWidget):
         else:
             QMessageBox.warning(self, "Error",
                                 "No se pudo extraer el audio del video.")
+
+    def _load_subtitles(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Cargar archivo de subtítulos", "",
+            "Subtítulos (*.srt *.vtt);;SRT (*.srt);;WebVTT (*.vtt);;Todos (*.*)"
+        )
+        if not path:
+            return
+        subs = parse_subtitle_file(path)
+        if not subs:
+            QMessageBox.warning(self, "Error",
+                                "No se encontraron subtítulos en el archivo.")
+            return
+        self._subtitles = subs
+        self._subtitle_path = path
+        self._subtitle_active = True
+        self._subtitle_toggle_action.setEnabled(True)
+        self._subtitle_toggle_action.setChecked(True)
+        self._subtitle_label.setVisible(True)
+        QMessageBox.information(
+            self, "Subtítulos cargados",
+            f"Se cargaron {len(subs)} entradas de subtítulos."
+        )
+
+    def _toggle_subtitles(self):
+        self._subtitle_active = self._subtitle_toggle_action.isChecked()
+        if not self._subtitle_active:
+            self._subtitle_label.setVisible(False)
+        else:
+            self._subtitle_label.setVisible(True)
+            self._update_subtitle_display()
+
+    def _remove_subtitles(self):
+        self._subtitles = []
+        self._subtitle_path = None
+        self._subtitle_active = False
+        self._subtitle_toggle_action.setChecked(False)
+        self._subtitle_toggle_action.setEnabled(False)
+        self._subtitle_label.setVisible(False)
+        self._subtitle_label.setText("")
+
+    def _update_subtitle_display(self):
+        if not self._subtitle_active or not self._subtitles:
+            self._subtitle_label.setText("")
+            self._subtitle_label.setVisible(False)
+            return
+
+        pos = self.player.position()
+        current_text = ""
+        for start_ms, end_ms, text in self._subtitles:
+            if start_ms <= pos <= end_ms:
+                current_text = text
+                break
+
+        if current_text:
+            self._subtitle_label.setText(current_text)
+            self._subtitle_label.setVisible(True)
+            self._position_subtitle_label()
+        else:
+            self._subtitle_label.setText("")
+            self._subtitle_label.setVisible(False)
+
+    def _position_subtitle_label(self):
+        parent = self.video_view
+        pw = parent.width()
+        ph = parent.height()
+        self._subtitle_label.setFixedWidth(min(pw - 40, 800))
+        self._subtitle_label.adjustSize()
+        lw = self._subtitle_label.width()
+        lh = self._subtitle_label.height()
+        x = (pw - lw) // 2
+        y = ph - lh - 40
+        self._subtitle_label.move(max(0, x), max(0, y))
 
 
     def _add_bookmark(self):
@@ -583,7 +783,8 @@ class VideoViewer(QWidget):
             return
 
         self.video_view.setParent(self._top_widget)
-        video_area_layout = self._top_layout.itemAt(0).layout()
+        item = self._top_layout.itemAt(0)
+        video_area_layout = item.layout() if item else None
         if video_area_layout:
             video_area_layout.insertWidget(0, self.video_view, 1)
         self.video_view.show()

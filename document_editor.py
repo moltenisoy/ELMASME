@@ -77,6 +77,7 @@ class TextEditorToolbar(QFrame):
                 min-width: 28px;
                 min-height: 24px;
                 color: #e5e7eb;
+                font-size: 26px;
             }
             QToolButton:hover {
                 background: rgba(59, 130, 246, 0.2);
@@ -526,6 +527,7 @@ class TextEditorToolbar(QFrame):
                 border: 1px solid rgba(148, 163, 184, 0.3);
                 border-radius: 6px;
                 color: #e5e7eb;
+                font-size: 26px;
             }
             QPushButton:hover {
                 background: rgba(148, 163, 184, 0.25);

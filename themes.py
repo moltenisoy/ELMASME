@@ -46,10 +46,16 @@ _THEMES = {
             background: rgba(28,28,28,0.92); color: #e5e7eb;
             border: 1px solid rgba(148,163,184,0.18);
             border-top-left-radius: 8px; border-top-right-radius: 8px;
-            padding: 6px 16px; margin-right: 2px;
+            padding: 6px 36px 6px 16px; margin-right: 2px;
         }
         QTabBar::tab:selected { background: rgba(255,255,255,0.15); border-bottom-color: transparent; }
         QTabBar::tab:hover { background: rgba(50,50,50,0.96); }
+        QTabBar::close-button {
+            subcontrol-position: right;
+            margin-right: 15px;
+            width: 18px;
+            height: 18px;
+        }
         QListWidget {
             background: #141414;
             border: 1px solid rgba(148,163,184,0.15);
@@ -136,10 +142,16 @@ _THEMES = {
             background: #f1f5f9; color: #1e293b;
             border: 1px solid #e2e8f0;
             border-top-left-radius: 8px; border-top-right-radius: 8px;
-            padding: 6px 16px; margin-right: 2px;
+            padding: 6px 36px 6px 16px; margin-right: 2px;
         }
         QTabBar::tab:selected { background: #dbeafe; border-bottom-color: transparent; }
         QTabBar::tab:hover { background: #e0f2fe; }
+        QTabBar::close-button {
+            subcontrol-position: right;
+            margin-right: 15px;
+            width: 18px;
+            height: 18px;
+        }
         QListWidget {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -237,13 +249,19 @@ _THEMES = {
             background: rgba(13,13,23,0.95); color: #fcdb03;
             border: 1px solid rgba(252,219,3,0.4);
             border-top-left-radius: 0px; border-top-right-radius: 0px;
-            padding: 6px 16px; margin-right: 2px;
+            padding: 6px 36px 6px 16px; margin-right: 2px;
         }
         QTabBar::tab:selected {
             background: rgba(252,219,3,0.2);
             border-bottom-color: transparent;
         }
         QTabBar::tab:hover { background: rgba(0,255,213,0.1); }
+        QTabBar::close-button {
+            subcontrol-position: right;
+            margin-right: 15px;
+            width: 18px;
+            height: 18px;
+        }
         QListWidget {
             background: #0d0d17;
             border: 1px solid rgba(252,219,3,0.3);
@@ -335,13 +353,19 @@ _THEMES = {
             background: #001a00; color: #00ff00;
             border: 1px solid rgba(0,170,0,0.4);
             border-top-left-radius: 2px; border-top-right-radius: 2px;
-            padding: 6px 16px; margin-right: 2px;
+            padding: 6px 36px 6px 16px; margin-right: 2px;
         }
         QTabBar::tab:selected {
             background: rgba(0,255,0,0.15);
             border-bottom-color: transparent;
         }
         QTabBar::tab:hover { background: rgba(0,255,0,0.1); }
+        QTabBar::close-button {
+            subcontrol-position: right;
+            margin-right: 15px;
+            width: 18px;
+            height: 18px;
+        }
         QListWidget {
             background: #001100;
             border: 1px solid rgba(0,170,0,0.3);
