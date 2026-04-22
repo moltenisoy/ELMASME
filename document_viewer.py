@@ -6,7 +6,7 @@ from PySide6.QtGui import QAction, QFont, QKeySequence, QTextDocument
 from PySide6.QtPdf import QPdfDocument, QPdfSearchModel
 from PySide6.QtPdfWidgets import QPdfView
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QStackedWidget, QFileDialog, QLineEdit
 )
 
@@ -24,6 +24,8 @@ from pdf_tools import (
     PdfFormFillerDialog, PdfPasswordDialog, PdfReorderDialog,
     PdfWatermarkDialog, PdfExportImagesDialog,
 )
+from line_number_area import LineNumberTextEdit
+from syntax_highlighter import get_highlighter_for_ext
 
 TEXT_DOCUMENT_EXTENSIONS = {
     ".txt", ".log", ".ini", ".cfg", ".conf", ".config", ".csv", ".tsv", ".xml",
@@ -253,6 +255,8 @@ class DocumentViewer(QWidget):
         self._pdf_editing = False
         self._modified = False
         self._high_contrast = False
+        self._syntax_highlighter = None
+        self._syntax_enabled = True
 
         self._build_ui()
 
@@ -264,7 +268,7 @@ class DocumentViewer(QWidget):
         self.pdf_view.setZoomMode(QPdfView.ZoomMode.Custom)
         self.pdf_view.setZoomFactor(self.zoom_levels[self.current_zoom_index])
 
-        self.text_view = QTextEdit()
+        self.text_view = LineNumberTextEdit()
         self.text_view.setAcceptRichText(True)
         self.text_view.setStyleSheet("""
             QTextEdit {
@@ -300,6 +304,8 @@ class DocumentViewer(QWidget):
         self.toolbar.search_btn.clicked.connect(self._toggle_search)
         self.toolbar.contrast_btn.clicked.connect(self._toggle_high_contrast)
         self.toolbar.compare_btn.clicked.connect(self._open_diff_viewer)
+        self.toolbar.line_numbers_btn.clicked.connect(self._toggle_line_numbers)
+        self.toolbar.syntax_btn.clicked.connect(self._toggle_syntax_highlight)
 
         self.text_view.textChanged.connect(self._on_content_changed)
 
@@ -460,6 +466,7 @@ class DocumentViewer(QWidget):
         self.is_pdf = False
         self._pdf_editing = False
         self._pdf_bar.setVisible(False)
+        self._clear_syntax_highlight()
 
         ext = Path(path).suffix.lower()
 
@@ -493,8 +500,11 @@ class DocumentViewer(QWidget):
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
             self.toolbar.contrast_btn.setVisible(True)
+            self.toolbar.line_numbers_btn.setVisible(True)
+            self.toolbar.syntax_btn.setVisible(True)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
+            self._apply_syntax_highlight(ext)
             return
 
         if ext in DOCX_EXTENSIONS:
@@ -512,6 +522,8 @@ class DocumentViewer(QWidget):
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
             self.toolbar.contrast_btn.setVisible(True)
+            self.toolbar.line_numbers_btn.setVisible(False)
+            self.toolbar.syntax_btn.setVisible(False)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
             return
@@ -531,6 +543,8 @@ class DocumentViewer(QWidget):
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
             self.toolbar.contrast_btn.setVisible(True)
+            self.toolbar.line_numbers_btn.setVisible(False)
+            self.toolbar.syntax_btn.setVisible(False)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
             return
@@ -550,6 +564,8 @@ class DocumentViewer(QWidget):
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
             self.toolbar.contrast_btn.setVisible(True)
+            self.toolbar.line_numbers_btn.setVisible(False)
+            self.toolbar.syntax_btn.setVisible(False)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
             return
@@ -569,6 +585,8 @@ class DocumentViewer(QWidget):
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
             self.toolbar.contrast_btn.setVisible(True)
+            self.toolbar.line_numbers_btn.setVisible(False)
+            self.toolbar.syntax_btn.setVisible(False)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
             return
@@ -588,6 +606,8 @@ class DocumentViewer(QWidget):
             self.stack.setCurrentWidget(self.text_view)
             self.toolbar.setVisible(True)
             self.toolbar.contrast_btn.setVisible(True)
+            self.toolbar.line_numbers_btn.setVisible(False)
+            self.toolbar.syntax_btn.setVisible(False)
             self._search_widget.set_text_mode(self.text_view)
             self._apply_contrast()
             return
@@ -720,6 +740,35 @@ class DocumentViewer(QWidget):
             """)
             self.toolbar.contrast_btn.setToolTip("Alto contraste")
 
+    def _toggle_line_numbers(self):
+        visible = self.toolbar.line_numbers_btn.isChecked()
+        self.text_view.set_line_numbers_visible(visible)
+
+    def _toggle_syntax_highlight(self):
+        self._syntax_enabled = self.toolbar.syntax_btn.isChecked()
+        if self._syntax_enabled and self.current_path:
+            ext = Path(self.current_path).suffix.lower()
+            self._apply_syntax_highlight(ext)
+        else:
+            self._clear_syntax_highlight()
+
+    def _apply_syntax_highlight(self, ext: str) -> None:
+        """Attach a syntax highlighter matching *ext* if highlighting is enabled."""
+        self._clear_syntax_highlight()
+        if not self._syntax_enabled:
+            return
+        hl = get_highlighter_for_ext(ext, self.text_view.document())
+        if hl:
+            self._syntax_highlighter = hl
+            self.toolbar.syntax_btn.setChecked(True)
+        else:
+            self.toolbar.syntax_btn.setChecked(False)
+
+    def _clear_syntax_highlight(self) -> None:
+        """Remove the current syntax highlighter (if any)."""
+        if self._syntax_highlighter is not None:
+            self._syntax_highlighter.setDocument(None)
+            self._syntax_highlighter = None
 
     def _toggle_pdf_edit_mode(self):
         if self._pdf_editing:

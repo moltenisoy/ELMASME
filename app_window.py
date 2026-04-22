@@ -11,7 +11,7 @@ from app_dialogs import SettingsDialog, OpenChoiceDialog, UnsavedChangesDialog, 
 from content_viewers import ViewerHost
 from file_navigation import FileNavigator
 from formats import display_type, supported_extensions
-from settings import load_settings, save_settings
+from settings import load_settings, save_settings, add_recent_file, get_recent_files
 from themes import THEME_NAMES, get_theme
 from windows_integration import (
     register_file_associations,
@@ -164,7 +164,47 @@ class UniversalViewerWindow(QMainWindow):
         abrir_carpeta.triggered.connect(self.open_folder_dialog)
         menu.addAction(abrir_carpeta)
 
+        menu.addSeparator()
+
+        recent = get_recent_files()
+        if recent:
+            recent_menu = menu.addMenu("Archivos recientes")
+            for path in recent:
+                label = os.path.basename(path)
+                action = QAction(label, self)
+                action.setToolTip(path)
+                action.setData(path)
+                action.triggered.connect(lambda checked, p=path: self._open_recent_file(p))
+                recent_menu.addAction(action)
+            recent_menu.addSeparator()
+            clear_action = QAction("Limpiar historial", self)
+            clear_action.triggered.connect(self._clear_recent_files)
+            recent_menu.addAction(clear_action)
+        else:
+            no_recent = QAction("(sin archivos recientes)", self)
+            no_recent.setEnabled(False)
+            menu.addAction(no_recent)
+
         menu.exec(self.archivo_button.mapToGlobal(self.archivo_button.rect().topLeft()))
+
+    def _open_recent_file(self, path: str):
+        if not os.path.isfile(path):
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Archivo no encontrado",
+                                f"El archivo ya no existe:\n{path}")
+            return
+        data, viewer = self._current_tab_data()
+        if data and data['current_path']:
+            self._open_in_new_tab(path)
+        elif viewer and data:
+            self._load_path_in_tab(path, viewer, data['navigator'])
+        else:
+            self._open_in_new_tab(path)
+
+    def _clear_recent_files(self):
+        saved = load_settings()
+        saved["recent_files"] = []
+        save_settings(saved)
 
     def _show_settings_panel(self):
         saved = load_settings()
@@ -313,6 +353,7 @@ class UniversalViewerWindow(QMainWindow):
         index = self.tab_widget.indexOf(viewer)
         if index >= 0:
             self.tab_widget.setTabText(index, os.path.basename(path))
+        add_recent_file(path)
         self._refresh_navigation()
 
     def _close_tab(self, index):
