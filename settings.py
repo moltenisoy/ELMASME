@@ -22,12 +22,16 @@ _DEFAULTS = {
         "escape": "Escape",
         "open_file": "Ctrl+O",
     },
+    "recent_files": [],
 }
+
+_MAX_RECENT_FILES = 20
 
 
 def load_settings() -> dict:
     settings = dict(_DEFAULTS)
     settings["shortcuts"] = dict(_DEFAULTS["shortcuts"])
+    settings["recent_files"] = list(_DEFAULTS["recent_files"])
     try:
         if os.path.isfile(_SETTINGS_FILE):
             with open(_SETTINGS_FILE, "r", encoding="utf-8") as f:
@@ -39,6 +43,10 @@ def load_settings() -> dict:
                             for sk, sv in data[key].items():
                                 if sk in _DEFAULTS["shortcuts"]:
                                     settings["shortcuts"][sk] = sv
+                        elif key == "recent_files" and isinstance(data[key], list):
+                            settings["recent_files"] = [
+                                p for p in data[key] if isinstance(p, str)
+                            ]
                         else:
                             settings[key] = data[key]
     except (json.JSONDecodeError, OSError, ValueError):
@@ -52,3 +60,18 @@ def save_settings(settings: dict) -> None:
             json.dump(settings, f, indent=2, ensure_ascii=False)
     except OSError:
         pass
+
+
+def add_recent_file(path: str) -> None:
+    """Add *path* to the top of the recent files list and persist."""
+    settings = load_settings()
+    recent = [p for p in settings.get("recent_files", []) if p != path]
+    recent.insert(0, path)
+    settings["recent_files"] = recent[:_MAX_RECENT_FILES]
+    save_settings(settings)
+
+
+def get_recent_files() -> list[str]:
+    """Return the list of recent file paths (most-recent first)."""
+    settings = load_settings()
+    return [p for p in settings.get("recent_files", []) if os.path.isfile(p)]

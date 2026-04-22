@@ -555,6 +555,56 @@ class TextEditorToolbar(QFrame):
         """)
         viewer_group.addWidget(self.contrast_btn)
 
+        self.line_numbers_btn = QPushButton("Nº de línea")
+        self.line_numbers_btn.setToolTip("Mostrar / ocultar numeración de líneas")
+        self.line_numbers_btn.setCheckable(True)
+        self.line_numbers_btn.setFixedSize(90, 26)
+        self.line_numbers_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(148, 163, 184, 0.15);
+                border: 1px solid rgba(148, 163, 184, 0.3);
+                border-radius: 6px;
+                padding: 4px 8px;
+                color: #e5e7eb;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background: rgba(148, 163, 184, 0.25);
+                border-color: rgba(148, 163, 184, 0.5);
+            }
+            QPushButton:checked {
+                background: rgba(59, 130, 246, 0.25);
+                border-color: rgba(59, 130, 246, 0.5);
+                color: #60a5fa;
+            }
+        """)
+        viewer_group.addWidget(self.line_numbers_btn)
+
+        self.syntax_btn = QPushButton("Sintaxis")
+        self.syntax_btn.setToolTip("Activar / desactivar resaltado de sintaxis")
+        self.syntax_btn.setCheckable(True)
+        self.syntax_btn.setFixedSize(70, 26)
+        self.syntax_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(148, 163, 184, 0.15);
+                border: 1px solid rgba(148, 163, 184, 0.3);
+                border-radius: 6px;
+                padding: 4px 8px;
+                color: #e5e7eb;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background: rgba(148, 163, 184, 0.25);
+                border-color: rgba(148, 163, 184, 0.5);
+            }
+            QPushButton:checked {
+                background: rgba(199, 146, 234, 0.25);
+                border-color: rgba(199, 146, 234, 0.5);
+                color: #c792ea;
+            }
+        """)
+        viewer_group.addWidget(self.syntax_btn)
+
         row2.addLayout(viewer_group)
         row2.addStretch()
 
