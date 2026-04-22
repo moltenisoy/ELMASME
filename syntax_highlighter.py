@@ -21,7 +21,7 @@ def _fmt(color: str, bold: bool = False, italic: bool = False) -> QTextCharForma
     return f
 
 
-# ── Common colour palette ──────────────────────────────────────────────────
+# ── Common color palette ──────────────────────────────────────────────────
 _C_KEYWORD   = _fmt("#c792ea", bold=True)
 _C_BUILTIN   = _fmt("#82aaff")
 _C_STRING    = _fmt("#c3e88d")

@@ -189,7 +189,6 @@ class UniversalViewerWindow(QMainWindow):
 
     def _open_recent_file(self, path: str):
         if not os.path.isfile(path):
-            from PySide6.QtWidgets import QMessageBox
             QMessageBox.warning(self, "Archivo no encontrado",
                                 f"El archivo ya no existe:\n{path}")
             return

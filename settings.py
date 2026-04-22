@@ -71,7 +71,7 @@ def add_recent_file(path: str) -> None:
     save_settings(settings)
 
 
-def get_recent_files() -> list:
+def get_recent_files() -> list[str]:
     """Return the list of recent file paths (most-recent first)."""
     settings = load_settings()
     return [p for p in settings.get("recent_files", []) if os.path.isfile(p)]

@@ -68,7 +68,8 @@ class LineNumberTextEdit(QTextEdit):
     def _line_number_area_width(self) -> int:
         if not self._ln_visible:
             return 0
-        digits = max(1, len(str(max(1, self.document().blockCount()))))
+        block_count = max(1, self.document().blockCount())
+        digits = max(1, len(str(block_count)))
         fm = self.fontMetrics()
         return fm.horizontalAdvance("9") * (digits + 2) + 8
 
